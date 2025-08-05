@@ -1,0 +1,46 @@
+export const CHARACTERISTICS = {
+  FORCE: 'force',
+  AGILITE: 'agilite',
+  INTELLIGENCE: 'intelligence',
+  VOLONTE: 'volonte',
+  RESISTANCE: 'resistance',
+  CHARISME: 'charisme',
+} as const;
+
+export const CHARACTERISTIC_NAMES = {
+  [CHARACTERISTICS.FORCE]: 'Force',
+  [CHARACTERISTICS.AGILITE]: 'Agilité',
+  [CHARACTERISTICS.INTELLIGENCE]: 'Intelligence',
+  [CHARACTERISTICS.VOLONTE]: 'Volonté',
+  [CHARACTERISTICS.RESISTANCE]: 'Résistance',
+  [CHARACTERISTICS.CHARISME]: 'Charisme',
+} as const;
+
+export const DICE_TYPES = {
+  D4: 'D4',
+  D6: 'D6',
+  D8: 'D8',
+  D10: 'D10',
+  D12: 'D12',
+  D20: 'D20',
+  D100: 'D100',
+} as const;
+
+export const CHARACTER_LIMITS = {
+  MIN_CHARACTERISTIC: 1,
+  MAX_CHARACTERISTIC: 20,
+  MIN_SKILL: 0,
+  MAX_SKILL: 100,
+  STARTING_CHARACTERISTICS: 8,
+  STARTING_HEALTH: 10,
+  STARTING_EXPERIENCE: 0,
+} as const;
+
+export const GAME_RULES = {
+  CRITICAL_SUCCESS: 1,
+  CRITICAL_FAILURE: 100,
+  DIFFICULTY_EASY: 20,
+  DIFFICULTY_NORMAL: 50,
+  DIFFICULTY_HARD: 80,
+  DIFFICULTY_EXTREME: 95,
+} as const; 

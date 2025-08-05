@@ -1,20 +1,48 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import RootNavigator from './src/navigation/RootNavigator';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './src/api/queryClient';
+import { Provider as JotaiProvider } from 'jotai';
+import React, { useEffect } from 'react';
+import './global.css';
+import { initDb } from './src/data/db';
+import { Alert } from "react-native";
+import * as SQLite from "expo-sqlite";
 
 export default function App() {
+  useEffect(() => {
+    Alert.alert(
+      "Supprimer la BDD locale ?",
+      "Voulez-vous réinitialiser toutes les données locales ?",
+      [
+        { text: "Non", style: "cancel" },
+        {
+          text: "Oui",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await SQLite.deleteDatabaseAsync("etrange_france.db");
+              alert("✅ Base locale supprimée !");
+              // Recréation immédiate
+              await initDb();
+            } catch (error) {
+              alert("❌ Erreur lors de la suppression : " + error);
+            }
+          },
+        },
+      ]
+    );
+
+    initDb();
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <JotaiProvider>
+      <QueryClientProvider client={queryClient}>
+        <NavigationContainer>
+          <RootNavigator />
+        </NavigationContainer>
+      </QueryClientProvider>
+    </JotaiProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
