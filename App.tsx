@@ -5,7 +5,7 @@ import { queryClient } from './src/api/queryClient';
 import { Provider as JotaiProvider } from 'jotai';
 import React, { useEffect } from 'react';
 import './global.css';
-import { initDb } from './src/data/db';
+import { initDb, getDb, closeDb } from './src/data/db';
 import { Alert } from "react-native";
 import * as SQLite from "expo-sqlite";
 
@@ -15,12 +15,20 @@ export default function App() {
       "Supprimer la BDD locale ?",
       "Voulez-vous réinitialiser toutes les données locales ?",
       [
-        { text: "Non", style: "cancel" },
+        {
+          text: "Non",
+          style: "cancel",
+          onPress: async () => {
+            await initDb();
+          }
+        },
         {
           text: "Oui",
           style: "destructive",
           onPress: async () => {
             try {
+
+              await closeDb();
               await SQLite.deleteDatabaseAsync("etrange_france.db");
               alert("✅ Base locale supprimée !");
               // Recréation immédiate
@@ -33,7 +41,7 @@ export default function App() {
       ]
     );
 
-    initDb();
+    //initDb();
   }, []);
 
   return (
