@@ -82,6 +82,8 @@ export const initDb = async () => {
       profession_score INTEGER DEFAULT 0,
       hobby_id INTEGER,
       hobby_score INTEGER DEFAULT 0,
+      voie_id INTEGER,
+      voie_score INTEGER DEFAULT 0,
       intelligence INTEGER DEFAULT 1,
       force INTEGER DEFAULT 1,
       dexterite INTEGER DEFAULT 1,
@@ -89,8 +91,15 @@ export const initDb = async () => {
       memoire INTEGER DEFAULT 1,
       volonte INTEGER DEFAULT 1,
       FOREIGN KEY (profession_id) REFERENCES professions(id),
-      FOREIGN KEY (hobby_id) REFERENCES hobbies(id)
+      FOREIGN KEY (hobby_id) REFERENCES hobbies(id),
+      FOREIGN KEY (voie_id) REFERENCES voies_etranges(id)
     );
+
+    INSERT OR IGNORE INTO voies_etranges (id, name, description) VALUES
+      (1, 'Alchimiste', 'Vous êtes un chercheur de la véritable essence des éléments.'),
+      (2, 'Chaman', 'Vous êtes le réceptacle du savoir de nombreuses générations.'),
+      (3, 'Chasseur de monstres', 'Like Buffy you know !!'),
+      (4, 'Goule', 'Dans vos veines coule le sang d''un tueur sans âme.');
 
     INSERT OR IGNORE INTO hobbies (id, name, description) VALUES
       (1, 'Jouer au cinéma', NULL),

@@ -4,6 +4,7 @@ import { Layout, Title, Body, Button } from "../components/ui";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
+import { useUpdateStrangePath } from "../api/charactersLocal";
 
 const strangePaths = [
   {
@@ -41,6 +42,7 @@ export default function ChooseStrangePathScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const { width } = Dimensions.get("window");
   const itemWidth = width - 32; // padding horizontal in Layout
+  const updateStrangePath = useUpdateStrangePath();
 
   const handleConfirm = () => {
     const selected = strangePaths[currentIndex];
@@ -48,10 +50,18 @@ export default function ChooseStrangePathScreen() {
       alert("Choisis une voie étrange pour ton enquêteur !");
       return;
     }
-
-    // TODO: sauvegarder la voie étrange en BDD quand elle sera disponible
-    alert(`✅ Voie étrange sélectionnée : ${selected.name}`);
-    navigation.navigate("MainTabs", { screen: "Characters" });
+    updateStrangePath.mutate(
+      { id: characterId, voieId: selected.id, voieScore: 2 },
+      {
+        onSuccess: () => {
+          alert(`✅ Voie étrange sélectionnée : ${selected.name}`);
+          navigation.navigate("MainTabs", { screen: "Characters" });
+        },
+        onError: (err) => {
+          alert("❌ Erreur lors de l'enregistrement : " + err);
+        },
+      }
+    );
   };
 
   return (

@@ -88,6 +88,14 @@ export default function CharacterSheet() {
         <Title className="text-purple-300 text-xl font-semibold mb-3">
           Voie étrange
         </Title>
+        {character.voie_name ? (
+          <View className="flex-row justify-between">
+            <Body className="text-white">{character.voie_name}</Body>
+            <Body className="text-white">{character.voie_score}</Body>
+          </View>
+        ) : (
+          <Body className="text-white">Aucune</Body>
+        )}
       </View>
 
       <View className="bg-gray-800/70 rounded-2xl p-4 mb-5 border border-yellow-600">
