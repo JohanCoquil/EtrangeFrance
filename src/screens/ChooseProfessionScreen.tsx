@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
-import { Layout, Title, Body, Button, Card } from "../components/ui";
+import { Layout, Title, Body, Button, Card, Caption } from "../components/ui";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
@@ -79,16 +79,22 @@ export default function ChooseProfessionScreen() {
             ))}
           </ScrollView>
         )}
+      </View>
 
+      <View className="pb-4">
         <Button
           variant="primary"
           onPress={handleConfirm}
-          className="mb-4 py-4 bg-blue-800 border-2 border-blue-500 rounded-lg shadow-xl"
+          className="mb-2 py-4 bg-blue-800 border-2 border-blue-500 rounded-lg shadow-xl"
         >
           <Title className="text-white text-lg font-bold tracking-wide">
             🚀 Valider le Métier
           </Title>
         </Button>
+
+        <Caption className="text-center mt-2 text-gray-400 italic">
+          Avant de devenir enquêteur, vous aviez une vie, des amis... Une profession.
+        </Caption>
       </View>
     </Layout>
   );
