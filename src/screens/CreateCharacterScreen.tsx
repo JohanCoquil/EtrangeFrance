@@ -66,6 +66,9 @@ export default function CreateCharacterScreen() {
       {
         name,
         profession_id: null,
+        profession_score: 0,
+        hobby_id: null,
+        hobby_score: 0,
         ...stats,
         creation_step: 1, // marque l’avancement
       },

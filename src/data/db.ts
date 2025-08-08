@@ -79,13 +79,17 @@ export const initDb = async () => {
       name TEXT NOT NULL,
       profession TEXT,
       profession_id INTEGER,
+      profession_score INTEGER DEFAULT 0,
+      hobby_id INTEGER,
+      hobby_score INTEGER DEFAULT 0,
       intelligence INTEGER DEFAULT 1,
       force INTEGER DEFAULT 1,
       dexterite INTEGER DEFAULT 1,
       charisme INTEGER DEFAULT 1,
       memoire INTEGER DEFAULT 1,
       volonte INTEGER DEFAULT 1,
-      FOREIGN KEY (profession_id) REFERENCES professions(id)
+      FOREIGN KEY (profession_id) REFERENCES professions(id),
+      FOREIGN KEY (hobby_id) REFERENCES hobbies(id)
     );
 
     INSERT OR IGNORE INTO hobbies (id, name, description) VALUES
