@@ -68,10 +68,10 @@ export default function HomeScreen({ navigation }: Props) {
       }}
     >
       <View className="mb-8">
-        <Title className="text-blue-100 text-center text-4xl font-bold mb-2 tracking-wider">
+        <Title className="text-white text-center text-4xl font-bold mb-2 tracking-wider">
           ÉTRANGE
         </Title>
-        <Title className="text-blue-100 text-center text-5xl font-bold tracking-widest">
+        <Title className="text-white text-center text-5xl font-bold tracking-widest">
           FRANCE
         </Title>
         <Caption className="text-white text-center mt-2 tracking-widest uppercase">
