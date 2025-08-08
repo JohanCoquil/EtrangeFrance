@@ -8,7 +8,7 @@ import Animated, {
   cancelAnimation,
 } from 'react-native-reanimated';
 import { suits, values } from '../data/deck';
-import FlippableCard from '../components/game/FlippableCard';
+import Card from '../components/game/Carte';
 
 // Nombre de dos de cartes affichés pendant le mélange
 const NUM_BACK_CARDS = 10;
@@ -73,7 +73,7 @@ export default function CardDrawScreen() {
       {/* Carte tirée */}
       {drawnCard && (
         <View style={styles.drawnCard}>
-          <FlippableCard value={drawnCard.value} suit={drawnCard.suit} />
+          <Card value={drawnCard.value} suit={drawnCard.suit} />
         </View>
       )}
     </Pressable>
