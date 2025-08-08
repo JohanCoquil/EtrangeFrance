@@ -28,11 +28,11 @@ export default function AuthScreen({ navigation }: Props) {
       // TODO: Implémenter la logique d'authentification
       console.log('Authentification:', { email, password, username, isLogin });
 
-      // Simulation d'un délai d'authentification
-      await new Promise(resolve => setTimeout(resolve, 1000));
+        // Simulation d'un délai d'authentification
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Pour l'instant, on navigue directement vers l'app
-      navigation.replace('MainTabs');
+        // Pour l'instant, on navigue directement vers l'app
+        navigation.replace('MainTabs', {});
     } catch (error) {
       Alert.alert('Erreur', 'Erreur lors de l\'authentification.');
     } finally {
