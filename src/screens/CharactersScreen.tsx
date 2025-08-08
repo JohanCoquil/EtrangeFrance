@@ -49,6 +49,11 @@ export default function CharactersScreen() {
                     Hobbie : {char.hobby_name}
                   </Text>
                 )}
+                {char.voie_name && (
+                  <Text className="text-white text-sm italic mb-2">
+                    Voie étrange : {char.voie_name}
+                  </Text>
+                )}
                 <Button
                   variant="danger"
                   size="sm"
