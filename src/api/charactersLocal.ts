@@ -28,6 +28,23 @@ export function useAddCharacter() {
   });
 }
 
+export function useUpdateProfession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, profession }: { id: string; profession: string }) => {
+      const db = getDb();
+      await db.runAsync("UPDATE characters SET profession = ? WHERE id = ?", [
+        profession,
+        id,
+      ]);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["characters"] });
+    },
+  });
+}
+
 export function useDeleteCharacter() {
   const queryClient = useQueryClient();
   return useMutation({
