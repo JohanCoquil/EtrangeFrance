@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
-import { ScrollView, View, Dimensions } from "react-native";
-import { Layout, Title, Body, Button, Caption, Card } from "../components/ui";
+import { useState } from "react";
+import { ScrollView, Dimensions } from "react-native";
+import { Layout, Title, Body, Button, Card } from "../components/ui";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { LinearGradient } from "expo-linear-gradient";
+import { useUpdateProfession } from "../api/charactersLocal";
 
 // Mock pour le moment : à remplacer par ton endpoint API
 const mockProfessions = [
@@ -18,11 +19,12 @@ export default function ChooseProfessionScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<any>();
-  const { characterDraft } = route.params;
+  const { characterId } = route.params;
 
   const [selectedProfession, setSelectedProfession] = useState<number | null>(
     null
   );
+  const updateProfession = useUpdateProfession();
 
   const handleConfirm = () => {
     if (!selectedProfession) {
@@ -30,11 +32,26 @@ export default function ChooseProfessionScreen() {
       return;
     }
 
-    // Tu peux ici appeler l’API pour créer en BDD
-    // avec addCharacter.mutate({ ...characterDraft, profession: selectedProfession })
+    const profession = mockProfessions.find(
+      (p) => p.id === selectedProfession
+    )?.name;
+    if (!profession) {
+      alert("Métier invalide");
+      return;
+    }
 
-    alert("✅ Personnage finalisé !");
-    navigation.navigate("MainTabs", { screen: "Characters" });
+    updateProfession.mutate(
+      { id: characterId, profession },
+      {
+        onSuccess: () => {
+          alert("✅ Personnage finalisé !");
+          navigation.navigate("MainTabs", { screen: "Characters" });
+        },
+        onError: (err) => {
+          alert("❌ Erreur lors de l'enregistrement : " + err);
+        },
+      }
+    );
   };
 
   const { height } = Dimensions.get("window");

@@ -13,14 +13,31 @@ export function useAddCharacter() {
       const db = getDb();
       await db.execAsync(`
         INSERT INTO characters
-          (id, name, species, intelligence, force, dexterite, charisme, memoire, volonte)
+          (id, name, profession, intelligence, force, dexterite, charisme, memoire, volonte)
         VALUES
-          ('${character.id}', '${character.name}', '${character.species}',
+          ('${character.id}', '${character.name}', '${character.profession}',
           ${character.intelligence}, ${character.force}, ${character.dexterite},
           ${character.charisme}, ${character.memoire}, ${character.volonte});
       `);
 
       return character;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["characters"] });
+    },
+  });
+}
+
+export function useUpdateProfession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, profession }: { id: string; profession: string }) => {
+      const db = getDb();
+      await db.runAsync("UPDATE characters SET profession = ? WHERE id = ?", [
+        profession,
+        id,
+      ]);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["characters"] });

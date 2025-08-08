@@ -34,7 +34,7 @@ export default function CharactersScreen() {
                   {char.name}
                 </Text>
                 <Text className="text-white text-sm italic mb-2">
-                  {char.species}
+                  {char.profession || "Profession à définir"}
                 </Text>
                 <Button
                   variant="danger"
