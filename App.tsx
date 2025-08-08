@@ -5,9 +5,8 @@ import { queryClient } from './src/api/queryClient';
 import { Provider as JotaiProvider } from 'jotai';
 import React, { useEffect } from 'react';
 import './global.css';
-import { initDb, getDb, closeDb } from './src/data/db';
+import { initDb, resetDb } from './src/data/db';
 import { Alert } from "react-native";
-import * as SQLite from "expo-sqlite";
 
 export default function App() {
   useEffect(() => {
@@ -27,12 +26,8 @@ export default function App() {
           style: "destructive",
           onPress: async () => {
             try {
-
-              await closeDb();
-              await SQLite.deleteDatabaseAsync("etrange_france.db");
+              await resetDb();
               alert("✅ Base locale supprimée !");
-              // Recréation immédiate
-              await initDb();
             } catch (error) {
               alert("❌ Erreur lors de la suppression : " + error);
             }

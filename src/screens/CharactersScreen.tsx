@@ -39,7 +39,7 @@ export default function CharactersScreen() {
                 <Button
                   variant="danger"
                   size="sm"
-                  onPress={() => deleteCharacter.mutate(char.id)}
+                  onPress={() => deleteCharacter.mutate(String(char.id))}
                 >
                   Supprimer
                 </Button>
