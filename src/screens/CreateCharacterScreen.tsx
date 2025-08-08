@@ -167,7 +167,7 @@ export default function CreateCharacterScreen() {
           </Caption>
         </View>
 
-        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
+        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 16 }}>
           {/* Caractéristiques */}
           <StatRow
             label="Intelligence"
@@ -211,24 +211,24 @@ export default function CreateCharacterScreen() {
             onIncrement={() => updateStat("volonte", 1)}
             onDecrement={() => updateStat("volonte", -1)}
           />
-
-          {/* Bouton Valider */}
-          <Button
-            variant="primary"
-            onPress={handleCreate}
-            disabled={remainingPoints !== 0 || addCharacter.isPending}
-            className="mt-6 py-4 bg-blue-800 border-2 border-blue-500 rounded-lg shadow-xl"
-          >
-            <Title className="text-white text-lg font-bold tracking-wide">
-              ✨ Valider le Personnage
-            </Title>
-          </Button>
-
-          {/* Footer */}
-          <Caption className="text-center mt-6 text-gray-400 italic">
-            Un nouvel enquêteur de l'étrange s'apprête à passer les portes de l'Agence...
-          </Caption>
         </ScrollView>
+
+        {/* Bouton Valider */}
+        <Button
+          variant="primary"
+          onPress={handleCreate}
+          disabled={remainingPoints !== 0 || addCharacter.isPending}
+          className="mt-6 py-4 bg-blue-800 border-2 border-blue-500 rounded-lg shadow-xl"
+        >
+          <Title className="text-white text-lg font-bold tracking-wide">
+            ✨ Valider le Personnage
+          </Title>
+        </Button>
+
+        {/* Footer */}
+        <Caption className="text-center mt-6 text-gray-400 italic">
+          Un nouvel enquêteur de l'étrange s'apprête à passer les portes de l'Agence...
+        </Caption>
       </View>
     </Layout>
   );
