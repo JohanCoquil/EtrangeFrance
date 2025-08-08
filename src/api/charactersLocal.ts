@@ -35,8 +35,8 @@ export function useAddCharacter() {
 export function useDeleteCharacter() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
-      await db.runAsync("DELETE FROM characters WHERE id = ?", [id]);
+    mutationFn: async (id: string) => {
+      await db.runAsync("DELETE FROM characters WHERE id = ?", [String(id)]);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["characters"] });
