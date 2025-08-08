@@ -4,32 +4,31 @@ import { Layout, Title, Body, Button, Card, Caption } from "../components/ui";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
-import { useUpdateProfession } from "../api/charactersLocal";
-import { useProfessions } from "../api/professionsLocal";
+import { useUpdateHobby } from "../api/charactersLocal";
+import { useHobbies } from "../api/hobbiesLocal";
 
-export default function ChooseProfessionScreen() {
+export default function ChooseHobbieScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<any>();
   const { characterId } = route.params;
 
-  const [selectedProfession, setSelectedProfession] = useState<number | null>(
-    null
-  );
-  const updateProfession = useUpdateProfession();
-  const { data: professions, isLoading } = useProfessions();
+  const [selectedHobby, setSelectedHobby] = useState<number | null>(null);
+  const updateHobby = useUpdateHobby();
+  const { data: hobbies, isLoading } = useHobbies();
 
   const handleConfirm = () => {
-    if (!selectedProfession) {
-      alert("Choisis un métier pour ton enquêteur !");
+    if (!selectedHobby) {
+      alert("Choisis un hobbie pour ton enquêteur !");
       return;
     }
 
-    updateProfession.mutate(
-      { id: characterId, professionId: selectedProfession, professionScore: 3 },
+    updateHobby.mutate(
+      { id: characterId, hobbyId: selectedHobby, hobbyScore: 2 },
       {
         onSuccess: () => {
-          navigation.navigate("ChooseHobbie", { characterId });
+          alert("✅ Personnage finalisé !");
+          navigation.navigate("MainTabs", { screen: "Characters" });
         },
         onError: (err) => {
           alert("❌ Erreur lors de l'enregistrement : " + err);
@@ -42,37 +41,32 @@ export default function ChooseProfessionScreen() {
     <Layout backgroundColor="gradient" className="flex-1 px-4">
       <View className="flex-1">
         <Title className="mb-6 text-center text-white text-3xl font-bold tracking-wide shadow-md">
-          Choisis ton Métier
+          Choisis ton Hobbie
         </Title>
 
         {isLoading ? (
           <Body className="text-center text-white">Chargement...</Body>
         ) : (
           <ScrollView className="flex-1 mb-4" contentContainerStyle={{ paddingBottom: 16 }}>
-            {professions?.map((prof: any) => (
+            {hobbies?.map((hob: any) => (
               <Card
-                key={prof.id}
+                key={hob.id}
                 className={`mb-4 p-5 rounded-xl ${
-                  selectedProfession === prof.id
+                  selectedHobby === hob.id
                     ? "bg-blue-900 border-2 border-blue-400"
                     : "bg-black/60 border border-gray-600"
                 }`}
               >
-                <Title className="text-blue-200 text-xl mb-2">{prof.name}</Title>
-                {prof.description && (
-                  <Body className="text-gray-300 mb-2">{prof.description}</Body>
-                )}
-                {prof.skills.length > 0 && (
-                  <Body className="text-gray-400 mb-3">
-                    Compétences : {prof.skills.join(", ")}
-                  </Body>
+                <Title className="text-blue-200 text-xl mb-2">{hob.name}</Title>
+                {hob.description && (
+                  <Body className="text-gray-300 mb-2">{hob.description}</Body>
                 )}
                 <Button
                   variant="secondary"
-                  onPress={() => setSelectedProfession(prof.id)}
+                  onPress={() => setSelectedHobby(hob.id)}
                   className="bg-gray-800 border border-blue-400"
                 >
-                  {selectedProfession === prof.id ? "✅ Sélectionné" : "Choisir"}
+                  {selectedHobby === hob.id ? "✅ Sélectionné" : "Choisir"}
                 </Button>
               </Card>
             ))}
@@ -87,12 +81,12 @@ export default function ChooseProfessionScreen() {
           className="mb-2 py-4 bg-blue-800 border-2 border-blue-500 rounded-lg shadow-xl"
         >
           <Title className="text-white text-lg font-bold tracking-wide">
-            🚀 Valider le Métier
+            🎯 Valider le Hobbie
           </Title>
         </Button>
 
         <Caption className="text-center mt-2 text-gray-400 italic">
-          Avant de devenir enquêteur, vous aviez une vie, des amis... Une profession.
+          Même les enquêteurs ont besoin d'un passe-temps.
         </Caption>
       </View>
     </Layout>
