@@ -7,6 +7,7 @@ import ChooseHobbieScreen from '../screens/ChooseHobbieScreen';
 import { RootStackParamList } from './types';
 import DeckScreen from '../screens/DeckScreen';
 import CardDrawScreen from '../screens/CardDrawScreen';
+import CharacterSheet from '../screens/CharacterSheet';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -20,6 +21,7 @@ export default function RootNavigator() {
       <Stack.Screen name="ChooseHobbie" component={ChooseHobbieScreen} />
       <Stack.Screen name="Deck" component={DeckScreen} />
       <Stack.Screen name="CardDraw" component={CardDrawScreen} />
+      <Stack.Screen name="CharacterSheet" component={CharacterSheet} />
     </Stack.Navigator>
   );
 }
