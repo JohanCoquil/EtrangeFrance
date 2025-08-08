@@ -27,8 +27,7 @@ export default function ChooseHobbieScreen() {
       { id: characterId, hobbyId: selectedHobby, hobbyScore: 2 },
       {
         onSuccess: () => {
-          alert("✅ Personnage finalisé !");
-          navigation.navigate("MainTabs", { screen: "Characters" });
+          navigation.navigate("ChooseStrangePath", { characterId });
         },
         onError: (err) => {
           alert("❌ Erreur lors de l'enregistrement : " + err);
