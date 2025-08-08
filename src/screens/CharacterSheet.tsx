@@ -39,13 +39,13 @@ export default function CharacterSheet() {
   return (
     <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
       <View className="mb-6">
-        <Title className="text-center text-3xl font-bold text-blue-300 tracking-widest">
+        <Title className="text-center text-3xl font-bold text-white tracking-widest">
           {character.name}
         </Title>
       </View>
 
       <View className="bg-gray-800/70 rounded-2xl p-4 mb-5 border border-blue-600">
-        <Title className="text-blue-300 text-xl font-semibold mb-3">
+        <Title className="text-white text-xl font-semibold mb-3">
           Caractéristiques
         </Title>
         {stats.map((stat) => (
