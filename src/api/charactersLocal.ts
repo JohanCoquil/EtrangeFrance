@@ -13,9 +13,9 @@ export function useAddCharacter() {
       const db = getDb();
       await db.execAsync(`
         INSERT INTO characters
-          (id, name, species, intelligence, force, dexterite, charisme, memoire, volonte)
+          (id, name, profession, intelligence, force, dexterite, charisme, memoire, volonte)
         VALUES
-          ('${character.id}', '${character.name}', '${character.species}',
+          ('${character.id}', '${character.name}', '${character.profession}',
           ${character.intelligence}, ${character.force}, ${character.dexterite},
           ${character.charisme}, ${character.memoire}, ${character.volonte});
       `);
