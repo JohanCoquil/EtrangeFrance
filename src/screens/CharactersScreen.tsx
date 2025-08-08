@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, ScrollView } from "react-native";
+import { View, Text, ScrollView, Alert, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "@/navigation/types"; // ton fichier types.ts
@@ -30,9 +30,17 @@ export default function CharactersScreen() {
                 key={char.id}
                 className="bg-white/10 p-3 rounded-lg mb-3"
               >
-                <Text className="text-white text-lg font-semibold">
-                  {char.name}
-                </Text>
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.navigate("CharacterSheet", {
+                      characterId: String(char.id),
+                    })
+                  }
+                >
+                  <Text className="text-white text-lg font-semibold">
+                    {char.name}
+                  </Text>
+                </TouchableOpacity>
                 <Text className="text-white text-sm italic mb-2">
                   {char.profession_name || "Profession à définir"}
                 </Text>
@@ -44,7 +52,20 @@ export default function CharactersScreen() {
                 <Button
                   variant="danger"
                   size="sm"
-                  onPress={() => deleteCharacter.mutate(String(char.id))}
+                  onPress={() =>
+                    Alert.alert(
+                      "Confirmation",
+                      "Voulez-vous supprimer ce personnage ?",
+                      [
+                        { text: "Non", style: "cancel" },
+                        {
+                          text: "Oui",
+                          onPress: () =>
+                            deleteCharacter.mutate(String(char.id)),
+                        },
+                      ]
+                    )
+                  }
                 >
                   Supprimer
                 </Button>
