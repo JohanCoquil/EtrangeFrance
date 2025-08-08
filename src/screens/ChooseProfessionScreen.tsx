@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { ScrollView, View, Dimensions } from "react-native";
-import { Layout, Title, Body, Button, Caption, Card } from "../components/ui";
+import { useState } from "react";
+import { ScrollView, Dimensions } from "react-native";
+import { Layout, Title, Body, Button, Card } from "../components/ui";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
@@ -18,7 +18,7 @@ export default function ChooseProfessionScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<any>();
-  const { characterDraft } = route.params;
+  const { characterId } = route.params;
 
   const [selectedProfession, setSelectedProfession] = useState<number | null>(
     null
@@ -31,7 +31,7 @@ export default function ChooseProfessionScreen() {
     }
 
     // Tu peux ici appeler l’API pour créer en BDD
-    // avec addCharacter.mutate({ ...characterDraft, profession: selectedProfession })
+    // avec addCharacter.mutate({ characterId, profession: selectedProfession })
 
     alert("✅ Personnage finalisé !");
     navigation.navigate("MainTabs", { screen: "Characters" });
