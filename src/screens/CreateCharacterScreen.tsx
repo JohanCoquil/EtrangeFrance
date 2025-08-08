@@ -66,7 +66,7 @@ export default function CreateCharacterScreen() {
     addCharacter.mutate(
       {
         name,
-        species: "À définir",
+        profession: "À définir",
         ...stats,
         creation_step: 1, // marque l’avancement
       },
