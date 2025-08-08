@@ -13,14 +13,14 @@ export function useAddCharacter() {
       const db = getDb();
       await db.execAsync(`
         INSERT INTO characters
-          (id, name, profession_id, profession_score, hobby_id, hobby_score, intelligence, force, dexterite, charisme, memoire, volonte)
+          (id, name, profession_id, profession_score, hobby_id, hobby_score, voie_id, voie_score, intelligence, force, dexterite, charisme, memoire, volonte)
         VALUES
           ('${character.id}', '${character.name}', ${
             character.profession_id ?? "NULL"
           },
           ${character.profession_score ?? 0}, ${
             character.hobby_id ?? "NULL"
-          }, ${character.hobby_score ?? 0},
+          }, ${character.hobby_score ?? 0}, ${character.voie_id ?? "NULL"}, ${character.voie_score ?? 0},
           ${character.intelligence}, ${character.force}, ${character.dexterite},
           ${character.charisme}, ${character.memoire}, ${character.volonte});
       `);
@@ -83,6 +83,31 @@ export function useUpdateHobby() {
   });
 }
 
+export function useUpdateStrangePath() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      voieId,
+      voieScore,
+    }: {
+      id: string;
+      voieId: number;
+      voieScore: number;
+    }) => {
+      const db = getDb();
+      await db.runAsync(
+        "UPDATE characters SET voie_id = ?, voie_score = ? WHERE id = ?",
+        [voieId, voieScore, id]
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["characters"] });
+    },
+  });
+}
+
 export function useDeleteCharacter() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -102,10 +127,11 @@ export function useCharacters() {
     queryFn: async () => {
       const db = getDb();
       const result = await db.getAllAsync(`
-        SELECT c.*, p.name AS profession_name, h.name AS hobby_name
+        SELECT c.*, p.name AS profession_name, h.name AS hobby_name, v.name AS voie_name
         FROM characters c
         LEFT JOIN professions p ON c.profession_id = p.id
         LEFT JOIN hobbies h ON c.hobby_id = h.id
+        LEFT JOIN voies_etranges v ON c.voie_id = v.id
       `);
       return result;
     },
