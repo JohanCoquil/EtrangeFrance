@@ -1,11 +1,10 @@
-import { useState } from "react";
-import { TextInput, View, ScrollView, Dimensions } from "react-native";
+import { useEffect, useState } from "react";
+import { TextInput, View, ScrollView, Alert } from "react-native";
 import { Layout, Title, Body, Button, Caption } from "../components/ui";
 import { useAddCharacter } from "../api/charactersLocal";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
-import { LinearGradient } from "expo-linear-gradient";
 
 type CharacterStats = {
   intelligence: number;
@@ -66,7 +65,7 @@ export default function CreateCharacterScreen() {
     addCharacter.mutate(
       {
         name,
-        profession: "À définir",
+        profession_id: null,
         ...stats,
         creation_step: 1, // marque l’avancement
       },
@@ -81,7 +80,6 @@ export default function CreateCharacterScreen() {
       }
     );
   };
-
 
   const StatRow = ({
     label,
@@ -110,8 +108,9 @@ export default function CreateCharacterScreen() {
           <Body className="text-white font-bold text-lg">-</Body>
         </Button>
         <Body
-          className={`${remainingPoints === 0 ? "text-green-300" : "text-white"
-            } text-2xl font-bold`}
+          className={`${
+            remainingPoints === 0 ? "text-green-300" : "text-white"
+          } text-2xl font-bold`}
         >
           {value}
         </Body>
@@ -126,18 +125,18 @@ export default function CreateCharacterScreen() {
     </View>
   );
 
-
-
-  const { height } = Dimensions.get("window");
+  useEffect(() => {
+    Alert.alert(
+      "Répartition des compétences",
+      "Tu disposes de 17 points à répartir dans chaque compétence, entre 1 et 5.\n1 = inférieur à la normale\n2 = dans la moyenne humaine\n3 = supérieur à la normale\n4 = dans le maximum des compétences humaines\n5 = surhumain"
+    );
+  }, []);
 
   return (
-    <LinearGradient
-      colors={["#0f2027", "#203a43", "#2c5364"]}
-      style={{ flex: 1, minHeight: height }}
-    >
-      <Layout variant="scroll" backgroundColor="gradient" className="px-4">
-        <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-          {/* Titre */}
+    <Layout backgroundColor="gradient" className="flex-1 px-4">
+      <View className="flex-1">
+        {/* En-tête */}
+        <View className="mb-4">
           <Title className="mb-4 text-center text-white text-3xl font-bold tracking-wide shadow-md">
             Création de Personnage
           </Title>
@@ -153,17 +152,19 @@ export default function CreateCharacterScreen() {
 
           {/* Instructions */}
           <Body className="text-center text-gray-200 mb-3">
-            Répartis{" "}
-            <Body className="text-blue-300 font-bold">{MAX_POINTS}</Body> points
+            Répartis <Body className="text-blue-300 font-bold">{MAX_POINTS}</Body> points
             entre tes caractéristiques.
           </Body>
           <Caption
-            className={`text-center mb-6 ${remainingPoints === 0 ? "text-green-400" : "text-gray-400"
-              }`}
+            className={`text-center ${
+              remainingPoints === 0 ? "text-green-400" : "text-gray-400"
+            }`}
           >
             Points restants : {remainingPoints}
           </Caption>
+        </View>
 
+        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
           {/* Caractéristiques */}
           <StatRow
             label="Intelligence"
@@ -225,7 +226,7 @@ export default function CreateCharacterScreen() {
             Un nouvel enquêteur de l'étrange s'apprête à passer les portes de l'Agence...
           </Caption>
         </ScrollView>
-      </Layout>
-    </LinearGradient>
+      </View>
+    </Layout>
   );
 }
