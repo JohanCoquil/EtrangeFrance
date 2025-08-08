@@ -6,14 +6,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { LinearGradient } from "expo-linear-gradient";
 import { useUpdateProfession } from "../api/charactersLocal";
-
-// Mock pour le moment : à remplacer par ton endpoint API
-const mockProfessions = [
-  { id: 1, name: "Archéologue", desc: "Explore les mystères enfouis." },
-  { id: 2, name: "Détective privé", desc: "Résout les affaires occultes." },
-  { id: 3, name: "Médecin", desc: "Soigne même les blessures étranges." },
-  { id: 4, name: "Chasseur de monstres", desc: "Traque l’indicible." },
-];
+import { useProfessions } from "../api/professionsLocal";
 
 export default function ChooseProfessionScreen() {
   const navigation =
@@ -25,6 +18,7 @@ export default function ChooseProfessionScreen() {
     null
   );
   const updateProfession = useUpdateProfession();
+  const { data: professions, isLoading } = useProfessions();
 
   const handleConfirm = () => {
     if (!selectedProfession) {
@@ -32,17 +26,8 @@ export default function ChooseProfessionScreen() {
       return;
     }
 
-    const profession = mockProfessions.find(
-      (p) => p.id === selectedProfession
-    )?.name;
-    if (!profession) {
-      alert("Métier invalide");
-      return;
-    }
-
-
     updateProfession.mutate(
-      { id: characterId, profession },
+      { id: characterId, professionId: selectedProfession },
       {
         onSuccess: () => {
           alert("✅ Personnage finalisé !");
@@ -68,25 +53,29 @@ export default function ChooseProfessionScreen() {
             Choisis ton Métier
           </Title>
 
-          {mockProfessions.map((prof) => (
-            <Card
-              key={prof.id}
-              className={`mb-4 p-5 rounded-xl ${selectedProfession === prof.id
-                  ? "bg-blue-900 border-2 border-blue-400"
-                  : "bg-black/60 border border-gray-600"
-                }`}
-            >
-              <Title className="text-blue-200 text-xl mb-2">{prof.name}</Title>
-              <Body className="text-gray-300 mb-3">{prof.desc}</Body>
-              <Button
-                variant="secondary"
-                onPress={() => setSelectedProfession(prof.id)}
-                className="bg-gray-800 border border-blue-400"
+          {isLoading ? (
+            <Body className="text-center text-white">Chargement...</Body>
+          ) : (
+            professions?.map((prof: any) => (
+              <Card
+                key={prof.id}
+                className={`mb-4 p-5 rounded-xl ${selectedProfession === prof.id
+                    ? "bg-blue-900 border-2 border-blue-400"
+                    : "bg-black/60 border border-gray-600"
+                  }`}
               >
-                {selectedProfession === prof.id ? "✅ Sélectionné" : "Choisir"}
-              </Button>
-            </Card>
-          ))}
+                <Title className="text-blue-200 text-xl mb-2">{prof.name}</Title>
+                <Body className="text-gray-300 mb-3">{prof.description}</Body>
+                <Button
+                  variant="secondary"
+                  onPress={() => setSelectedProfession(prof.id)}
+                  className="bg-gray-800 border border-blue-400"
+                >
+                  {selectedProfession === prof.id ? "✅ Sélectionné" : "Choisir"}
+                </Button>
+              </Card>
+            ))
+          )}
 
           <Button
             variant="primary"
