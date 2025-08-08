@@ -40,6 +40,7 @@ export default function ChooseProfessionScreen() {
       return;
     }
 
+
     updateProfession.mutate(
       { id: characterId, profession },
       {
