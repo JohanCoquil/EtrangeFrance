@@ -78,14 +78,29 @@ export const initDb = async () => {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       profession TEXT,
+      profession_id INTEGER,
       intelligence INTEGER DEFAULT 1,
       force INTEGER DEFAULT 1,
       dexterite INTEGER DEFAULT 1,
       charisme INTEGER DEFAULT 1,
       memoire INTEGER DEFAULT 1,
-      volonte INTEGER DEFAULT 1
+      volonte INTEGER DEFAULT 1,
+      FOREIGN KEY (profession_id) REFERENCES professions(id)
     );
   `);
+
+  // Ensure profession_id column exists for older databases
+  const columns = await database.getAllAsync("PRAGMA table_info(characters);");
+  const hasProfessionId = columns.some((c: any) => c.name === "profession_id");
+  if (!hasProfessionId) {
+    await database.execAsync(
+      "ALTER TABLE characters ADD COLUMN profession_id INTEGER;"
+    );
+  }
+
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_characters_profession_id ON characters(profession_id);"
+  );
 };
 
 export const resetDb = async () => {
