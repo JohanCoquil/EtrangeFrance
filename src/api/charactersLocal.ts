@@ -13,9 +13,11 @@ export function useAddCharacter() {
       const db = getDb();
       await db.execAsync(`
         INSERT INTO characters
-          (id, name, profession, intelligence, force, dexterite, charisme, memoire, volonte)
+          (id, name, profession_id, intelligence, force, dexterite, charisme, memoire, volonte)
         VALUES
-          ('${character.id}', '${character.name}', '${character.profession}',
+          ('${character.id}', '${character.name}', ${
+            character.profession_id ?? "NULL"
+          },
           ${character.intelligence}, ${character.force}, ${character.dexterite},
           ${character.charisme}, ${character.memoire}, ${character.volonte});
       `);
@@ -32,12 +34,18 @@ export function useUpdateProfession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, profession }: { id: string; profession: string }) => {
+    mutationFn: async ({
+      id,
+      professionId,
+    }: {
+      id: string;
+      professionId: number;
+    }) => {
       const db = getDb();
-      await db.runAsync("UPDATE characters SET profession = ? WHERE id = ?", [
-        profession,
-        id,
-      ]);
+      await db.runAsync(
+        "UPDATE characters SET profession_id = ? WHERE id = ?",
+        [professionId, id]
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["characters"] });
@@ -63,7 +71,11 @@ export function useCharacters() {
     queryKey: ["characters"],
     queryFn: async () => {
       const db = getDb();
-      const result = await db.getAllAsync("SELECT * FROM characters");
+      const result = await db.getAllAsync(`
+        SELECT c.*, p.name AS profession_name
+        FROM characters c
+        LEFT JOIN professions p ON c.profession_id = p.id
+      `);
       return result;
     },
   });
