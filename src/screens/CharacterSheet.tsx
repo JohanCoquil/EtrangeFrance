@@ -1,10 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { View, TextInput, Dimensions, ScrollView } from "react-native";
 import { createAudioPlayer, AudioPlayer, setAudioModeAsync } from "expo-audio";
-import {
-  PanGestureHandler,
-  PanGestureHandlerEventPayload,
-} from "react-native-gesture-handler";
+import { PanGestureHandler, State } from "react-native-gesture-handler";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { Layout, Title, Body, Caption } from "../components/ui";
 import { RootStackParamList } from "../navigation/types";
@@ -70,8 +67,7 @@ export default function CharacterSheet() {
 
   const createPanHandlers = (direction: "left" | "right") => {
     const onGestureEvent = (event: any) => {
-      const { translationX, translationY } =
-        event.nativeEvent as PanGestureHandlerEventPayload;
+      const { translationX, translationY } = event.nativeEvent;
       if (
         !soundPlayed.current &&
         Math.abs(translationX) > SWIPE_SOUND_THRESHOLD &&
@@ -83,26 +79,33 @@ export default function CharacterSheet() {
       }
     };
 
-    const onBegan = () => {
-      soundPlayed.current = false;
-    };
+    const onHandlerStateChange = (event: any) => {
+      const { state, translationX, translationY, velocityX } =
+        event.nativeEvent;
 
-    const onEnded = (event: any) => {
-      const { translationX, translationY } =
-        event.nativeEvent as PanGestureHandlerEventPayload;
+      if (state === State.BEGAN) {
+        soundPlayed.current = false;
+      }
+
       if (
-        Math.abs(translationX) > Math.abs(translationY) &&
-        Math.abs(translationX) > SWIPE_FLIP_THRESHOLD
+        state === State.END ||
+        state === State.CANCELLED ||
+        state === State.FAILED
       ) {
-        if (direction === "left" && translationX < 0) {
-          handleFlip();
-        } else if (direction === "right" && translationX > 0) {
-          handleFlip();
+        const strongDistance = Math.abs(translationX) > SWIPE_FLIP_THRESHOLD;
+        const strongVelocity = Math.abs(velocityX) > 600;
+
+        if (
+          (strongDistance || strongVelocity) &&
+          Math.abs(translationX) > Math.abs(translationY)
+        ) {
+          if (direction === "left" && translationX < 0) handleFlip();
+          if (direction === "right" && translationX > 0) handleFlip();
         }
       }
     };
 
-    return { onGestureEvent, onBegan, onEnded };
+    return { onGestureEvent, onHandlerStateChange };
   };
 
   const frontPan = createPanHandlers("left");
@@ -123,9 +126,9 @@ export default function CharacterSheet() {
       <CardFlip style={{ width, height }} ref={cardRef}>
         <PanGestureHandler
           onGestureEvent={frontPan.onGestureEvent}
-          onBegan={frontPan.onBegan}
-          onEnded={frontPan.onEnded}
-          failOffsetY={[-20, 20]}
+          onHandlerStateChange={frontPan.onHandlerStateChange}
+          activeOffsetX={[-40, 40]}
+          failOffsetY={[-12, 12]}
         >
           <Layout
             backgroundColor="gradient"
@@ -218,9 +221,9 @@ export default function CharacterSheet() {
         </PanGestureHandler>
         <PanGestureHandler
           onGestureEvent={backPan.onGestureEvent}
-          onBegan={backPan.onBegan}
-          onEnded={backPan.onEnded}
-          failOffsetY={[-20, 20]}
+          onHandlerStateChange={backPan.onHandlerStateChange}
+          activeOffsetX={[-40, 40]}
+          failOffsetY={[-12, 12]}
         >
           <Layout
             backgroundColor="gradient"
