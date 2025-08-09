@@ -1,5 +1,6 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, TextInput, Dimensions } from 'react-native';
+import { Audio } from 'expo-av';
 import GestureRecognizer, {
   GestureRecognizerProps,
 } from 'react-native-swipe-gestures';
@@ -15,6 +16,7 @@ export default function CharacterSheet() {
   const { characterId } = route.params;
   const { width, height } = Dimensions.get('window');
   const cardRef = useRef<CardFlipRef>(null);
+  const flipSound = useRef<Audio.Sound | null>(null);
   const { data: characters, isLoading } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
   const { data: capacites } = useCharacterCapacites(characterId);
@@ -50,7 +52,27 @@ export default function CharacterSheet() {
     directionalOffsetThreshold: 80,
   };
 
-  const handleFlip = () => cardRef.current?.flip();
+  useEffect(() => {
+    let isMounted = true;
+    const loadSound = async () => {
+      const { sound } = await Audio.Sound.createAsync(
+        require('../../sounds/page.aac')
+      );
+      if (isMounted) {
+        flipSound.current = sound;
+      }
+    };
+    loadSound();
+    return () => {
+      isMounted = false;
+      flipSound.current?.unloadAsync();
+    };
+  }, []);
+
+  const handleFlip = () => {
+    flipSound.current?.replayAsync();
+    cardRef.current?.flip();
+  };
 
   return (
     <Layout backgroundColor="gradient" className="flex-1">
