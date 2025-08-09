@@ -1,5 +1,8 @@
 import React, { useRef } from 'react';
-import { View, TextInput, Dimensions, Pressable } from 'react-native';
+import { View, TextInput, Dimensions } from 'react-native';
+import GestureRecognizer, {
+  GestureRecognizerConfig,
+} from 'react-native-swipe-gestures';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { Layout, Title, Body, Caption } from '../components/ui';
 import { RootStackParamList } from '../navigation/types';
@@ -42,9 +45,20 @@ export default function CharacterSheet() {
     { label: 'Santé', value: character.sante },
   ];
 
+  const swipeConfig: GestureRecognizerConfig = {
+    velocityThreshold: 0.2,
+    directionalOffsetThreshold: 80,
+  };
+
+  const handleFlip = () => cardRef.current?.flip();
+
   return (
     <CardFlip style={{ width, height }} ref={cardRef}>
-      <Pressable onPress={() => cardRef.current?.flip()} style={{ flex: 1 }}>
+      <GestureRecognizer
+        onSwipeLeft={handleFlip}
+        config={swipeConfig}
+        style={{ flex: 1 }}
+      >
         <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
           <View className="mb-6">
             <Title className="text-center text-3xl font-bold text-white tracking-widest">
@@ -127,8 +141,12 @@ export default function CharacterSheet() {
             </Title>
           </View>
         </Layout>
-      </Pressable>
-      <Pressable onPress={() => cardRef.current?.flip()} style={{ flex: 1 }}>
+      </GestureRecognizer>
+      <GestureRecognizer
+        onSwipeRight={handleFlip}
+        config={swipeConfig}
+        style={{ flex: 1 }}
+      >
         <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
           <View className="mb-6">
             <Title className="text-center text-3xl font-bold text-purple-300 tracking-widest">
@@ -216,7 +234,7 @@ export default function CharacterSheet() {
             </Caption>
           </View>
         </Layout>
-      </Pressable>
+      </GestureRecognizer>
     </CardFlip>
   );
 }
