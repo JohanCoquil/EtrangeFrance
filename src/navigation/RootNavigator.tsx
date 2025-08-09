@@ -10,6 +10,7 @@ import { RootStackParamList } from './types';
 import DeckScreen from '../screens/DeckScreen';
 import CardDrawScreen from '../screens/CardDrawScreen';
 import CharacterSheet from '../screens/CharacterSheet';
+import CharacterHistory from '../screens/CharacterHistory';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -26,6 +27,7 @@ export default function RootNavigator() {
       <Stack.Screen name="Deck" component={DeckScreen} />
       <Stack.Screen name="CardDraw" component={CardDrawScreen} />
       <Stack.Screen name="CharacterSheet" component={CharacterSheet} />
+      <Stack.Screen name="CharacterHistory" component={CharacterHistory} />
     </Stack.Navigator>
   );
 }
