@@ -6,27 +6,28 @@ export function useAddCharacter() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (newCharacter: any) => {
-      const id = await Crypto.randomUUID();
-      const character = { id, ...newCharacter };
+      mutationFn: async (newCharacter: any) => {
+        const id = await Crypto.randomUUID();
+        const character = { id, ...newCharacter };
+        character.sante = (character.force + character.volonte) * 2;
 
-      const db = getDb();
-      await db.execAsync(`
-        INSERT INTO characters
-          (id, name, profession_id, profession_score, hobby_id, hobby_score, voie_id, voie_score, intelligence, force, dexterite, charisme, memoire, volonte)
-        VALUES
-          ('${character.id}', '${character.name}', ${
-            character.profession_id ?? "NULL"
-          },
-          ${character.profession_score ?? 0}, ${
-            character.hobby_id ?? "NULL"
-          }, ${character.hobby_score ?? 0}, ${character.voie_id ?? "NULL"}, ${character.voie_score ?? 0},
-          ${character.intelligence}, ${character.force}, ${character.dexterite},
-          ${character.charisme}, ${character.memoire}, ${character.volonte});
-      `);
+        const db = getDb();
+        await db.execAsync(`
+          INSERT INTO characters
+            (id, name, profession_id, profession_score, hobby_id, hobby_score, voie_id, voie_score, intelligence, force, dexterite, charisme, memoire, volonte, sante)
+          VALUES
+            ('${character.id}', '${character.name}', ${
+              character.profession_id ?? "NULL"
+            },
+            ${character.profession_score ?? 0}, ${
+              character.hobby_id ?? "NULL"
+            }, ${character.hobby_score ?? 0}, ${character.voie_id ?? "NULL"}, ${character.voie_score ?? 0},
+            ${character.intelligence}, ${character.force}, ${character.dexterite},
+            ${character.charisme}, ${character.memoire}, ${character.volonte}, ${character.sante});
+        `);
 
-      return character;
-    },
+        return character;
+      },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["characters"] });
     },
