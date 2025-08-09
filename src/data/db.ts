@@ -46,6 +46,16 @@ export const initDb = async () => {
       UNIQUE (capacite_id, rang)
     );
 
+    CREATE TABLE IF NOT EXISTS character_capacites (
+      character_id TEXT NOT NULL,
+      capacite_id INTEGER NOT NULL,
+      level INTEGER NOT NULL,
+      PRIMARY KEY (character_id, capacite_id),
+      FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
+      FOREIGN KEY (capacite_id) REFERENCES capacites(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_character_capacites_character_id ON character_capacites(character_id);
+
     CREATE TABLE IF NOT EXISTS hobbies (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
@@ -100,6 +110,31 @@ export const initDb = async () => {
       (2, 'Chaman', 'Vous êtes le réceptacle du savoir de nombreuses générations.'),
       (3, 'Chasseur de monstres', 'Like Buffy you know !!'),
       (4, 'Goule', 'Dans vos veines coule le sang d''un tueur sans âme.');
+
+    INSERT OR IGNORE INTO capacites (id, voie_id, name, description) VALUES
+      (1, 1, 'Alchimie utilitaire', 'Permet de créer des potions utiles pour le quotidien'),
+      (2, 1, 'Alchimie des remèdes magiques', 'Concocte des remèdes qui soignent la magie'),
+      (3, 1, 'Alchimie de transmutation', 'Transforme la matière pour altérer ses propriétés'),
+      (4, 1, 'Familier', 'Un compagnon mystique qui vous assiste'),
+      (5, 1, 'Hypnose', 'Influence l’esprit des autres par la suggestion'),
+      (6, 2, 'Appel de la nature', 'Invoque la force des éléments naturels'),
+      (7, 2, 'Champ de protection magique', 'Érige une barrière contre les attaques mystiques'),
+      (8, 2, 'Chant envoutant', 'Utilise la musique pour canaliser la magie'),
+      (9, 2, 'Communion avec les esprits', 'Dialogue avec les esprits du monde invisible'),
+      (10, 2, 'Rites sacrés', 'Accomplit des cérémonies ancestrales puissantes'),
+      (11, 2, 'Rites de passage des cairns', 'Maîtrise les rituels des lieux sacrés'),
+      (12, 2, 'Guérison mystique', 'Soigne les blessures par l’énergie spirituelle'),
+      (13, 3, 'Agilité surnaturelle', 'Se déplace avec une rapidité inhumaine'),
+      (14, 3, 'Croquemitaine', 'Incarne la peur pour terrifier les monstres'),
+      (15, 3, 'Familier', 'Un allié animal spécialisé dans la chasse aux monstres'),
+      (16, 3, 'Force surnaturelle', 'Déploie une puissance physique extraordinaire'),
+      (17, 3, 'Perception surnaturelle', 'Détecte les dangers cachés et les créatures'),
+      (18, 3, 'Volonté surnaturelle', 'Résiste aux influences occultes'),
+      (19, 4, 'Animalisme', 'Communique et contrôle les bêtes sauvages'),
+      (20, 4, 'Hypnose', 'Soumet les esprits faibles à votre volonté'),
+      (21, 4, 'Force surnaturelle', 'Une puissance brute héritée du sang impur'),
+      (22, 4, 'Perception surnaturelle', 'Voit dans les ténèbres et sent la chair fraîche'),
+      (23, 4, 'Régénération', 'Guérit rapidement des blessures');
 
     INSERT OR IGNORE INTO hobbies (id, name, description) VALUES
       (1, 'Jouer au cinéma', NULL),
