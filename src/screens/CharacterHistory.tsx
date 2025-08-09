@@ -1,10 +1,30 @@
 import React from 'react';
-import { ScrollView, TextInput, View } from 'react-native';
+import { ScrollView, TextInput, View, PanResponder } from 'react-native';
 import { Title, Caption, Body } from '../components/ui';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { RootStackParamList } from '../navigation/types';
 
 export default function CharacterHistory() {
+  const navigation = useNavigation();
+  const route = useRoute<RouteProp<RootStackParamList, 'CharacterHistory'>>();
+  const { characterId } = route.params;
+  const panResponder = React.useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gesture) =>
+        Math.abs(gesture.dx) > Math.abs(gesture.dy) && Math.abs(gesture.dx) > 20,
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dx > 50) {
+          // Swipe right
+          navigation.navigate('CharacterSheet', { characterId });
+        }
+      },
+    })
+  ).current;
   return (
-    <View className="flex-1 bg-gradient-to-b from-black via-gray-900 to-purple-950">
+    <View
+      className="flex-1 bg-gradient-to-b from-black via-gray-900 to-purple-950"
+      {...panResponder.panHandlers}
+    >
       <ScrollView contentContainerStyle={{ padding: 16 }}>
 
         {/* Titre principal */}
