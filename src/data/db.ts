@@ -100,6 +100,7 @@ export const initDb = async () => {
       charisme INTEGER DEFAULT 1,
       memoire INTEGER DEFAULT 1,
       volonte INTEGER DEFAULT 1,
+      sante INTEGER DEFAULT 0,
       FOREIGN KEY (profession_id) REFERENCES professions(id),
       FOREIGN KEY (hobby_id) REFERENCES hobbies(id),
       FOREIGN KEY (voie_id) REFERENCES voies_etranges(id)
