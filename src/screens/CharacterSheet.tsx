@@ -17,7 +17,6 @@ export default function CharacterSheet() {
   const flipSound = useRef<AudioPlayer | null>(null);
   const frontScrollRef = useRef<ScrollView>(null);
   const backScrollRef = useRef<ScrollView>(null);
-  const soundPlayed = useRef(false);
   const [isBack, setIsBack] = useState(false);
   const { data: characters, isLoading } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
@@ -62,30 +61,12 @@ export default function CharacterSheet() {
     };
   }, []);
 
-  const SWIPE_SOUND_THRESHOLD = 20;
   const SWIPE_FLIP_THRESHOLD = 50;
 
   const createPanHandlers = (direction: "left" | "right") => {
-    const onGestureEvent = (event: any) => {
-      const { translationX, translationY } = event.nativeEvent;
-      if (
-        !soundPlayed.current &&
-        Math.abs(translationX) > SWIPE_SOUND_THRESHOLD &&
-        Math.abs(translationX) > Math.abs(translationY)
-      ) {
-        flipSound.current?.seekTo(0);
-        flipSound.current?.play();
-        soundPlayed.current = true;
-      }
-    };
-
     const onHandlerStateChange = (event: any) => {
       const { state, translationX, translationY, velocityX } =
         event.nativeEvent;
-
-      if (state === State.BEGAN) {
-        soundPlayed.current = false;
-      }
 
       if (
         state === State.END ||
@@ -99,13 +80,21 @@ export default function CharacterSheet() {
           (strongDistance || strongVelocity) &&
           Math.abs(translationX) > Math.abs(translationY)
         ) {
-          if (direction === "left" && translationX < 0) handleFlip();
-          if (direction === "right" && translationX > 0) handleFlip();
+          if (direction === "left" && translationX < 0) {
+            flipSound.current?.seekTo(0);
+            flipSound.current?.play();
+            handleFlip();
+          }
+          if (direction === "right" && translationX > 0) {
+            flipSound.current?.seekTo(0);
+            flipSound.current?.play();
+            handleFlip();
+          }
         }
       }
     };
 
-    return { onGestureEvent, onHandlerStateChange };
+    return { onHandlerStateChange };
   };
 
   const frontPan = createPanHandlers("left");
@@ -125,7 +114,6 @@ export default function CharacterSheet() {
     <Layout backgroundColor="gradient" className="flex-1">
       <CardFlip style={{ width, height }} ref={cardRef}>
         <PanGestureHandler
-          onGestureEvent={frontPan.onGestureEvent}
           onHandlerStateChange={frontPan.onHandlerStateChange}
           activeOffsetX={[-40, 40]}
           failOffsetY={[-12, 12]}
@@ -220,7 +208,6 @@ export default function CharacterSheet() {
           </Layout>
         </PanGestureHandler>
         <PanGestureHandler
-          onGestureEvent={backPan.onGestureEvent}
           onHandlerStateChange={backPan.onHandlerStateChange}
           activeOffsetX={[-40, 40]}
           failOffsetY={[-12, 12]}
