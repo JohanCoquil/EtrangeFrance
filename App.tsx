@@ -7,6 +7,7 @@ import React, { useEffect } from 'react';
 import './global.css';
 import { initDb, resetDb } from './src/data/db';
 import { Alert } from "react-native";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function App() {
   useEffect(() => {
@@ -40,12 +41,14 @@ export default function App() {
   }, []);
 
   return (
-    <JotaiProvider>
-      <QueryClientProvider client={queryClient}>
-        <NavigationContainer>
-          <RootNavigator />
-        </NavigationContainer>
-      </QueryClientProvider>
-    </JotaiProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <JotaiProvider>
+        <QueryClientProvider client={queryClient}>
+          <NavigationContainer>
+            <RootNavigator />
+          </NavigationContainer>
+        </QueryClientProvider>
+      </JotaiProvider>
+    </GestureHandlerRootView>
   );
 }

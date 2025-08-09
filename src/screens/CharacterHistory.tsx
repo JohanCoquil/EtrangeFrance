@@ -1,42 +1,39 @@
 import React from 'react';
-import { TextInput, View, PanResponder, Animated } from 'react-native';
+import { TextInput, View } from 'react-native';
 import { Layout, Title, Caption } from '../components/ui';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
 
 export default function CharacterHistory() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RootStackParamList, 'CharacterHistory'>>();
   const { characterId } = route.params;
-  const flipAnim = React.useRef(new Animated.Value(0)).current;
-  const panResponder = React.useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gesture) =>
-        Math.abs(gesture.dx) > Math.abs(gesture.dy) && Math.abs(gesture.dx) > 20,
-      onPanResponderRelease: (_, gesture) => {
-        if (gesture.dx > 50) {
-          Animated.timing(flipAnim, {
-            toValue: -1,
-            duration: 300,
-            useNativeDriver: true,
-          }).start(() => {
-            flipAnim.setValue(0);
-            navigation.navigate('CharacterSheet', { characterId });
-          });
-        }
-      },
-    })
-  ).current;
-  const rotateY = flipAnim.interpolate({
-    inputRange: [-1, 0, 1],
-    outputRange: ['-180deg', '0deg', '180deg'],
+  const flip = useSharedValue(0);
+
+  const goToSheet = () => navigation.navigate('CharacterSheet', { characterId });
+
+  const pan = Gesture.Pan().onEnd((e) => {
+    if (e.translationX > 50) {
+      flip.value = withTiming(-180, { duration: 300 }, () => {
+        flip.value = 0;
+        runOnJS(goToSheet)();
+      });
+    }
   });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ perspective: 1000 }, { rotateY: `${flip.value}deg` }],
+  }));
   return (
-    <Animated.View
-      className="flex-1"
-      style={{ transform: [{ rotateY }] }}
-      {...panResponder.panHandlers}
-    >
+    <GestureDetector gesture={pan}>
+      <Animated.View className="flex-1" style={animatedStyle}>
       <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
         {/* Titre principal */}
         <View className="mb-6">
@@ -130,6 +127,7 @@ export default function CharacterHistory() {
           </Caption>
         </View>
       </Layout>
-    </Animated.View>
+      </Animated.View>
+    </GestureDetector>
   );
 }
