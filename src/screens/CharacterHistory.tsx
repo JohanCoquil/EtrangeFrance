@@ -1,6 +1,6 @@
 import React from 'react';
-import { TextInput, View, PanResponder } from 'react-native';
-import { Layout, Title, Caption, Body } from '../components/ui';
+import { TextInput, View, PanResponder, Animated } from 'react-native';
+import { Layout, Title, Caption } from '../components/ui';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
 
@@ -8,29 +8,41 @@ export default function CharacterHistory() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RootStackParamList, 'CharacterHistory'>>();
   const { characterId } = route.params;
+  const flipAnim = React.useRef(new Animated.Value(0)).current;
   const panResponder = React.useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gesture) =>
         Math.abs(gesture.dx) > Math.abs(gesture.dy) && Math.abs(gesture.dx) > 20,
       onPanResponderRelease: (_, gesture) => {
         if (gesture.dx > 50) {
-          // Swipe right
-          navigation.navigate('CharacterSheet', { characterId });
+          Animated.timing(flipAnim, {
+            toValue: -1,
+            duration: 300,
+            useNativeDriver: true,
+          }).start(() => {
+            flipAnim.setValue(0);
+            navigation.navigate('CharacterSheet', { characterId });
+          });
         }
       },
     })
   ).current;
+  const rotateY = flipAnim.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: ['-180deg', '0deg', '180deg'],
+  });
   return (
-    <View className="flex-1" {...panResponder.panHandlers}>
+    <Animated.View
+      className="flex-1"
+      style={{ transform: [{ rotateY }] }}
+      {...panResponder.panHandlers}
+    >
       <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
         {/* Titre principal */}
         <View className="mb-6">
           <Title className="text-center text-3xl font-bold text-purple-300 tracking-widest">
             HISTORIQUE & NOTES
           </Title>
-          <Caption className="text-center text-purple-200 mt-1">
-            Secrets, Alliances & Révélations
-          </Caption>
         </View>
 
         {/* Backstory */}
@@ -58,18 +70,8 @@ export default function CharacterHistory() {
           <Title className="text-indigo-300 text-xl font-semibold mb-3">
             Rencontres & Alliés
           </Title>
-          <Body className="text-white mb-2">🔮 Mentor Occultiste</Body>
-          <Body className="text-white mb-2">🕵️ Collègue enquêteur</Body>
-          <Body className="text-white">👤 Informateur mystérieux</Body>
-        </View>
-
-        {/* Notes secrètes */}
-        <View className="bg-gray-800/70 rounded-2xl p-4 mb-5 border border-red-600">
-          <Title className="text-red-300 text-xl font-semibold mb-3">
-            Notes Secrètes
-          </Title>
           <TextInput
-            placeholder="Vos réflexions, hypothèses et indices cachés..."
+            placeholder="Listez les rencontres marquantes et vos alliés..."
             placeholderTextColor="#aaa"
             multiline
             style={{
@@ -83,22 +85,42 @@ export default function CharacterHistory() {
           />
         </View>
 
-        {/* Indices collectés */}
-        <View className="bg-gray-800/70 rounded-2xl p-4 mb-5 border border-yellow-600">
-          <Title className="text-yellow-300 text-xl font-semibold mb-3">
-            Indices Collectés
+        {/* Notes */}
+        <View className="bg-gray-800/70 rounded-2xl p-4 mb-5 border border-red-600">
+          <Title className="text-red-300 text-xl font-semibold mb-3">Notes</Title>
+          <TextInput
+            placeholder="Vos réflexions, hypothèses..."
+            placeholderTextColor="#aaa"
+            multiline
+            style={{
+              backgroundColor: 'rgba(0,0,0,0.3)',
+              color: '#fff',
+              borderRadius: 10,
+              padding: 12,
+              minHeight: 120,
+              textAlignVertical: 'top',
+            }}
+          />
+        </View>
+
+        {/* Effets déclenchés / Objets fétiches */}
+        <View className="bg-gray-800/70 rounded-2xl p-4 mb-5 border border-teal-600">
+          <Title className="text-teal-300 text-xl font-semibold mb-3">
+            Effets déclenchés / Objets fétiches
           </Title>
-          <View className="flex-row flex-wrap gap-2">
-            <Body className="bg-yellow-600/40 text-yellow-200 px-3 py-1 rounded-full">
-              Lettre Anonyme
-            </Body>
-            <Body className="bg-yellow-600/40 text-yellow-200 px-3 py-1 rounded-full">
-              Photographie Floue
-            </Body>
-            <Body className="bg-yellow-600/40 text-yellow-200 px-3 py-1 rounded-full">
-              Voix Étrange
-            </Body>
-          </View>
+          <TextInput
+            placeholder="Décrivez les effets spéciaux ou vos objets fétiches..."
+            placeholderTextColor="#aaa"
+            multiline
+            style={{
+              backgroundColor: 'rgba(0,0,0,0.3)',
+              color: '#fff',
+              borderRadius: 10,
+              padding: 12,
+              minHeight: 120,
+              textAlignVertical: 'top',
+            }}
+          />
         </View>
 
         {/* Footer */}
@@ -108,6 +130,6 @@ export default function CharacterHistory() {
           </Caption>
         </View>
       </Layout>
-    </View>
+    </Animated.View>
   );
 }
