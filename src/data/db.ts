@@ -16,6 +16,7 @@ export const initDb = async () => {
 
     CREATE TABLE IF NOT EXISTS voies_etranges (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      distant_id INTEGER DEFAULT 0,
       name TEXT NOT NULL,
       description TEXT NOT NULL,
       image_url TEXT,
@@ -25,6 +26,7 @@ export const initDb = async () => {
 
     CREATE TABLE IF NOT EXISTS capacites (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      distant_id INTEGER DEFAULT 0,
       voie_id INTEGER NOT NULL,
       name TEXT NOT NULL,
       description TEXT NOT NULL,
@@ -37,6 +39,7 @@ export const initDb = async () => {
 
     CREATE TABLE IF NOT EXISTS capacite_rangs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      distant_id INTEGER DEFAULT 0,
       capacite_id INTEGER NOT NULL,
       rang INTEGER NOT NULL CHECK (rang >= 1),
       description TEXT NOT NULL,
@@ -47,6 +50,7 @@ export const initDb = async () => {
     );
 
     CREATE TABLE IF NOT EXISTS character_capacites (
+      distant_id INTEGER DEFAULT 0,
       character_id TEXT NOT NULL,
       capacite_id INTEGER NOT NULL,
       level INTEGER NOT NULL,
@@ -58,6 +62,7 @@ export const initDb = async () => {
 
     CREATE TABLE IF NOT EXISTS hobbies (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      distant_id INTEGER DEFAULT 0,
       name TEXT NOT NULL UNIQUE,
       description TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -65,17 +70,20 @@ export const initDb = async () => {
 
     CREATE TABLE IF NOT EXISTS skills (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      distant_id INTEGER DEFAULT 0,
       name TEXT NOT NULL UNIQUE
     );
 
     CREATE TABLE IF NOT EXISTS professions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      distant_id INTEGER DEFAULT 0,
       name TEXT NOT NULL,
       description TEXT,
       image TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS profession_skills (
+      distant_id INTEGER DEFAULT 0,
       profession_id INTEGER NOT NULL,
       skill_id INTEGER NOT NULL,
       PRIMARY KEY (profession_id, skill_id),
@@ -86,6 +94,7 @@ export const initDb = async () => {
 
     CREATE TABLE IF NOT EXISTS characters (
       id TEXT PRIMARY KEY,
+      distant_id INTEGER DEFAULT 0,
       name TEXT NOT NULL,
       profession TEXT,
       profession_id INTEGER,
