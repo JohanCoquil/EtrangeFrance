@@ -12,7 +12,6 @@ export type RootStackParamList = {
   Deck: undefined;
   CardDraw: undefined;
   CharacterSheet: { characterId: string };
-  CharacterHistory: { characterId: string };
   // Ajoutez d'autres écrans modaux ou stack ici si nécessaire
 };
 
