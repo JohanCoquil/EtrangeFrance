@@ -47,6 +47,8 @@ export default function Layout({
   const paddingTop = showSafeArea ? insets.top : 0;
   const paddingBottom = showSafeArea ? insets.bottom : 0;
 
+  const contentPaddingBottom = paddingBottom + 32; // add extra space for scrolling
+
   const Container = variant === 'scroll' ? ScrollView : View;
 
   // Si gradient, on utilise LinearGradient
@@ -58,7 +60,8 @@ export default function Layout({
       >
         <Container
           className={`${getVariantStyles()} ${className}`}
-          contentContainerStyle={variant === 'scroll' ? { flexGrow: 1 } : undefined}
+          contentContainerStyle=
+            {variant === 'scroll' ? { flexGrow: 1, paddingBottom: contentPaddingBottom } : undefined}
         >
           {children}
         </Container>
@@ -71,7 +74,8 @@ export default function Layout({
     <Container
       style={{ paddingTop, paddingBottom }}
       className={`${getBackgroundColor()} ${getVariantStyles()} ${className}`}
-      contentContainerStyle={variant === 'scroll' ? { flexGrow: 1 } : undefined}
+      contentContainerStyle=
+        {variant === 'scroll' ? { flexGrow: 1, paddingBottom: contentPaddingBottom } : undefined}
     >
       {children}
     </Container>
