@@ -1,40 +1,34 @@
 import React from 'react';
-import { TextInput, View } from 'react-native';
+import { TextInput, View, Dimensions } from 'react-native';
 import { Layout, Title, Caption } from '../components/ui';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, NavigationProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  runOnJS,
-} from 'react-native-reanimated';
+import PageFlipper from 'react-native-mobile-page-flipper';
 
 export default function CharacterHistory() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'CharacterHistory'>>();
   const { characterId } = route.params;
-  const flip = useSharedValue(0);
+  const { width, height } = Dimensions.get('window');
 
   const goToSheet = () => navigation.navigate('CharacterSheet', { characterId });
 
-  const pan = Gesture.Pan().onEnd((e) => {
-    if (e.translationX > 50) {
-      flip.value = withTiming(-180, { duration: 300 }, () => {
-        flip.value = 0;
-        runOnJS(goToSheet)();
-      });
-    }
-  });
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ perspective: 1000 }, { rotateY: `${flip.value}deg` }],
-  }));
   return (
-    <GestureDetector gesture={pan}>
-      <Animated.View className="flex-1" style={animatedStyle}>
-      <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
+    <PageFlipper
+      type="image"
+      data={["", ""]}
+      toIndex={1}
+      portrait
+      pageSize={{ width, height }}
+      contentContainerStyle={{ flex: 1 }}
+      onFlippedEnd={(index) => {
+        if (index === 0) {
+          goToSheet();
+        }
+      }}
+      renderPage={({ index }) =>
+        index === 1 ? (
+          <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
         {/* Titre principal */}
         <View className="mb-6">
           <Title className="text-center text-3xl font-bold text-purple-300 tracking-widest">
@@ -127,7 +121,12 @@ export default function CharacterHistory() {
           </Caption>
         </View>
       </Layout>
-      </Animated.View>
-    </GestureDetector>
+        ) : (
+          <Layout backgroundColor="gradient" className="flex-1">
+            <></>
+          </Layout>
+        )
+      }
+    />
   );
 }

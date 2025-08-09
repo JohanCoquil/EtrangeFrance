@@ -1,39 +1,18 @@
 import React from 'react';
-import { View } from 'react-native';
-import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
+import { View, Dimensions } from 'react-native';
+import { RouteProp, useRoute, useNavigation, NavigationProp } from '@react-navigation/native';
 import { Layout, Title, Body } from '../components/ui';
 import { RootStackParamList } from '../navigation/types';
 import { useCharacters } from '@/api/charactersLocal';
 import { useCharacterCapacites } from '@/api/capacitiesLocal';
-import { GestureDetector, Gesture } from 'react-native-gesture-handler';
-import Animated, {
-  useSharedValue,
-  withTiming,
-  useAnimatedStyle,
-  runOnJS,
-} from 'react-native-reanimated';
+import PageFlipper from 'react-native-mobile-page-flipper';
 
 export default function CharacterSheet() {
   const route = useRoute<RouteProp<RootStackParamList, 'CharacterSheet'>>();
   const { characterId } = route.params;
-  const navigation = useNavigation();
-  const flip = useSharedValue(0);
-
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const goToHistory = () => navigation.navigate('CharacterHistory', { characterId });
-
-  const pan = Gesture.Pan()
-    .onEnd((e) => {
-      if (e.translationX < -50) {
-        flip.value = withTiming(180, { duration: 300 }, () => {
-          flip.value = 0;
-          runOnJS(goToHistory)();
-        });
-      }
-    });
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ perspective: 1000 }, { rotateY: `${flip.value}deg` }],
-  }));
+  const { width, height } = Dimensions.get('window');
   const { data: characters, isLoading } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
   const { data: capacites } = useCharacterCapacites(characterId);
@@ -65,14 +44,25 @@ export default function CharacterSheet() {
   ];
 
   return (
-    <GestureDetector gesture={pan}>
-      <Animated.View className="flex-1" style={animatedStyle}>
-      <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
-        <View className="mb-6">
-          <Title className="text-center text-3xl font-bold text-white tracking-widest">
-            {character.name}
-          </Title>
-        </View>
+    <PageFlipper
+      type="image"
+      data={["", ""]}
+      portrait
+      pageSize={{ width, height }}
+      contentContainerStyle={{ flex: 1 }}
+      onFlippedEnd={(index) => {
+        if (index === 1) {
+          goToHistory();
+        }
+      }}
+      renderPage={({ index }) =>
+        index === 0 ? (
+          <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
+          <View className="mb-6">
+            <Title className="text-center text-3xl font-bold text-white tracking-widest">
+              {character.name}
+            </Title>
+          </View>
 
       <View className="bg-gray-800/70 rounded-2xl p-4 mb-5 border border-blue-600">
         <Title className="text-white text-xl font-semibold mb-3">
@@ -149,7 +139,12 @@ export default function CharacterSheet() {
           </Title>
         </View>
       </Layout>
-      </Animated.View>
-    </GestureDetector>
+        ) : (
+          <Layout backgroundColor="gradient" className="flex-1">
+            <></>
+          </Layout>
+        )
+      }
+    />
   );
 }
