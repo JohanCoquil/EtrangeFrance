@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { ScrollView, View, Modal, TextInput } from "react-native";
 import { Layout, Title, Body, Button, Card, Caption } from "../components/ui";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { useUpdateHobby } from "../api/charactersLocal";
-import { useHobbies } from "../api/hobbiesLocal";
+import { useHobbies, useAddHobby } from "../api/hobbiesLocal";
 
 export default function ChooseHobbieScreen() {
   const navigation =
@@ -16,6 +16,9 @@ export default function ChooseHobbieScreen() {
   const [selectedHobby, setSelectedHobby] = useState<number | null>(null);
   const updateHobby = useUpdateHobby();
   const { data: hobbies, isLoading } = useHobbies();
+  const addHobby = useAddHobby();
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [newHobbyName, setNewHobbyName] = useState("");
 
   const handleConfirm = () => {
     if (!selectedHobby) {
@@ -32,7 +35,39 @@ export default function ChooseHobbieScreen() {
         onError: (err) => {
           alert("❌ Erreur lors de l'enregistrement : " + err);
         },
-      }
+      },
+    );
+  };
+
+  const handleCreateHobby = () => {
+    const name = newHobbyName.trim();
+    if (!name) {
+      alert("Nom requis");
+      return;
+    }
+
+    addHobby.mutate(
+      { name },
+      {
+        onSuccess: (hobbyId) => {
+          setModalVisible(false);
+          setNewHobbyName("");
+          updateHobby.mutate(
+            { id: characterId, hobbyId, hobbyScore: 2 },
+            {
+              onSuccess: () => {
+                navigation.navigate("ChooseStrangePath", { characterId });
+              },
+              onError: (err) => {
+                alert("❌ Erreur lors de l'enregistrement : " + err);
+              },
+            },
+          );
+        },
+        onError: (err) => {
+          alert("❌ Erreur lors de l'ajout : " + err);
+        },
+      },
     );
   };
 
@@ -46,7 +81,10 @@ export default function ChooseHobbieScreen() {
         {isLoading ? (
           <Body className="text-center text-white">Chargement...</Body>
         ) : (
-          <ScrollView className="flex-1 mb-4" contentContainerStyle={{ paddingBottom: 16 }}>
+          <ScrollView
+            className="flex-1 mb-4"
+            contentContainerStyle={{ paddingBottom: 16 }}
+          >
             {hobbies?.map((hob: any) => (
               <Card
                 key={hob.id}
@@ -69,6 +107,16 @@ export default function ChooseHobbieScreen() {
                 </Button>
               </Card>
             ))}
+            <Card className="mb-4 p-5 rounded-xl bg-black/60 border border-gray-600">
+              <Title className="text-blue-200 text-xl mb-2">Autre hobbie</Title>
+              <Button
+                variant="secondary"
+                onPress={() => setModalVisible(true)}
+                className="bg-gray-800 border border-blue-400"
+              >
+                Ajouter
+              </Button>
+            </Card>
           </ScrollView>
         )}
       </View>
@@ -88,6 +136,37 @@ export default function ChooseHobbieScreen() {
           Même les enquêteurs ont besoin d'un passe-temps.
         </Caption>
       </View>
+
+      <Modal visible={isModalVisible} transparent animationType="slide">
+        <View className="flex-1 justify-center bg-black/60 p-4">
+          <View className="bg-gray-900 p-4 rounded-lg">
+            <Title className="text-white text-xl mb-2">Nouveau Hobbie</Title>
+            <TextInput
+              placeholder="Nom du hobbie"
+              value={newHobbyName}
+              onChangeText={setNewHobbyName}
+              className="border border-blue-500 rounded-lg p-2 mb-3 text-white"
+              placeholderTextColor="#aaa"
+            />
+            <View className="flex-row justify-between">
+              <Button
+                variant="secondary"
+                onPress={() => setModalVisible(false)}
+                className="flex-1 mr-2 bg-gray-700 border border-gray-500"
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="secondary"
+                onPress={handleCreateHobby}
+                className="flex-1 ml-2 bg-blue-800 border border-blue-500"
+              >
+                Valider
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Layout>
   );
 }
