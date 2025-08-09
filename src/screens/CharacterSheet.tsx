@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { View, TextInput, Dimensions } from 'react-native';
 import GestureRecognizer, {
-  GestureRecognizerConfig,
+  GestureRecognizerProps,
 } from 'react-native-swipe-gestures';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { Layout, Title, Body, Caption } from '../components/ui';
@@ -45,7 +45,7 @@ export default function CharacterSheet() {
     { label: 'Santé', value: character.sante },
   ];
 
-  const swipeConfig: GestureRecognizerConfig = {
+  const swipeConfig: GestureRecognizerProps['config'] = {
     velocityThreshold: 0.2,
     directionalOffsetThreshold: 80,
   };
