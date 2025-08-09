@@ -7,7 +7,7 @@ export function useCapacitesByVoie(voieId: number) {
     queryFn: async () => {
       const db = getDb();
       return await db.getAllAsync(
-        "SELECT id, name, description FROM capacites WHERE voie_id = ?",
+        "SELECT id, name, description FROM capacites WHERE voie_id = ? order by name",
         [voieId]
       );
     },

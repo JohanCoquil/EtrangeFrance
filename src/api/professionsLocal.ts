@@ -11,7 +11,8 @@ export function useProfessions() {
          FROM professions p
          LEFT JOIN profession_skills ps ON ps.profession_id = p.id
          LEFT JOIN skills s ON s.id = ps.skill_id
-         GROUP BY p.id`
+         GROUP BY p.id
+         ORDER BY p.name`
       );
       return result.map((row: any) => ({
         ...row,

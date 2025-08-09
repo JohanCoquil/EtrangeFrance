@@ -6,7 +6,7 @@ export function useHobbies() {
     queryKey: ["hobbies"],
     queryFn: async () => {
       const db = getDb();
-      const result = await db.getAllAsync("SELECT * FROM hobbies");
+      const result = await db.getAllAsync("SELECT * FROM hobbies order by name");
       return result;
     },
   });
