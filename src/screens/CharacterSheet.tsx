@@ -255,6 +255,19 @@ export default function CharacterSheet() {
               <Title className="text-yellow-300 text-xl font-semibold mb-3">
                 Équipement
               </Title>
+              <TextInput
+                placeholder="Listez votre équipement et vos objets..."
+                placeholderTextColor="#aaa"
+                multiline
+                style={{
+                  backgroundColor: "rgba(0,0,0,0.3)",
+                  color: "#fff",
+                  borderRadius: 10,
+                  padding: 12,
+                  minHeight: 120,
+                  textAlignVertical: "top",
+                }}
+              />
             </View>
 
             <View className="bg-gray-800/70 rounded-2xl p-4 mb-5 border border-teal-600">
