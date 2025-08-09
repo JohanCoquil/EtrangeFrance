@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, PanResponder } from 'react-native';
+import { View, PanResponder, Animated } from 'react-native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { Layout, Title, Body } from '../components/ui';
 import { RootStackParamList } from '../navigation/types';
@@ -10,18 +10,29 @@ export default function CharacterSheet() {
   const route = useRoute<RouteProp<RootStackParamList, 'CharacterSheet'>>();
   const { characterId } = route.params;
   const navigation = useNavigation();
+  const flipAnim = React.useRef(new Animated.Value(0)).current;
   const panResponder = React.useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gesture) =>
         Math.abs(gesture.dx) > Math.abs(gesture.dy) && Math.abs(gesture.dx) > 20,
       onPanResponderRelease: (_, gesture) => {
         if (gesture.dx < -50) {
-          // Swipe left
-          navigation.navigate('CharacterHistory', { characterId });
+          Animated.timing(flipAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }).start(() => {
+            flipAnim.setValue(0);
+            navigation.navigate('CharacterHistory', { characterId });
+          });
         }
       },
     })
   ).current;
+  const rotateY = flipAnim.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: ['-180deg', '0deg', '180deg'],
+  });
   const { data: characters, isLoading } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
   const { data: capacites } = useCharacterCapacites(characterId);
@@ -53,7 +64,11 @@ export default function CharacterSheet() {
   ];
 
   return (
-    <View className="flex-1" {...panResponder.panHandlers}>
+    <Animated.View
+      className="flex-1"
+      style={{ transform: [{ rotateY }] }}
+      {...panResponder.panHandlers}
+    >
       <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
         <View className="mb-6">
           <Title className="text-center text-3xl font-bold text-white tracking-widest">
@@ -136,6 +151,6 @@ export default function CharacterSheet() {
           </Title>
         </View>
       </Layout>
-    </View>
+    </Animated.View>
   );
 }
