@@ -1,6 +1,6 @@
 import React from 'react';
-import { ScrollView, TextInput, View, PanResponder } from 'react-native';
-import { Title, Caption, Body } from '../components/ui';
+import { TextInput, View, PanResponder } from 'react-native';
+import { Layout, Title, Caption, Body } from '../components/ui';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
 
@@ -21,12 +21,8 @@ export default function CharacterHistory() {
     })
   ).current;
   return (
-    <View
-      className="flex-1 bg-gradient-to-b from-black via-gray-900 to-purple-950"
-      {...panResponder.panHandlers}
-    >
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
-
+    <View className="flex-1" {...panResponder.panHandlers}>
+      <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
         {/* Titre principal */}
         <View className="mb-6">
           <Title className="text-center text-3xl font-bold text-purple-300 tracking-widest">
@@ -111,7 +107,7 @@ export default function CharacterHistory() {
             Étrange France © 2025 - Dossier confidentiel
           </Caption>
         </View>
-      </ScrollView>
+      </Layout>
     </View>
   );
 }
