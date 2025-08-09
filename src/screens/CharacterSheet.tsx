@@ -158,14 +158,9 @@ export default function CharacterSheet() {
             )}
           </View>
 
-          <View className="bg-gray-800/70 rounded-2xl p-4 mb-5 border border-yellow-600">
-            <Title className="text-yellow-300 text-xl font-semibold mb-3">
-              Équipement
-            </Title>
-          </View>
-        </Layout>
-      </GestureRecognizer>
-      <GestureRecognizer
+          </Layout>
+        </GestureRecognizer>
+        <GestureRecognizer
         onSwipeRight={handleFlip} // swipe left to right to return front
         config={swipeConfig}
         style={{ flex: 1 }}
@@ -230,6 +225,12 @@ export default function CharacterSheet() {
                 textAlignVertical: 'top',
               }}
             />
+          </View>
+
+          <View className="bg-gray-800/70 rounded-2xl p-4 mb-5 border border-yellow-600">
+            <Title className="text-yellow-300 text-xl font-semibold mb-3">
+              Équipement
+            </Title>
           </View>
 
           <View className="bg-gray-800/70 rounded-2xl p-4 mb-5 border border-teal-600">
