@@ -1,15 +1,10 @@
 import React, { useRef, useEffect, useState } from "react";
-import {
-  View,
-  TextInput,
-  Dimensions,
-  ScrollView,
-  GestureResponderEvent,
-} from "react-native";
+import { View, TextInput, Dimensions, ScrollView } from "react-native";
 import { createAudioPlayer, AudioPlayer, setAudioModeAsync } from "expo-audio";
-import GestureRecognizer, {
-  GestureRecognizerProps,
-} from "react-native-swipe-gestures";
+import {
+  PanGestureHandler,
+  PanGestureHandlerEventPayload,
+} from "react-native-gesture-handler";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { Layout, Title, Body, Caption } from "../components/ui";
 import { RootStackParamList } from "../navigation/types";
@@ -25,7 +20,6 @@ export default function CharacterSheet() {
   const flipSound = useRef<AudioPlayer | null>(null);
   const frontScrollRef = useRef<ScrollView>(null);
   const backScrollRef = useRef<ScrollView>(null);
-  const touchStart = useRef({ x: 0, y: 0 });
   const soundPlayed = useRef(false);
   const [isBack, setIsBack] = useState(false);
   const { data: characters, isLoading } = useCharacters();
@@ -58,11 +52,6 @@ export default function CharacterSheet() {
     { label: "Santé", value: character.sante },
   ];
 
-  const swipeConfig: GestureRecognizerProps["config"] = {
-    velocityThreshold: 0.2,
-    directionalOffsetThreshold: 80,
-  };
-
   useEffect(() => {
     setAudioModeAsync({
       playsInSilentMode: true,
@@ -76,24 +65,48 @@ export default function CharacterSheet() {
     };
   }, []);
 
-  const handleSwipeStart = (e: GestureResponderEvent) => {
-    touchStart.current = {
-      x: e.nativeEvent.pageX,
-      y: e.nativeEvent.pageY,
+  const SWIPE_SOUND_THRESHOLD = 20;
+  const SWIPE_FLIP_THRESHOLD = 50;
+
+  const createPanHandlers = (direction: "left" | "right") => {
+    const onGestureEvent = (event: any) => {
+      const { translationX, translationY } =
+        event.nativeEvent as PanGestureHandlerEventPayload;
+      if (
+        !soundPlayed.current &&
+        Math.abs(translationX) > SWIPE_SOUND_THRESHOLD &&
+        Math.abs(translationX) > Math.abs(translationY)
+      ) {
+        flipSound.current?.seekTo(0);
+        flipSound.current?.play();
+        soundPlayed.current = true;
+      }
     };
-    soundPlayed.current = false;
+
+    const onBegan = () => {
+      soundPlayed.current = false;
+    };
+
+    const onEnded = (event: any) => {
+      const { translationX, translationY } =
+        event.nativeEvent as PanGestureHandlerEventPayload;
+      if (
+        Math.abs(translationX) > Math.abs(translationY) &&
+        Math.abs(translationX) > SWIPE_FLIP_THRESHOLD
+      ) {
+        if (direction === "left" && translationX < 0) {
+          handleFlip();
+        } else if (direction === "right" && translationX > 0) {
+          handleFlip();
+        }
+      }
+    };
+
+    return { onGestureEvent, onBegan, onEnded };
   };
 
-  const handleSwipeMove = (e: GestureResponderEvent) => {
-    if (soundPlayed.current) return;
-    const dx = e.nativeEvent.pageX - touchStart.current.x;
-    const dy = e.nativeEvent.pageY - touchStart.current.y;
-    if (Math.abs(dx) > 20 && Math.abs(dx) > Math.abs(dy)) {
-      flipSound.current?.seekTo(0);
-      flipSound.current?.play();
-      soundPlayed.current = true;
-    }
-  };
+  const frontPan = createPanHandlers("left");
+  const backPan = createPanHandlers("right");
 
   const handleFlip = () => {
     if (isBack) {
@@ -108,12 +121,11 @@ export default function CharacterSheet() {
   return (
     <Layout backgroundColor="gradient" className="flex-1">
       <CardFlip style={{ width, height }} ref={cardRef}>
-        <GestureRecognizer
-          onSwipeLeft={handleFlip} // swipe right to left to show back
-          config={swipeConfig}
-          style={{ flex: 1 }}
-          onTouchStart={handleSwipeStart}
-          onTouchMove={handleSwipeMove}
+        <PanGestureHandler
+          onGestureEvent={frontPan.onGestureEvent}
+          onBegan={frontPan.onBegan}
+          onEnded={frontPan.onEnded}
+          failOffsetY={[-20, 20]}
         >
           <Layout
             backgroundColor="gradient"
@@ -203,13 +215,12 @@ export default function CharacterSheet() {
               )}
             </View>
           </Layout>
-        </GestureRecognizer>
-        <GestureRecognizer
-          onSwipeRight={handleFlip} // swipe left to right to return front
-          config={swipeConfig}
-          style={{ flex: 1 }}
-          onTouchStart={handleSwipeStart}
-          onTouchMove={handleSwipeMove}
+        </PanGestureHandler>
+        <PanGestureHandler
+          onGestureEvent={backPan.onGestureEvent}
+          onBegan={backPan.onBegan}
+          onEnded={backPan.onEnded}
+          failOffsetY={[-20, 20]}
         >
           <Layout
             backgroundColor="gradient"
@@ -324,7 +335,7 @@ export default function CharacterSheet() {
               </Caption>
             </View>
           </Layout>
-        </GestureRecognizer>
+        </PanGestureHandler>
       </CardFlip>
     </Layout>
   );
