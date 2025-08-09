@@ -47,7 +47,7 @@ export default function ChooseVoieCapacitiesScreen() {
       { characterId, capacites: data },
       {
         onSuccess: () => {
-          alert("✅ Capacités enregistrées");
+          //alert("✅ Capacités enregistrées");
           navigation.navigate("MainTabs", { screen: "Characters" });
         },
         onError: (err) => alert("❌ Erreur : " + err),

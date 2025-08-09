@@ -22,7 +22,7 @@ const strangePaths = [
   {
     id: 3,
     name: "Chasseur de monstres",
-    description: "Like Buffy you know !!",
+    description: "Like SUPERNATURAL you know !!",
     image: require("../../assets/illustrations/background3.jpg"),
   },
   {
@@ -54,7 +54,7 @@ export default function ChooseStrangePathScreen() {
       { id: characterId, voieId: selected.id, voieScore: 2 },
       {
         onSuccess: () => {
-          alert(`✅ Voie étrange sélectionnée : ${selected.name}`);
+          //alert(`✅ Voie étrange sélectionnée : ${selected.name}`);
           navigation.navigate("ChooseVoieCapacities", {
             characterId,
             voieId: selected.id,
