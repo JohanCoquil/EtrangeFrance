@@ -53,18 +53,19 @@ export default function CharacterSheet() {
   const handleFlip = () => cardRef.current?.flip();
 
   return (
-    <CardFlip style={{ width, height }} ref={cardRef}>
-      <GestureRecognizer
-        onSwipeLeft={handleFlip}
-        config={swipeConfig}
-        style={{ flex: 1 }}
-      >
-        <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
-          <View className="mb-6">
-            <Title className="text-center text-3xl font-bold text-white tracking-widest">
-              {character.name}
-            </Title>
-          </View>
+    <Layout backgroundColor="gradient" className="flex-1">
+      <CardFlip style={{ width, height }} ref={cardRef}>
+        <GestureRecognizer
+          onSwipeLeft={handleFlip} // swipe right to left to show back
+          config={swipeConfig}
+          style={{ flex: 1 }}
+        >
+          <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
+            <View className="mb-6">
+              <Title className="text-center text-3xl font-bold text-white tracking-widest">
+                {character.name}
+              </Title>
+            </View>
 
           <View className="bg-gray-800/70 rounded-2xl p-4 mb-5 border border-blue-600">
             <Title className="text-white text-xl font-semibold mb-3">
@@ -143,7 +144,7 @@ export default function CharacterSheet() {
         </Layout>
       </GestureRecognizer>
       <GestureRecognizer
-        onSwipeRight={handleFlip}
+        onSwipeRight={handleFlip} // swipe left to right to return front
         config={swipeConfig}
         style={{ flex: 1 }}
       >
@@ -236,5 +237,6 @@ export default function CharacterSheet() {
         </Layout>
       </GestureRecognizer>
     </CardFlip>
+  </Layout>
   );
 }
