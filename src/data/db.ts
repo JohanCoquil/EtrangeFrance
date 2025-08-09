@@ -448,12 +448,19 @@ export const initDb = async () => {
       (7, 64);
   `);
 
-  // Ensure profession_id column exists for older databases
+  // Ensure new columns exist for older databases
   const columns = await database.getAllAsync("PRAGMA table_info(characters);");
   const hasProfessionId = columns.some((c: any) => c.name === "profession_id");
   if (!hasProfessionId) {
     await database.execAsync(
       "ALTER TABLE characters ADD COLUMN profession_id INTEGER;"
+    );
+  }
+
+  const hasSante = columns.some((c: any) => c.name === "sante");
+  if (!hasSante) {
+    await database.execAsync(
+      "ALTER TABLE characters ADD COLUMN sante INTEGER DEFAULT 0;"
     );
   }
 

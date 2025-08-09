@@ -36,6 +36,7 @@ export default function CharacterSheet() {
     { label: 'Charisme', value: character.charisme },
     { label: 'Mémoire', value: character.memoire },
     { label: 'Volonté', value: character.volonte },
+    { label: 'Santé', value: character.sante },
   ];
 
   return (
