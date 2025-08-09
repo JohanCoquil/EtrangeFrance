@@ -22,10 +22,16 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.EtrangeFrance"
+      "package": "com.anonymous.EtrangeFrance",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "24846888-0c93-4d6b-9070-a4939cbbc930"
+      }
     }
   }
 }
