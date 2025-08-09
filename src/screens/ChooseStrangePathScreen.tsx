@@ -55,7 +55,10 @@ export default function ChooseStrangePathScreen() {
       {
         onSuccess: () => {
           alert(`✅ Voie étrange sélectionnée : ${selected.name}`);
-          navigation.navigate("MainTabs", { screen: "Characters" });
+          navigation.navigate("ChooseVoieCapacities", {
+            characterId,
+            voieId: selected.id,
+          });
         },
         onError: (err) => {
           alert("❌ Erreur lors de l'enregistrement : " + err);

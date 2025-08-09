@@ -4,12 +4,14 @@ import { RouteProp, useRoute } from '@react-navigation/native';
 import { Layout, Title, Body } from '../components/ui';
 import { RootStackParamList } from '../navigation/types';
 import { useCharacters } from '@/api/charactersLocal';
+import { useCharacterCapacites } from '@/api/capacitiesLocal';
 
 export default function CharacterSheet() {
   const route = useRoute<RouteProp<RootStackParamList, 'CharacterSheet'>>();
   const { characterId } = route.params;
   const { data: characters, isLoading } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
+  const { data: capacites } = useCharacterCapacites(characterId);
 
   if (isLoading) {
     return (
@@ -89,10 +91,25 @@ export default function CharacterSheet() {
           Voie étrange
         </Title>
         {character.voie_name ? (
-          <View className="flex-row justify-between">
-            <Body className="text-white">{character.voie_name}</Body>
-            <Body className="text-white">{character.voie_score}</Body>
-          </View>
+          <>
+            <View className="flex-row justify-between">
+              <Body className="text-white">{character.voie_name}</Body>
+              <Body className="text-white">{character.voie_score}</Body>
+            </View>
+            {capacites && capacites.length > 0 ? (
+              capacites.map((cap: any) => (
+                <View
+                  key={cap.id}
+                  className="flex-row justify-between ml-4 mt-1"
+                >
+                  <Body className="text-purple-200">{cap.name}</Body>
+                  <Body className="text-purple-200">{cap.level}</Body>
+                </View>
+              ))
+            ) : (
+              <Body className="text-white">Aucune capacité</Body>
+            )}
+          </>
         ) : (
           <Body className="text-white">Aucune</Body>
         )}
