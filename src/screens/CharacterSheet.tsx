@@ -1,5 +1,11 @@
 import React, { useRef, useEffect, useState } from "react";
-import { View, TextInput, Dimensions, ScrollView } from "react-native";
+import {
+  View,
+  TextInput,
+  Dimensions,
+  ScrollView,
+  GestureResponderEvent,
+} from "react-native";
 import { createAudioPlayer, AudioPlayer, setAudioModeAsync } from "expo-audio";
 import GestureRecognizer, {
   GestureRecognizerProps,
@@ -19,6 +25,8 @@ export default function CharacterSheet() {
   const flipSound = useRef<AudioPlayer | null>(null);
   const frontScrollRef = useRef<ScrollView>(null);
   const backScrollRef = useRef<ScrollView>(null);
+  const touchStart = useRef({ x: 0, y: 0 });
+  const soundPlayed = useRef(false);
   const [isBack, setIsBack] = useState(false);
   const { data: characters, isLoading } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
@@ -68,9 +76,26 @@ export default function CharacterSheet() {
     };
   }, []);
 
+  const handleSwipeStart = (e: GestureResponderEvent) => {
+    touchStart.current = {
+      x: e.nativeEvent.pageX,
+      y: e.nativeEvent.pageY,
+    };
+    soundPlayed.current = false;
+  };
+
+  const handleSwipeMove = (e: GestureResponderEvent) => {
+    if (soundPlayed.current) return;
+    const dx = e.nativeEvent.pageX - touchStart.current.x;
+    const dy = e.nativeEvent.pageY - touchStart.current.y;
+    if (Math.abs(dx) > 20 && Math.abs(dx) > Math.abs(dy)) {
+      flipSound.current?.seekTo(0);
+      flipSound.current?.play();
+      soundPlayed.current = true;
+    }
+  };
+
   const handleFlip = () => {
-    flipSound.current?.seekTo(0);
-    flipSound.current?.play();
     if (isBack) {
       frontScrollRef.current?.scrollTo({ y: 0, animated: true });
     } else {
@@ -87,6 +112,8 @@ export default function CharacterSheet() {
           onSwipeLeft={handleFlip} // swipe right to left to show back
           config={swipeConfig}
           style={{ flex: 1 }}
+          onTouchStart={handleSwipeStart}
+          onTouchMove={handleSwipeMove}
         >
           <Layout
             backgroundColor="gradient"
@@ -181,6 +208,8 @@ export default function CharacterSheet() {
           onSwipeRight={handleFlip} // swipe left to right to return front
           config={swipeConfig}
           style={{ flex: 1 }}
+          onTouchStart={handleSwipeStart}
+          onTouchMove={handleSwipeMove}
         >
           <Layout
             backgroundColor="gradient"
