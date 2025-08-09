@@ -1,5 +1,5 @@
 import { View, ScrollView } from 'react-native';
-import { ReactNode } from 'react';
+import { ReactNode, forwardRef } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -11,13 +11,17 @@ interface LayoutProps {
   backgroundColor?: 'light' | 'dark' | 'gray' | 'gradient';
 }
 
-export default function Layout({
-  children,
-  variant = 'default',
-  className = '',
-  showSafeArea = true,
-  backgroundColor = 'light',
-}: LayoutProps) {
+const Layout = forwardRef<View | ScrollView, LayoutProps>(
+  (
+    {
+      children,
+      variant = 'default',
+      className = '',
+      showSafeArea = true,
+      backgroundColor = 'light',
+    }: LayoutProps,
+    ref,
+  ) => {
   const insets = useSafeAreaInsets();
 
   const getBackgroundColor = () => {
@@ -59,6 +63,7 @@ export default function Layout({
         style={{ flex: 1, paddingTop, paddingBottom }}
       >
         <Container
+          ref={ref as any}
           className={`${getVariantStyles()} ${className}`}
           contentContainerStyle=
             {variant === 'scroll' ? { flexGrow: 1, paddingBottom: contentPaddingBottom } : undefined}
@@ -72,6 +77,7 @@ export default function Layout({
   // Sinon, comportement classique
   return (
     <Container
+      ref={ref as any}
       style={{ paddingTop, paddingBottom }}
       className={`${getBackgroundColor()} ${getVariantStyles()} ${className}`}
       contentContainerStyle=
@@ -80,4 +86,7 @@ export default function Layout({
       {children}
     </Container>
   );
-}
+},
+);
+
+export default Layout;
