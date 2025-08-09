@@ -1,6 +1,6 @@
-import React, { useRef, useEffect } from "react";
-import { View, TextInput, Dimensions } from "react-native";
-import { createAudioPlayer, AudioPlayer } from "expo-audio";
+import React, { useRef, useEffect, useState } from "react";
+import { View, TextInput, Dimensions, ScrollView } from "react-native";
+import { createAudioPlayer, AudioPlayer, setAudioModeAsync } from "expo-audio";
 import GestureRecognizer, {
   GestureRecognizerProps,
 } from "react-native-swipe-gestures";
@@ -17,6 +17,9 @@ export default function CharacterSheet() {
   const { width, height } = Dimensions.get("window");
   const cardRef = useRef<CardFlipRef>(null);
   const flipSound = useRef<AudioPlayer | null>(null);
+  const frontScrollRef = useRef<ScrollView>(null);
+  const backScrollRef = useRef<ScrollView>(null);
+  const [isBack, setIsBack] = useState(false);
   const { data: characters, isLoading } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
   const { data: capacites } = useCharacterCapacites(characterId);
@@ -53,6 +56,11 @@ export default function CharacterSheet() {
   };
 
   useEffect(() => {
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      interruptionMode: "mixWithOthers",
+      interruptionModeAndroid: "duckOthers",
+    });
     const player = createAudioPlayer(require("../../sounds/page.aac"));
     flipSound.current = player;
     return () => {
@@ -63,7 +71,13 @@ export default function CharacterSheet() {
   const handleFlip = () => {
     flipSound.current?.seekTo(0);
     flipSound.current?.play();
+    if (isBack) {
+      frontScrollRef.current?.scrollTo({ y: 0, animated: true });
+    } else {
+      backScrollRef.current?.scrollTo({ y: 0, animated: true });
+    }
     cardRef.current?.flip();
+    setIsBack((prev) => !prev);
   };
 
   return (
@@ -78,6 +92,7 @@ export default function CharacterSheet() {
             backgroundColor="gradient"
             variant="scroll"
             className="px-4 py-6"
+            ref={frontScrollRef}
           >
             <View className="mb-6">
               <Title className="text-center text-3xl font-bold text-white tracking-widest">
@@ -171,6 +186,7 @@ export default function CharacterSheet() {
             backgroundColor="gradient"
             variant="scroll"
             className="px-4 py-6"
+            ref={backScrollRef}
           >
             <View className="mb-6">
               <Title className="text-center text-3xl font-bold text-purple-300 tracking-widest">
