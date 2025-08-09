@@ -26,8 +26,10 @@ export default function RootNavigator() {
       <Stack.Screen name="ChooseVoieCapacities" component={ChooseVoieCapacitiesScreen} />
       <Stack.Screen name="Deck" component={DeckScreen} />
       <Stack.Screen name="CardDraw" component={CardDrawScreen} />
-      <Stack.Screen name="CharacterSheet" component={CharacterSheet} />
-      <Stack.Screen name="CharacterHistory" component={CharacterHistory} />
+      <Stack.Group screenOptions={{ animation: 'flip', presentation: 'modal' }}>
+        <Stack.Screen name="CharacterSheet" component={CharacterSheet} />
+        <Stack.Screen name="CharacterHistory" component={CharacterHistory} />
+      </Stack.Group>
     </Stack.Navigator>
   );
 }
