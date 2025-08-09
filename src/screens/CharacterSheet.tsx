@@ -1,16 +1,17 @@
-import React from 'react';
-import { View, TextInput, Dimensions } from 'react-native';
+import React, { useRef } from 'react';
+import { View, TextInput, Dimensions, Pressable } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { Layout, Title, Body, Caption } from '../components/ui';
 import { RootStackParamList } from '../navigation/types';
 import { useCharacters } from '@/api/charactersLocal';
 import { useCharacterCapacites } from '@/api/capacitiesLocal';
-import GestureFlipView from 'react-native-gesture-flip-card';
+import CardFlip from 'react-native-card-flip';
 
 export default function CharacterSheet() {
   const route = useRoute<RouteProp<RootStackParamList, 'CharacterSheet'>>();
   const { characterId } = route.params;
   const { width, height } = Dimensions.get('window');
+  const cardRef = useRef<CardFlip>(null);
   const { data: characters, isLoading } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
   const { data: capacites } = useCharacterCapacites(characterId);
@@ -42,10 +43,9 @@ export default function CharacterSheet() {
   ];
 
   return (
-    <GestureFlipView
-      width={width}
-      height={height}
-      renderFront={() => (
+    // @ts-ignore children are supported by react-native-card-flip
+    <CardFlip style={{ width, height }} ref={cardRef}>
+      <Pressable onPress={() => cardRef.current?.flip()} style={{ flex: 1 }}>
         <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
           <View className="mb-6">
             <Title className="text-center text-3xl font-bold text-white tracking-widest">
@@ -128,8 +128,8 @@ export default function CharacterSheet() {
             </Title>
           </View>
         </Layout>
-      )}
-      renderBack={() => (
+      </Pressable>
+      <Pressable onPress={() => cardRef.current?.flip()} style={{ flex: 1 }}>
         <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
           <View className="mb-6">
             <Title className="text-center text-3xl font-bold text-purple-300 tracking-widest">
@@ -217,7 +217,7 @@ export default function CharacterSheet() {
             </Caption>
           </View>
         </Layout>
-      )}
-    />
+      </Pressable>
+    </CardFlip>
   );
 }
