@@ -1,38 +1,39 @@
 import React from 'react';
-import { View, PanResponder, Animated } from 'react-native';
+import { View } from 'react-native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { Layout, Title, Body } from '../components/ui';
 import { RootStackParamList } from '../navigation/types';
 import { useCharacters } from '@/api/charactersLocal';
 import { useCharacterCapacites } from '@/api/capacitiesLocal';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  withTiming,
+  useAnimatedStyle,
+  runOnJS,
+} from 'react-native-reanimated';
 
 export default function CharacterSheet() {
   const route = useRoute<RouteProp<RootStackParamList, 'CharacterSheet'>>();
   const { characterId } = route.params;
   const navigation = useNavigation();
-  const flipAnim = React.useRef(new Animated.Value(0)).current;
-  const panResponder = React.useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gesture) =>
-        Math.abs(gesture.dx) > Math.abs(gesture.dy) && Math.abs(gesture.dx) > 20,
-      onPanResponderRelease: (_, gesture) => {
-        if (gesture.dx < -50) {
-          Animated.timing(flipAnim, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-          }).start(() => {
-            flipAnim.setValue(0);
-            navigation.navigate('CharacterHistory', { characterId });
-          });
-        }
-      },
-    })
-  ).current;
-  const rotateY = flipAnim.interpolate({
-    inputRange: [-1, 0, 1],
-    outputRange: ['-180deg', '0deg', '180deg'],
-  });
+  const flip = useSharedValue(0);
+
+  const goToHistory = () => navigation.navigate('CharacterHistory', { characterId });
+
+  const pan = Gesture.Pan()
+    .onEnd((e) => {
+      if (e.translationX < -50) {
+        flip.value = withTiming(180, { duration: 300 }, () => {
+          flip.value = 0;
+          runOnJS(goToHistory)();
+        });
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ perspective: 1000 }, { rotateY: `${flip.value}deg` }],
+  }));
   const { data: characters, isLoading } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
   const { data: capacites } = useCharacterCapacites(characterId);
@@ -64,11 +65,8 @@ export default function CharacterSheet() {
   ];
 
   return (
-    <Animated.View
-      className="flex-1"
-      style={{ transform: [{ rotateY }] }}
-      {...panResponder.panHandlers}
-    >
+    <GestureDetector gesture={pan}>
+      <Animated.View className="flex-1" style={animatedStyle}>
       <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
         <View className="mb-6">
           <Title className="text-center text-3xl font-bold text-white tracking-widest">
@@ -151,6 +149,7 @@ export default function CharacterSheet() {
           </Title>
         </View>
       </Layout>
-    </Animated.View>
+      </Animated.View>
+    </GestureDetector>
   );
 }
