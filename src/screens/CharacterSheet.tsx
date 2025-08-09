@@ -5,13 +5,13 @@ import { Layout, Title, Body, Caption } from '../components/ui';
 import { RootStackParamList } from '../navigation/types';
 import { useCharacters } from '@/api/charactersLocal';
 import { useCharacterCapacites } from '@/api/capacitiesLocal';
-import CardFlip from 'react-native-card-flip';
+import CardFlip, { CardFlipRef } from '@/components/CardFlip';
 
 export default function CharacterSheet() {
   const route = useRoute<RouteProp<RootStackParamList, 'CharacterSheet'>>();
   const { characterId } = route.params;
   const { width, height } = Dimensions.get('window');
-  const cardRef = useRef<CardFlip>(null);
+  const cardRef = useRef<CardFlipRef>(null);
   const { data: characters, isLoading } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
   const { data: capacites } = useCharacterCapacites(characterId);
@@ -43,7 +43,6 @@ export default function CharacterSheet() {
   ];
 
   return (
-    // @ts-ignore children are supported by react-native-card-flip
     <CardFlip style={{ width, height }} ref={cardRef}>
       <Pressable onPress={() => cardRef.current?.flip()} style={{ flex: 1 }}>
         <Layout backgroundColor="gradient" variant="scroll" className="px-4 py-6">
