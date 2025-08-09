@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDb } from "../data/db";
 
 export function useProfessions() {
@@ -18,6 +18,53 @@ export function useProfessions() {
         ...row,
         skills: row.skills ? (row.skills as string).split(',') : [],
       }));
+    },
+  });
+}
+
+export function useAddProfession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      name,
+      skills,
+    }: {
+      name: string;
+      skills: string[];
+    }) => {
+      const db = getDb();
+      const result = await db.runAsync(
+        "INSERT INTO professions (name, description, image) VALUES (?, NULL, '')",
+        [name]
+      );
+      const professionId = result.lastInsertRowId as number;
+
+      for (const skillName of skills) {
+        const existing = await db.getAllAsync(
+          "SELECT id FROM skills WHERE name = ?",
+          [skillName]
+        );
+        let skillId: number;
+        if (existing.length > 0) {
+          skillId = existing[0].id as number;
+        } else {
+          const skillResult = await db.runAsync(
+            "INSERT INTO skills (name) VALUES (?)",
+            [skillName]
+          );
+          skillId = skillResult.lastInsertRowId as number;
+        }
+        await db.runAsync(
+          "INSERT INTO profession_skills (profession_id, skill_id) VALUES (?, ?)",
+          [professionId, skillId]
+        );
+      }
+
+      return professionId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["professions"] });
     },
   });
 }

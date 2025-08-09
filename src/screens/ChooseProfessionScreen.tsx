@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { ScrollView, View, Modal, TextInput } from "react-native";
 import { Layout, Title, Body, Button, Card, Caption } from "../components/ui";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { useUpdateProfession } from "../api/charactersLocal";
-import { useProfessions } from "../api/professionsLocal";
+import { useProfessions, useAddProfession } from "../api/professionsLocal";
 
 export default function ChooseProfessionScreen() {
   const navigation =
@@ -18,6 +18,10 @@ export default function ChooseProfessionScreen() {
   );
   const updateProfession = useUpdateProfession();
   const { data: professions, isLoading } = useProfessions();
+  const addProfession = useAddProfession();
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [newProfessionName, setNewProfessionName] = useState("");
+  const [skillInputs, setSkillInputs] = useState<string[]>(["", "", ""]);
 
   const handleConfirm = () => {
     if (!selectedProfession) {
@@ -33,6 +37,52 @@ export default function ChooseProfessionScreen() {
         },
         onError: (err) => {
           alert("❌ Erreur lors de l'enregistrement : " + err);
+        },
+      }
+    );
+  };
+
+  const addSkillField = () => {
+    if (skillInputs.length < 5) {
+      setSkillInputs([...skillInputs, ""]);
+    }
+  };
+
+  const updateSkill = (index: number, value: string) => {
+    const updated = [...skillInputs];
+    updated[index] = value;
+    setSkillInputs(updated);
+  };
+
+  const handleCreateProfession = () => {
+    const name = newProfessionName.trim();
+    const skills = skillInputs.map((s) => s.trim()).filter((s) => s);
+    if (!name || skills.length < 3) {
+      alert("Nom et au moins 3 compétences requis");
+      return;
+    }
+
+    addProfession.mutate(
+      { name, skills },
+      {
+        onSuccess: (professionId) => {
+          setModalVisible(false);
+          setNewProfessionName("");
+          setSkillInputs(["", "", ""]);
+          updateProfession.mutate(
+            { id: characterId, professionId, professionScore: 3 },
+            {
+              onSuccess: () => {
+                navigation.navigate("ChooseHobbie", { characterId });
+              },
+              onError: (err) => {
+                alert("❌ Erreur lors de l'enregistrement : " + err);
+              },
+            }
+          );
+        },
+        onError: (err) => {
+          alert("❌ Erreur lors de l'ajout : " + err);
         },
       }
     );
@@ -76,6 +126,18 @@ export default function ChooseProfessionScreen() {
                 </Button>
               </Card>
             ))}
+            <Card className="mb-4 p-5 rounded-xl bg-black/60 border border-gray-600">
+              <Title className="text-blue-200 text-xl mb-2">
+                Autre métier
+              </Title>
+              <Button
+                variant="secondary"
+                onPress={() => setModalVisible(true)}
+                className="bg-gray-800 border border-blue-400"
+              >
+                Ajouter
+              </Button>
+            </Card>
           </ScrollView>
         )}
       </View>
@@ -95,6 +157,56 @@ export default function ChooseProfessionScreen() {
           Avant de devenir enquêteur, vous aviez une vie, des amis... Une profession.
         </Caption>
       </View>
+
+      <Modal visible={isModalVisible} transparent animationType="slide">
+        <View className="flex-1 justify-center bg-black/60 p-4">
+          <View className="bg-gray-900 p-4 rounded-lg">
+            <Title className="text-white text-xl mb-2">Nouveau Métier</Title>
+            <TextInput
+              placeholder="Nom du métier"
+              value={newProfessionName}
+              onChangeText={setNewProfessionName}
+              className="border border-blue-500 rounded-lg p-2 mb-3 text-white"
+              placeholderTextColor="#aaa"
+            />
+            {skillInputs.map((skill, idx) => (
+              <TextInput
+                key={idx}
+                placeholder={`Compétence ${idx + 1}`}
+                value={skill}
+                onChangeText={(text) => updateSkill(idx, text)}
+                className="border border-blue-500 rounded-lg p-2 mb-3 text-white"
+                placeholderTextColor="#aaa"
+              />
+            ))}
+            {skillInputs.length < 5 && (
+              <Button
+                variant="secondary"
+                onPress={addSkillField}
+                className="mb-3 bg-gray-800 border border-blue-400"
+              >
+                Ajouter une compétence
+              </Button>
+            )}
+            <View className="flex-row justify-between">
+              <Button
+                variant="secondary"
+                onPress={() => setModalVisible(false)}
+                className="flex-1 mr-2 bg-gray-700 border border-gray-500"
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="secondary"
+                onPress={handleCreateProfession}
+                className="flex-1 ml-2 bg-blue-800 border border-blue-500"
+              >
+                Valider
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Layout>
   );
 }
