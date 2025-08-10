@@ -15,8 +15,10 @@ export async function syncDatabase() {
 }
 
 async function pushLocalChanges(db: SQLite.SQLiteDatabase) {
+  await pushTable(db, "skills", ["name"]);
   await pushTable(db, "professions", ["name", "description", "image"]);
   await pushTable(db, "hobbies", ["name", "description"]);
+  await pushProfessionSkills(db);
 }
 
 async function pushTable(
@@ -48,6 +50,36 @@ async function pushTable(
       }
     } catch (e) {
       console.error(`Failed to push ${table} row`, e);
+    }
+  }
+}
+
+async function pushProfessionSkills(db: SQLite.SQLiteDatabase) {
+  const rows = (await db.getAllAsync(
+    `SELECT * FROM profession_skills WHERE distant_id = 0`
+  )) as any[];
+  for (const row of rows) {
+    try {
+      const res = await fetch(`${API_URL}/profession_skills`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profession_id: row.profession_id,
+          skill_id: row.skill_id,
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const newId = json.id ?? json[0]?.id;
+        if (newId) {
+          await db.runAsync(
+            "UPDATE profession_skills SET distant_id = ? WHERE profession_id = ? AND skill_id = ?",
+            [newId, row.profession_id, row.skill_id]
+          );
+        }
+      }
+    } catch (e) {
+      console.error("Failed to push profession_skills row", e);
     }
   }
 }
