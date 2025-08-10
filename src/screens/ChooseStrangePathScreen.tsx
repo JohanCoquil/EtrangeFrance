@@ -23,9 +23,12 @@ export default function ChooseStrangePathScreen() {
   const { width } = Dimensions.get("window");
   const updateStrangePath = useUpdateStrangePath();
   const { data: strangePaths = [], isLoading } = useStrangePaths();
+  const sortedStrangePaths = [...strangePaths].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
 
   const handleConfirm = () => {
-    const selected = strangePaths[currentIndex];
+    const selected = sortedStrangePaths[currentIndex];
     if (!selected) {
       alert("Choisis une voie étrange pour ton enquêteur !");
       return;
@@ -62,9 +65,12 @@ export default function ChooseStrangePathScreen() {
       </Title>
 
       <FlatList<StrangePath>
-        data={strangePaths}
+        data={sortedStrangePaths}
         horizontal
         pagingEnabled
+        removeClippedSubviews={false}
+        initialNumToRender={2}
+        windowSize={3}
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.id.toString()}
         onMomentumScrollEnd={(e) =>
