@@ -1,3 +1,4 @@
+// ChooseStrangePathScreen.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -20,11 +21,11 @@ export default function ChooseStrangePathScreen() {
   const route = useRoute<any>();
   const { characterId } = route.params;
 
-  const { width, height } = Dimensions.get("window");
+  const { width } = Dimensions.get("window");
   const { data: strangePaths = [], isLoading } = useStrangePaths();
   const updateStrangePath = useUpdateStrangePath();
 
-  // Données triées et stables
+  // Données stables triées (une seule ref tant que strangePaths ne change pas)
   const paths = useMemo<StrangePath[]>(
     () => [...strangePaths].sort((a, b) => a.name.localeCompare(b.name)),
     [strangePaths]
@@ -32,7 +33,7 @@ export default function ChooseStrangePathScreen() {
 
   const [index, setIndex] = useState(0);
 
-  // Animations
+  // --- Animations (RN Animated, pas Reanimated) ---
   const translateX = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(1)).current;
 
@@ -71,20 +72,32 @@ export default function ChooseStrangePathScreen() {
     });
   };
 
-  // Swipe
-  const SWIPE_DIST = 60;
-  const SWIPE_VEL = 600;
+  // --- Swipe horizontal fiable (le parent prend la main) ---
+  const [isPanning, setIsPanning] = useState(false);
+  const SWIPE_DIST = 80; // px : distance minimale pour valider un swipe
 
   const panResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) =>
-        Math.abs(g.dx) > 20 && Math.abs(g.dx) > Math.abs(g.dy),
-      onPanResponderEnd: (_, g) => {
-        const toLeft = g.dx < -SWIPE_DIST || g.vx < -SWIPE_VEL / 1000;
-        const toRight = g.dx > SWIPE_DIST || g.vx > SWIPE_VEL / 1000;
-        if (toLeft && index < paths.length - 1) animateTo(index + 1, "left");
-        else if (toRight && index > 0) animateTo(index - 1, "right");
+      // capter tôt si c'est horizontal
+      onMoveShouldSetPanResponder: (_evt, g) =>
+        Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy),
+      onMoveShouldSetPanResponderCapture: (_evt, g) =>
+        Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy),
+
+      onPanResponderGrant: () => setIsPanning(true),
+
+      onPanResponderRelease: (_evt, g) => {
+        setIsPanning(false);
+        const toLeft = g.dx <= -SWIPE_DIST;
+        const toRight = g.dx >= SWIPE_DIST;
+
+        if (toLeft && index < paths.length - 1) {
+          animateTo(index + 1, "left");
+        } else if (toRight && index > 0) {
+          animateTo(index - 1, "right");
+        }
       },
+      onPanResponderTerminate: () => setIsPanning(false),
     })
   ).current;
 
@@ -117,6 +130,11 @@ export default function ChooseStrangePathScreen() {
 
   const item = paths[index];
 
+  // NOTE images :
+  // - Si tes images sont LOCALES, remplace { uri: item.image_url } par un mapping statique require(...)
+  //   (RN n'accepte pas require() dynamique).
+  // - Si item.image_url est déjà une URL http(s), laisse tel quel.
+
   return (
     <Layout backgroundColor="gradient" className="flex-1">
       <Title className="mb-2 px-4 text-center text-white text-3xl font-bold tracking-wide">
@@ -141,7 +159,7 @@ export default function ChooseStrangePathScreen() {
             <ImageBackground
               source={
                 item.image_url
-                  ? { uri: item.image_url } // ⚠️ si images locales: remplace par un mapping require(...)
+                  ? { uri: item.image_url }
                   : require("../../assets/illustrations/background.jpg")
               }
               style={{ width: "100%", height: 220 }}
@@ -155,13 +173,15 @@ export default function ChooseStrangePathScreen() {
             {item.name}
           </Title>
 
-          {/* Description – scroll vertical, fond noir, hauteur garantie */}
+          {/* Description : scroll vertical, fond noir.
+              On bloque le scroll pendant le swipe pour que le parent garde la main. */}
           <View style={{ flex: 1, minHeight: 140 }}>
             <ScrollView
               style={{ flex: 1 }}
               contentContainerStyle={{ paddingBottom: 8 }}
               nestedScrollEnabled
               showsVerticalScrollIndicator
+              scrollEnabled={!isPanning} // ← clé : le ScrollView ne “vole” pas le geste
             >
               <View className="p-4 bg-black rounded-lg">
                 <Body className="text-gray-200">
