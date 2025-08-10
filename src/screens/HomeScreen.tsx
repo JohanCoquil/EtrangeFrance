@@ -78,15 +78,18 @@ export default function HomeScreen({ navigation }: Props) {
   }, [nextIndex]);
 
   useEffect(() => {
-    setAudioModeAsync({
-      playsInSilentMode: true,
-      interruptionMode: 'mixWithOthers',
-      interruptionModeAndroid: 'duckOthers',
-    });
-    const player = createAudioPlayer(require('../../sounds/minitel.mp3'));
-    minitelPlayer.current = player;
+    const setup = async () => {
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        interruptionMode: 'mixWithOthers',
+        interruptionModeAndroid: 'duckOthers',
+      });
+      const player = createAudioPlayer(require('../../sounds/minitel.mp3'));
+      minitelPlayer.current = player;
+    };
+    setup();
     return () => {
-      player.remove();
+      minitelPlayer.current?.remove();
       minitelPlayer.current = null;
     };
   }, []);
@@ -95,7 +98,7 @@ export default function HomeScreen({ navigation }: Props) {
     if (!initModal) return;
     const run = async () => {
       setPlayMusic(false);
-      minitelPlayer.current?.seekTo(0);
+      await minitelPlayer.current?.seekTo(0);
       minitelPlayer.current?.play();
       await new Promise((res) => setTimeout(res, 12000));
       minitelPlayer.current?.pause();
