@@ -3,16 +3,16 @@ import {
   NavigationContainer,
   useNavigationContainerRef,
 } from '@react-navigation/native';
-import RootNavigator from './src/navigation/RootNavigator';
+import RootNavigator from '@/navigation/RootNavigator';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from './src/api/queryClient';
+import { queryClient } from '@/api/queryClient';
 import { Provider as JotaiProvider } from 'jotai';
 import React, { useEffect } from 'react';
 import './global.css';
-import { initDb, resetDb } from './src/data/db';
+import { initDb, resetDb } from '@/data/db';
 import { Alert } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { PlayMusicProvider, usePlayMusic } from './src/context/PlayMusicContext';
+import { PlayMusicProvider, usePlayMusic } from '@/context/PlayMusicContext';
 
 export default function App() {
   useEffect(() => {
