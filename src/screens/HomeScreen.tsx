@@ -14,11 +14,10 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import { VideoView, useVideoPlayer } from 'expo-video';
+import { Audio, Video } from 'expo-av';
 import { TabParamList, RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
 import { syncDatabase } from '@/data/sync';
-import { createAudioPlayer, AudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { usePlayMusic } from '@/context/PlayMusicContext';
 
 type Props = BottomTabScreenProps<TabParamList, 'Home'>;
@@ -45,14 +44,10 @@ export default function HomeScreen({ navigation }: Props) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const rootNavigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const minitelPlayer = useRef<AudioPlayer | null>(null);
+  const minitelPlayer = useRef<Audio.Sound | null>(null);
+  const videoRef = useRef<Video>(null);
 
   const { setPlayMusic } = usePlayMusic();
-
-  const videoPlayer = useVideoPlayer(require('../../assets/minitel.mp4'), (player) => {
-    player.loop = true;
-    player.play();
-  });
 
   const handleEnterAgency = () => {
     rootNavigation.navigate('Auth');
@@ -79,17 +74,20 @@ export default function HomeScreen({ navigation }: Props) {
 
   useEffect(() => {
     const setup = async () => {
-      await setAudioModeAsync({
-        playsInSilentMode: true,
-        interruptionMode: 'mixWithOthers',
-        interruptionModeAndroid: 'duckOthers',
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_MIX_WITH_OTHERS,
+        interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DUCK_OTHERS,
+        shouldDuckAndroid: true,
       });
-      const player = createAudioPlayer(require('../../sounds/minitel.mp3'));
-      minitelPlayer.current = player;
+      const { sound } = await Audio.Sound.createAsync(
+        require('../../sounds/minitel.mp3')
+      );
+      minitelPlayer.current = sound;
     };
     setup();
     return () => {
-      minitelPlayer.current?.remove();
+      minitelPlayer.current?.unloadAsync();
       minitelPlayer.current = null;
     };
   }, []);
@@ -98,10 +96,9 @@ export default function HomeScreen({ navigation }: Props) {
     if (!initModal) return;
     const run = async () => {
       setPlayMusic(false);
-      await minitelPlayer.current?.seekTo(0);
-      minitelPlayer.current?.play();
+      await minitelPlayer.current?.replayAsync();
       await new Promise((res) => setTimeout(res, 12000));
-      minitelPlayer.current?.pause();
+      await minitelPlayer.current?.pauseAsync();
       setShowAnimation(true);
       setPlayMusic(true);
       setSyncing(true);
@@ -117,6 +114,12 @@ export default function HomeScreen({ navigation }: Props) {
     };
     run();
   }, [initModal, setPlayMusic]);
+
+  useEffect(() => {
+    if (showAnimation) {
+      videoRef.current?.replayAsync();
+    }
+  }, [showAnimation]);
 
   const ScreenContent = () => (
     <ScrollView
@@ -253,9 +256,12 @@ export default function HomeScreen({ navigation }: Props) {
       <View className="flex-1 items-center justify-center bg-black/80">
         {showAnimation && (
           <>
-            <VideoView
-              player={videoPlayer}
+            <Video
+              ref={videoRef}
+              source={require('../../assets/minitel.mp4')}
               style={{ width: screenWidth * 0.85, aspectRatio: 1, marginBottom: 16 }}
+              isLooping
+              resizeMode="contain"
             />
             {syncing && <ActivityIndicator size="large" color="#fff" />}
             {syncing && (
