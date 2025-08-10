@@ -27,11 +27,13 @@ const backgrounds = [
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
+let hasSyncedOnce = false;
+
 export default function HomeScreen({ navigation }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [nextIndex, setNextIndex] = useState(1);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [syncing, setSyncing] = useState(true);
+  const [syncing, setSyncing] = useState(!hasSyncedOnce);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const rootNavigation =
@@ -42,6 +44,7 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   useEffect(() => {
+    if (hasSyncedOnce) return;
     const run = async () => {
       setSyncing(true);
       try {
@@ -49,6 +52,7 @@ export default function HomeScreen({ navigation }: Props) {
       } catch (e) {
         console.error('Database sync failed', e);
       } finally {
+        hasSyncedOnce = true;
         setSyncing(false);
       }
     };
