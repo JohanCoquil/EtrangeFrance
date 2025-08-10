@@ -27,15 +27,21 @@ export const initDb = async () => {
     CREATE TABLE IF NOT EXISTS capacites (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       distant_id INTEGER DEFAULT 0,
-      voie_id INTEGER NOT NULL,
       name TEXT NOT NULL,
       description TEXT NOT NULL,
       image_url TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (voie_id) REFERENCES voies_etranges(id) ON DELETE CASCADE
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
-    CREATE INDEX IF NOT EXISTS idx_capacites_voie_id ON capacites(voie_id);
+
+    CREATE TABLE IF NOT EXISTS voie_capacite (
+      voie_id INTEGER NOT NULL,
+      capacite_id INTEGER NOT NULL,
+      PRIMARY KEY (voie_id, capacite_id),
+      FOREIGN KEY (voie_id) REFERENCES voies_etranges(id) ON DELETE CASCADE,
+      FOREIGN KEY (capacite_id) REFERENCES capacites(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_voie_capacite_voie_id ON voie_capacite(voie_id);
 
     CREATE TABLE IF NOT EXISTS capacite_rangs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -126,30 +132,55 @@ export const initDb = async () => {
       (3, 'Chasseur de monstres', 'Like Buffy you know !!'),
       (4, 'Goule', 'Dans vos veines coule le sang d''un tueur sans âme.');
 
-    INSERT OR IGNORE INTO capacites (id, voie_id, name, description) VALUES
-      (1, 1, 'Alchimie utilitaire', 'Permet de créer des potions utiles pour le quotidien'),
-      (2, 1, 'Alchimie des remèdes magiques', 'Concocte des remèdes qui soignent la magie'),
-      (3, 1, 'Alchimie de transmutation', 'Transforme la matière pour altérer ses propriétés'),
-      (4, 1, 'Familier', 'Un compagnon mystique qui vous assiste'),
-      (5, 1, 'Hypnose', 'Influence l’esprit des autres par la suggestion'),
-      (6, 2, 'Appel de la nature', 'Invoque la force des éléments naturels'),
-      (7, 2, 'Champ de protection magique', 'Érige une barrière contre les attaques mystiques'),
-      (8, 2, 'Chant envoutant', 'Utilise la musique pour canaliser la magie'),
-      (9, 2, 'Communion avec les esprits', 'Dialogue avec les esprits du monde invisible'),
-      (10, 2, 'Rites sacrés', 'Accomplit des cérémonies ancestrales puissantes'),
-      (11, 2, 'Rites de passage des cairns', 'Maîtrise les rituels des lieux sacrés'),
-      (12, 2, 'Guérison mystique', 'Soigne les blessures par l’énergie spirituelle'),
-      (13, 3, 'Agilité surnaturelle', 'Se déplace avec une rapidité inhumaine'),
-      (14, 3, 'Croquemitaine', 'Incarne la peur pour terrifier les monstres'),
-      (15, 3, 'Familier', 'Un allié animal spécialisé dans la chasse aux monstres'),
-      (16, 3, 'Force surnaturelle', 'Déploie une puissance physique extraordinaire'),
-      (17, 3, 'Perception surnaturelle', 'Détecte les dangers cachés et les créatures'),
-      (18, 3, 'Volonté surnaturelle', 'Résiste aux influences occultes'),
-      (19, 4, 'Animalisme', 'Communique et contrôle les bêtes sauvages'),
-      (20, 4, 'Hypnose', 'Soumet les esprits faibles à votre volonté'),
-      (21, 4, 'Force surnaturelle', 'Une puissance brute héritée du sang impur'),
-      (22, 4, 'Perception surnaturelle', 'Voit dans les ténèbres et sent la chair fraîche'),
-      (23, 4, 'Régénération', 'Guérit rapidement des blessures');
+    INSERT OR IGNORE INTO capacites (id, name, description) VALUES
+      (1, 'Alchimie utilitaire', 'Permet de créer des potions utiles pour le quotidien'),
+      (2, 'Alchimie des remèdes magiques', 'Concocte des remèdes qui soignent la magie'),
+      (3, 'Alchimie de transmutation', 'Transforme la matière pour altérer ses propriétés'),
+      (4, 'Familier', 'Un compagnon mystique qui vous assiste'),
+      (5, 'Hypnose', 'Influence l’esprit des autres par la suggestion'),
+      (6, 'Appel de la nature', 'Invoque la force des éléments naturels'),
+      (7, 'Champ de protection magique', 'Érige une barrière contre les attaques mystiques'),
+      (8, 'Chant envoutant', 'Utilise la musique pour canaliser la magie'),
+      (9, 'Communion avec les esprits', 'Dialogue avec les esprits du monde invisible'),
+      (10, 'Rites sacrés', 'Accomplit des cérémonies ancestrales puissantes'),
+      (11, 'Rites de passage des cairns', 'Maîtrise les rituels des lieux sacrés'),
+      (12, 'Guérison mystique', 'Soigne les blessures par l’énergie spirituelle'),
+      (13, 'Agilité surnaturelle', 'Se déplace avec une rapidité inhumaine'),
+      (14, 'Croquemitaine', 'Incarne la peur pour terrifier les monstres'),
+      (15, 'Familier', 'Un allié animal spécialisé dans la chasse aux monstres'),
+      (16, 'Force surnaturelle', 'Déploie une puissance physique extraordinaire'),
+      (17, 'Perception surnaturelle', 'Détecte les dangers cachés et les créatures'),
+      (18, 'Volonté surnaturelle', 'Résiste aux influences occultes'),
+      (19, 'Animalisme', 'Communique et contrôle les bêtes sauvages'),
+      (20, 'Hypnose', 'Soumet les esprits faibles à votre volonté'),
+      (21, 'Force surnaturelle', 'Une puissance brute héritée du sang impur'),
+      (22, 'Perception surnaturelle', 'Voit dans les ténèbres et sent la chair fraîche'),
+      (23, 'Régénération', 'Guérit rapidement des blessures');
+
+    INSERT OR IGNORE INTO voie_capacite (voie_id, capacite_id) VALUES
+      (1, 1),
+      (1, 2),
+      (1, 3),
+      (1, 4),
+      (1, 5),
+      (2, 6),
+      (2, 7),
+      (2, 8),
+      (2, 9),
+      (2, 10),
+      (2, 11),
+      (2, 12),
+      (3, 13),
+      (3, 14),
+      (3, 15),
+      (3, 16),
+      (3, 17),
+      (3, 18),
+      (4, 19),
+      (4, 20),
+      (4, 21),
+      (4, 22),
+      (4, 23);
 
     INSERT OR IGNORE INTO hobbies (id, name, description) VALUES
       (1, 'Jouer au cinéma', NULL),
