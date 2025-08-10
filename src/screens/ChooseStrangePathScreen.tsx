@@ -21,7 +21,6 @@ export default function ChooseStrangePathScreen() {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const { width } = Dimensions.get("window");
-  const itemWidth = width - 32; // padding horizontal in Layout
   const updateStrangePath = useUpdateStrangePath();
   const { data: strangePaths = [], isLoading } = useStrangePaths();
 
@@ -50,15 +49,15 @@ export default function ChooseStrangePathScreen() {
 
   if (isLoading) {
     return (
-      <Layout backgroundColor="gradient" className="flex-1 px-4">
-        <Body className="text-white">Chargement...</Body>
+      <Layout backgroundColor="gradient" className="flex-1">
+        <Body className="px-4 text-white">Chargement...</Body>
       </Layout>
     );
   }
 
   return (
-    <Layout backgroundColor="gradient" className="flex-1 px-4">
-      <Title className="mb-6 text-center text-white text-3xl font-bold tracking-wide shadow-md">
+    <Layout backgroundColor="gradient" className="flex-1">
+      <Title className="mb-6 px-4 text-center text-white text-3xl font-bold tracking-wide shadow-md">
         Choisis ta Voie étrange
       </Title>
 
@@ -69,11 +68,11 @@ export default function ChooseStrangePathScreen() {
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.id.toString()}
         onMomentumScrollEnd={(e) =>
-          setCurrentIndex(Math.round(e.nativeEvent.contentOffset.x / itemWidth))
+          setCurrentIndex(Math.round(e.nativeEvent.contentOffset.x / width))
         }
         className="flex-1"
         renderItem={({ item }) => (
-          <View style={{ width: itemWidth, marginRight: 16 }} className="flex-1">
+          <View style={{ width }} className="flex-1 px-4">
             <ImageBackground
               source={
                 item.image_url
@@ -93,7 +92,7 @@ export default function ChooseStrangePathScreen() {
         )}
       />
 
-      <View className="pb-4 mt-4">
+      <View className="pb-4 mt-4 px-4">
         <Button
           variant="primary"
           onPress={handleConfirm}
