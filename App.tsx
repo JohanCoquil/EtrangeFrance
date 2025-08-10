@@ -1,4 +1,8 @@
-import { NavigationContainer } from '@react-navigation/native';
+// App.tsx
+import {
+  NavigationContainer,
+  useNavigationContainerRef,
+} from '@react-navigation/native';
 import RootNavigator from './src/navigation/RootNavigator';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './src/api/queryClient';
@@ -6,8 +10,9 @@ import { Provider as JotaiProvider } from 'jotai';
 import React, { useEffect } from 'react';
 import './global.css';
 import { initDb, resetDb } from './src/data/db';
-import { Alert } from "react-native";
+import { Alert } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { PlayMusicProvider, usePlayMusic } from './src/context/PlayMusicContext';
 
 export default function App() {
   useEffect(() => {
@@ -44,11 +49,32 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <JotaiProvider>
         <QueryClientProvider client={queryClient}>
-          <NavigationContainer>
-            <RootNavigator />
-          </NavigationContainer>
+          <PlayMusicProvider>
+            <NavigationWithMusic />
+          </PlayMusicProvider>
         </QueryClientProvider>
       </JotaiProvider>
     </GestureHandlerRootView>
+  );
+}
+
+function NavigationWithMusic() {
+  const navigationRef = useNavigationContainerRef();
+  const { setPlayMusic } = usePlayMusic();
+
+  return (
+    <NavigationContainer
+      ref={navigationRef}
+      onReady={() => {
+        const name = navigationRef.getCurrentRoute()?.name;
+        setPlayMusic(name !== 'Session');
+      }}
+      onStateChange={() => {
+        const name = navigationRef.getCurrentRoute()?.name;
+        setPlayMusic(name !== 'Session');
+      }}
+    >
+      <RootNavigator />
+    </NavigationContainer>
   );
 }
