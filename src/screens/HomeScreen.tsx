@@ -14,7 +14,7 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Video } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { TabParamList, RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
 import { syncDatabase } from '@/data/sync';
@@ -48,6 +48,11 @@ export default function HomeScreen({ navigation }: Props) {
   const minitelPlayer = useRef<AudioPlayer | null>(null);
 
   const { setPlayMusic } = usePlayMusic();
+
+  const videoPlayer = useVideoPlayer(require('../../assets/minitel.mp4'), (player) => {
+    player.loop = true;
+    player.play();
+  });
 
   const handleEnterAgency = () => {
     rootNavigation.navigate('Auth');
@@ -245,11 +250,9 @@ export default function HomeScreen({ navigation }: Props) {
       <View className="flex-1 items-center justify-center bg-black/80">
         {showAnimation && (
           <>
-            <Video
-              source={require('../../assets/minitel.mp4')}
+            <VideoView
+              player={videoPlayer}
               style={{ width: screenWidth * 0.85, aspectRatio: 1, marginBottom: 16 }}
-              isLooping
-              shouldPlay
             />
             {syncing && <ActivityIndicator size="large" color="#fff" />}
             {syncing && (
