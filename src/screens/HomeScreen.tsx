@@ -8,6 +8,8 @@ import {
   Modal,
   ActivityIndicator,
   Image,
+  Text,
+  Linking
 } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
@@ -90,7 +92,7 @@ export default function HomeScreen({ navigation }: Props) {
       setPlayMusic(false);
       minitelPlayer.current?.seekTo(0);
       minitelPlayer.current?.play();
-      await new Promise((res) => setTimeout(res, 8000));
+      await new Promise((res) => setTimeout(res, 12000));
       minitelPlayer.current?.pause();
       setShowAnimation(true);
       setPlayMusic(true);
@@ -159,9 +161,15 @@ export default function HomeScreen({ navigation }: Props) {
         <Caption className="text-gray-400 text-center">
           Assistant JDR Étrange France • Version 1.0.0
         </Caption>
-        <Caption className="text-gray-500 text-center mt-1">
-          Le jeu de rôles Étrange France est une création originale de Fletch.
-        </Caption>
+       <Caption className="text-gray-500 text-center mt-1">
+  Le jeu de rôles Étrange France est une création originale de{" "}
+  <Text
+    style={{ color: "#3b82f6", textDecorationLine: "underline" }}
+    onPress={() => Linking.openURL("https://etrange-france.fr/")}
+  >
+    Fletch
+  </Text>.
+</Caption>
       </View>
 
       <Button
@@ -239,12 +247,12 @@ export default function HomeScreen({ navigation }: Props) {
           <>
             <Image
               source={require('../../assets/minitel.gif')}
-              className="w-40 h-40 mb-4"
+              className="w-80 h-80 mb-4"
             />
             {syncing && <ActivityIndicator size="large" color="#fff" />}
             {syncing && (
               <Title className="text-white mt-4">
-                Synchronisation en cours...
+                Récupération des dossiers de l'agence Khole en cours...
               </Title>
             )}
           </>
