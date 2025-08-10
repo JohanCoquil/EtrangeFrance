@@ -78,24 +78,13 @@ export default function ChooseStrangePathScreen() {
 
   const panResponder = useRef(
     PanResponder.create({
-      // capter tôt si c'est horizontal
-      onMoveShouldSetPanResponder: (_evt, g) =>
-        Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy),
-      onMoveShouldSetPanResponderCapture: (_evt, g) =>
-        Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy),
-
-      onPanResponderGrant: () => setIsPanning(true),
-
-      onPanResponderRelease: (_evt, g) => {
-        setIsPanning(false);
-        const toLeft = g.dx <= -SWIPE_DIST;
-        const toRight = g.dx >= SWIPE_DIST;
-
-        if (toLeft && index < paths.length - 1) {
-          animateTo(index + 1, "left");
-        } else if (toRight && index > 0) {
-          animateTo(index - 1, "right");
-        }
+      onMoveShouldSetPanResponder: (_, g) =>
+        Math.abs(g.dx) > 20 && Math.abs(g.dx) > Math.abs(g.dy),
+      onPanResponderRelease: (_, g) => {
+        const toLeft = g.dx < -SWIPE_DIST || g.vx < -SWIPE_VEL / 1000;
+        const toRight = g.dx > SWIPE_DIST || g.vx > SWIPE_VEL / 1000;
+        if (toLeft && index < paths.length - 1) animateTo(index + 1, "left");
+        else if (toRight && index > 0) animateTo(index - 1, "right");
       },
       onPanResponderTerminate: () => setIsPanning(false),
     })
