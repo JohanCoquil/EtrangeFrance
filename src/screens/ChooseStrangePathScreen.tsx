@@ -79,7 +79,7 @@ export default function ChooseStrangePathScreen() {
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, g) =>
         Math.abs(g.dx) > 20 && Math.abs(g.dx) > Math.abs(g.dy),
-      onPanResponderEnd: (_, g) => {
+      onPanResponderRelease: (_, g) => {
         const toLeft = g.dx < -SWIPE_DIST || g.vx < -SWIPE_VEL / 1000;
         const toRight = g.dx > SWIPE_DIST || g.vx > SWIPE_VEL / 1000;
         if (toLeft && index < paths.length - 1) animateTo(index + 1, "left");
