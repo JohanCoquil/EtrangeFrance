@@ -5,33 +5,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { useUpdateStrangePath } from "../api/charactersLocal";
-
-const strangePaths = [
-  {
-    id: 1,
-    name: "Alchimiste",
-    description: "Vous êtes un chercheur de la véritable essence des éléments.",
-    image: require("../../assets/illustrations/background.jpg"),
-  },
-  {
-    id: 2,
-    name: "Chaman",
-    description: "Vous êtes le réceptacle du savoir de nombreuses générations.",
-    image: require("../../assets/illustrations/background2.jpg"),
-  },
-  {
-    id: 3,
-    name: "Chasseur de monstres",
-    description: "Like SUPERNATURAL you know !!",
-    image: require("../../assets/illustrations/background3.jpg"),
-  },
-  {
-    id: 4,
-    name: "Goule",
-    description: "Dans vos veines coule le sang d'un tueur sans âme.",
-    image: require("../../assets/illustrations/background4.jpg"),
-  },
-];
+import { useStrangePaths, StrangePath } from "@/api/strangePathsLocal";
 
 export default function ChooseStrangePathScreen() {
   const navigation =
@@ -43,6 +17,7 @@ export default function ChooseStrangePathScreen() {
   const { width } = Dimensions.get("window");
   const itemWidth = width - 32; // padding horizontal in Layout
   const updateStrangePath = useUpdateStrangePath();
+  const { data: strangePaths = [], isLoading } = useStrangePaths();
 
   const handleConfirm = () => {
     const selected = strangePaths[currentIndex];
@@ -67,13 +42,21 @@ export default function ChooseStrangePathScreen() {
     );
   };
 
+  if (isLoading) {
+    return (
+      <Layout backgroundColor="gradient" className="flex-1 px-4">
+        <Body className="text-white">Chargement...</Body>
+      </Layout>
+    );
+  }
+
   return (
     <Layout backgroundColor="gradient" className="flex-1 px-4">
       <Title className="mb-6 text-center text-white text-3xl font-bold tracking-wide shadow-md">
         Choisis ta Voie étrange
       </Title>
 
-      <FlatList
+      <FlatList<StrangePath>
         data={strangePaths}
         horizontal
         pagingEnabled
@@ -84,7 +67,11 @@ export default function ChooseStrangePathScreen() {
         }
         renderItem={({ item }) => (
           <ImageBackground
-            source={item.image}
+            source={
+              item.image_url
+                ? { uri: item.image_url }
+                : require("../../assets/illustrations/background.jpg")
+            }
             style={{ width: itemWidth, height: 300, marginRight: 16 }}
             className="rounded-xl overflow-hidden justify-end"
           >
