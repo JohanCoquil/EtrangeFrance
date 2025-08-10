@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View } from "react-native";
+import { View, Alert } from "react-native";
 import { Layout, Title, Body, Button } from "../components/ui";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -68,38 +68,50 @@ export default function ChooseVoieCapacitiesScreen() {
       <Title className="text-center text-white text-2xl mb-4">
         Choisis tes capacités
       </Title>
-      {capacites?.map((cap: any) => (
-        <View
-          key={cap.id}
-          className="flex-row justify-between items-center mb-3"
-        >
-          <View className="flex-1 pr-2">
-            <Title className="text-white text-lg">{cap.name}</Title>
-            <Body className="text-gray-300 text-sm">{cap.description}</Body>
+      {capacites?.map((cap: any) => {
+        const truncatedDescription =
+          cap.description.length > 30
+            ? cap.description.slice(0, 30) + "..."
+            : cap.description;
+
+        return (
+          <View
+            key={cap.id}
+            className="flex-row justify-between items-center mb-3"
+          >
+            <View className="flex-1 pr-2">
+              <Title className="text-white text-lg">{cap.name}</Title>
+              <Body
+                className="text-gray-300 text-sm"
+                onPress={() => Alert.alert("Description", cap.description)}
+              >
+                {truncatedDescription}
+              </Body>
+            </View>
+            <View className="flex-row items-center">
+              <Button
+                size="sm"
+                variant="secondary"
+                onPress={() => decrement(cap.id)}
+                className="px-2"
+              >
+                -
+              </Button>
+              <Body className="text-white mx-2">
+                {levels[cap.id] || 0}
+              </Body>
+              <Button
+                size="sm"
+                variant="secondary"
+                onPress={() => increment(cap.id)}
+                className="px-2"
+              >
+                +
+              </Button>
+            </View>
           </View>
-          <View className="flex-row items-center">
-            <Button
-              size="sm"
-              variant="secondary"
-              onPress={() => decrement(cap.id)}
-              className="px-2"
-            >
-              -
-            </Button>
-            <Body className="text-white mx-2">
-              {levels[cap.id] || 0}
-            </Body>
-            <Button
-              size="sm"
-              variant="secondary"
-              onPress={() => increment(cap.id)}
-              className="px-2"
-            >
-              +
-            </Button>
-          </View>
-        </View>
-      ))}
+        );
+      })}
       <Body className="text-white mb-4">
         Points restants : {2 - totalPoints}
       </Body>
