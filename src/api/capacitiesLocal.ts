@@ -44,7 +44,7 @@ export function useCapacitesByVoie(voieId: number) {
           capacites.push(item);
         }
         if (row.rang) {
-          map.get(row.id).rangs[row.rang] = row.rang_description as string;
+          map.get(row.id)!.rangs[row.rang] = row.rang_description as string;
         }
       }
 
