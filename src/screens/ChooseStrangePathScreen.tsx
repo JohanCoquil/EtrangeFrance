@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   View,
   ImageBackground,
@@ -19,18 +19,24 @@ export default function ChooseStrangePathScreen() {
   const route = useRoute<any>();
   const { characterId } = route.params;
 
-  const [currentIndex, setCurrentIndex] = useState(0);
   const { width } = Dimensions.get("window");
   const updateStrangePath = useUpdateStrangePath();
   const { data: strangePaths = [], isLoading } = useStrangePaths();
 
-  // ✅ Mémorise le tri pour ne pas changer la référence à chaque render
-  const sortedStrangePaths = useMemo(() => {
-    return [...strangePaths].sort((a, b) => a.name.localeCompare(b.name));
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const pathsRef = useRef<StrangePath[]>([]);
+
+  // Charger et figer les données au montage
+  useEffect(() => {
+    if (pathsRef.current.length === 0 && strangePaths.length > 0) {
+      pathsRef.current = [...strangePaths].sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
+    }
   }, [strangePaths]);
 
   const handleConfirm = () => {
-    const selected = sortedStrangePaths[currentIndex];
+    const selected = pathsRef.current[currentIndex];
     if (!selected) {
       alert("Choisis une voie étrange pour ton enquêteur !");
       return;
@@ -65,27 +71,19 @@ export default function ChooseStrangePathScreen() {
         Choisis ta Voie étrange
       </Title>
 
-      <FlatList<StrangePath>
-        data={sortedStrangePaths}
+      <FlatList
+        data={pathsRef.current}
         horizontal
         pagingEnabled
-        removeClippedSubviews={false}
-        initialNumToRender={2}
-        windowSize={3}
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.id.toString()}
-        // ✅ Calcule fixe pour éviter les re-layouts
-        getItemLayout={(_, index) => ({
-          length: width,
-          offset: width * index,
-          index,
-        })}
         onMomentumScrollEnd={(e) =>
           setCurrentIndex(Math.round(e.nativeEvent.contentOffset.x / width))
         }
         className="flex-1"
         renderItem={({ item }) => (
           <View style={{ width }} className="flex-1 px-4">
+            {/* Image avec arrondi */}
             <View style={{ borderRadius: 12, overflow: "hidden" }}>
               <ImageBackground
                 source={
@@ -95,17 +93,20 @@ export default function ChooseStrangePathScreen() {
                 }
                 style={{ width: "100%", height: 200 }}
                 imageStyle={{ borderRadius: 12 }}
-                fadeDuration={0} // évite le fondu blanc
+                fadeDuration={0}
               />
             </View>
+
+            {/* Nom */}
             <Title className="text-white text-2xl my-4 text-center">
               {item.name}
             </Title>
+
+            {/* Description scrollable avec fond noir */}
             <ScrollView
               className="flex-1"
               nestedScrollEnabled
-              showsVerticalScrollIndicator={false}
-              style={{ flexGrow: 0 }} // ✅ évite le re-mesurage
+              showsVerticalScrollIndicator={true}
             >
               <View className="p-4 bg-black rounded-lg">
                 <Body className="text-gray-200">{item.description}</Body>
@@ -115,6 +116,7 @@ export default function ChooseStrangePathScreen() {
         )}
       />
 
+      {/* Bouton validation */}
       <View className="pb-4 mt-4 px-4">
         <Button
           variant="primary"
