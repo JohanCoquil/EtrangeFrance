@@ -5,6 +5,8 @@ import {
   Dimensions,
   ImageBackground,
   Animated,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
@@ -12,6 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TabParamList, RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
+import { syncDatabase } from '@/data/sync';
 
 type Props = BottomTabScreenProps<TabParamList, 'Home'>;
 
@@ -28,6 +31,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [nextIndex, setNextIndex] = useState(1);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [syncing, setSyncing] = useState(true);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const rootNavigation =
@@ -36,6 +40,20 @@ export default function HomeScreen({ navigation }: Props) {
   const handleEnterAgency = () => {
     rootNavigation.navigate('Auth');
   };
+
+  useEffect(() => {
+    const run = async () => {
+      setSyncing(true);
+      try {
+        await syncDatabase();
+      } catch (e) {
+        console.error('Database sync failed', e);
+      } finally {
+        setSyncing(false);
+      }
+    };
+    run();
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -132,6 +150,7 @@ export default function HomeScreen({ navigation }: Props) {
   );
 
   return (
+    <>
     <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
       {/* Image actuelle */}
       <ImageBackground
@@ -175,5 +194,17 @@ export default function HomeScreen({ navigation }: Props) {
       {/* Contenu */}
       <ScreenContent />
     </View>
+    <Modal
+      visible={syncing}
+      transparent={false}
+      animationType="fade"
+      onRequestClose={() => {}}
+    >
+      <View className="flex-1 items-center justify-center bg-black/80">
+        <ActivityIndicator size="large" color="#fff" />
+        <Title className="text-white mt-4">Synchronisation en cours...</Title>
+      </View>
+    </Modal>
+    </>
   );
 }
