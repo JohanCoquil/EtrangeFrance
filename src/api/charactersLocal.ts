@@ -109,6 +109,36 @@ export function useUpdateStrangePath() {
   });
 }
 
+export function useUpdateCharacterSheet() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      origines,
+      rencontres,
+      notes,
+      equipement,
+      fetiches,
+    }: {
+      id: string;
+      origines: string;
+      rencontres: string;
+      notes: string;
+      equipement: string;
+      fetiches: string;
+    }) => {
+      const db = getDb();
+      await db.runAsync(
+        "UPDATE characters SET origines = ?, rencontres = ?, notes = ?, equipement = ?, fetiches = ? WHERE id = ?",
+        [origines, rencontres, notes, equipement, fetiches, id]
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["characters"] });
+    },
+  });
+}
+
 export function useDeleteCharacter() {
   const queryClient = useQueryClient();
   return useMutation({

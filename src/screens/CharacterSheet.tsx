@@ -5,7 +5,7 @@ import { PanGestureHandler, State } from "react-native-gesture-handler";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { Layout, Title, Body, Caption } from "../components/ui";
 import { RootStackParamList } from "../navigation/types";
-import { useCharacters } from "@/api/charactersLocal";
+import { useCharacters, useUpdateCharacterSheet } from "@/api/charactersLocal";
 import { useCharacterCapacites } from "@/api/capacitiesLocal";
 import CardFlip, { CardFlipRef } from "@/components/CardFlip";
 
@@ -18,6 +18,12 @@ export default function CharacterSheet() {
   const frontScrollRef = useRef<ScrollView>(null);
   const backScrollRef = useRef<ScrollView>(null);
   const [isBack, setIsBack] = useState(false);
+  const [origines, setOrigines] = useState("");
+  const [rencontres, setRencontres] = useState("");
+  const [notes, setNotes] = useState("");
+  const [equipement, setEquipement] = useState("");
+  const [fetiches, setFetiches] = useState("");
+  const updateSheet = useUpdateCharacterSheet();
   const { data: characters, isLoading } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
   const { data: capacites } = useCharacterCapacites(characterId);
@@ -37,6 +43,35 @@ export default function CharacterSheet() {
       </Layout>
     );
   }
+
+  useEffect(() => {
+    if (character) {
+      setOrigines(character.origines ?? "");
+      setRencontres(character.rencontres ?? "");
+      setNotes(character.notes ?? "");
+      setEquipement(character.equipement ?? "");
+      setFetiches(character.fetiches ?? "");
+    }
+  }, [character]);
+
+  const skipSave = useRef(true);
+  useEffect(() => {
+    if (skipSave.current) {
+      skipSave.current = false;
+      return;
+    }
+    const timeout = setTimeout(() => {
+      updateSheet.mutate({
+        id: characterId,
+        origines,
+        rencontres,
+        notes,
+        equipement,
+        fetiches,
+      });
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [origines, rencontres, notes, equipement, fetiches, characterId]);
 
   const stats = [
     { label: "Force", value: character.force },
@@ -232,6 +267,8 @@ export default function CharacterSheet() {
                 placeholder="Décrivez l'origine et l'histoire de votre personnage..."
                 placeholderTextColor="#aaa"
                 multiline
+                value={origines}
+                onChangeText={setOrigines}
                 style={{
                   backgroundColor: "rgba(0,0,0,0.3)",
                   color: "#fff",
@@ -251,6 +288,8 @@ export default function CharacterSheet() {
                 placeholder="Listez les rencontres marquantes et vos alliés..."
                 placeholderTextColor="#aaa"
                 multiline
+                value={rencontres}
+                onChangeText={setRencontres}
                 style={{
                   backgroundColor: "rgba(0,0,0,0.3)",
                   color: "#fff",
@@ -270,6 +309,8 @@ export default function CharacterSheet() {
                 placeholder="Vos réflexions, hypothèses..."
                 placeholderTextColor="#aaa"
                 multiline
+                value={notes}
+                onChangeText={setNotes}
                 style={{
                   backgroundColor: "rgba(0,0,0,0.3)",
                   color: "#fff",
@@ -289,6 +330,8 @@ export default function CharacterSheet() {
                 placeholder="Listez votre équipement et vos objets..."
                 placeholderTextColor="#aaa"
                 multiline
+                value={equipement}
+                onChangeText={setEquipement}
                 style={{
                   backgroundColor: "rgba(0,0,0,0.3)",
                   color: "#fff",
@@ -308,6 +351,8 @@ export default function CharacterSheet() {
                 placeholder="Décrivez les effets spéciaux ou vos objets fétiches..."
                 placeholderTextColor="#aaa"
                 multiline
+                value={fetiches}
+                onChangeText={setFetiches}
                 style={{
                   backgroundColor: "rgba(0,0,0,0.3)",
                   color: "#fff",
