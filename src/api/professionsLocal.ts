@@ -41,10 +41,10 @@ export function useAddProfession() {
       const professionId = result.lastInsertRowId as number;
 
       for (const skillName of skills) {
-        const existing = await db.getAllAsync(
+        const existing = (await db.getAllAsync(
           "SELECT id FROM skills WHERE name = ?",
           [skillName]
-        );
+        )) as any[];
         let skillId: number;
         if (existing.length > 0) {
           skillId = existing[0].id as number;

@@ -1,4 +1,5 @@
 import * as SQLite from "expo-sqlite";
+import { syncDatabase } from "./sync";
 
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -546,6 +547,12 @@ export const initDb = async () => {
   await database.execAsync(
     "CREATE INDEX IF NOT EXISTS idx_characters_profession_id ON characters(profession_id);"
   );
+
+  try {
+    await syncDatabase();
+  } catch (e) {
+    console.error("Database sync failed", e);
+  }
 };
 
 export const resetDb = async () => {
