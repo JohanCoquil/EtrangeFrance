@@ -7,7 +7,6 @@ import {
   Animated,
   Modal,
   ActivityIndicator,
-  Image,
   Text,
   Linking
 } from 'react-native';
@@ -15,6 +14,7 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Video } from 'expo-av';
 import { TabParamList, RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
 import { syncDatabase } from '@/data/sync';
@@ -245,9 +245,11 @@ export default function HomeScreen({ navigation }: Props) {
       <View className="flex-1 items-center justify-center bg-black/80">
         {showAnimation && (
           <>
-            <Image
-              source={require('../../assets/minitel.gif')}
-              className="w-80 h-80 mb-4"
+            <Video
+              source={require('../../assets/minitel.mp4')}
+              style={{ width: screenWidth * 0.85, aspectRatio: 1, marginBottom: 16 }}
+              isLooping
+              shouldPlay
             />
             {syncing && <ActivityIndicator size="large" color="#fff" />}
             {syncing && (
