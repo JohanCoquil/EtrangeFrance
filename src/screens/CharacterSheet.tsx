@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import { View, TextInput, Dimensions, ScrollView } from "react-native";
-import { createAudioPlayer, AudioPlayer, setAudioModeAsync } from "expo-audio";
+import { Audio } from "expo-av";
 import { PanGestureHandler, State } from "react-native-gesture-handler";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { Layout, Title, Body, Caption } from "../components/ui";
@@ -14,7 +14,7 @@ export default function CharacterSheet() {
   const { characterId } = route.params;
   const { width, height } = Dimensions.get("window");
   const cardRef = useRef<CardFlipRef>(null);
-  const flipSound = useRef<AudioPlayer | null>(null);
+  const flipSound = useRef<Audio.Sound | null>(null);
   const frontScrollRef = useRef<ScrollView>(null);
   const backScrollRef = useRef<ScrollView>(null);
   const [isBack, setIsBack] = useState(false);
@@ -84,15 +84,21 @@ export default function CharacterSheet() {
   ];
 
   useEffect(() => {
-    setAudioModeAsync({
-      playsInSilentMode: true,
-      interruptionMode: "mixWithOthers",
-      interruptionModeAndroid: "duckOthers",
-    });
-    const player = createAudioPlayer(require("../../sounds/page.aac"));
-    flipSound.current = player;
+    const setup = async () => {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_MIX_WITH_OTHERS,
+        interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DUCK_OTHERS,
+        shouldDuckAndroid: true,
+      });
+      const { sound } = await Audio.Sound.createAsync(
+        require("../../sounds/page.aac")
+      );
+      flipSound.current = sound;
+    };
+    setup();
     return () => {
-      player.remove();
+      flipSound.current?.unloadAsync();
     };
   }, []);
 
@@ -116,13 +122,11 @@ export default function CharacterSheet() {
           Math.abs(translationX) > Math.abs(translationY)
         ) {
           if (direction === "left" && translationX < 0) {
-            flipSound.current?.seekTo(0);
-            flipSound.current?.play();
+            flipSound.current?.replayAsync();
             handleFlip();
           }
           if (direction === "right" && translationX > 0) {
-            flipSound.current?.seekTo(0);
-            flipSound.current?.play();
+            flipSound.current?.replayAsync();
             handleFlip();
           }
         }

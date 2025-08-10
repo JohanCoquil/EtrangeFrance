@@ -1,6 +1,6 @@
 // src/context/PlayMusicContext.tsx
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { createAudioPlayer, AudioPlayer, setAudioModeAsync } from 'expo-audio';
+import { Audio } from 'expo-av';
 
 type PlayMusicContextType = {
   playMusic: boolean;
@@ -11,26 +11,29 @@ const PlayMusicContext = createContext<PlayMusicContextType | undefined>(undefin
 
 export const PlayMusicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [playMusic, setPlayMusic] = useState(false);
-  const playerRef = useRef<AudioPlayer | null>(null);
+  const playerRef = useRef<Audio.Sound | null>(null);
 
   useEffect(() => {
     const setup = async () => {
-      await setAudioModeAsync({
-        playsInSilentMode: true,
-        interruptionMode: 'mixWithOthers',
-        interruptionModeAndroid: 'duckOthers',
-        shouldPlayInBackground: true,
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_MIX_WITH_OTHERS,
+        interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DUCK_OTHERS,
+        shouldDuckAndroid: true,
+        staysActiveInBackground: true,
       });
-      const player = createAudioPlayer(require('../../sounds/13-Enigmatic-Shadows.mp3'));
-      player.loop = true;
-      playerRef.current = player;
+      const { sound } = await Audio.Sound.createAsync(
+        require('../../sounds/13-Enigmatic-Shadows.mp3'),
+        { isLooping: true }
+      );
+      playerRef.current = sound;
       if (playMusic) {
-        player.play();
+        sound.playAsync();
       }
     };
     setup();
     return () => {
-      playerRef.current?.remove();
+      playerRef.current?.unloadAsync();
       playerRef.current = null;
     };
   }, []);
@@ -39,13 +42,9 @@ export const PlayMusicProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const player = playerRef.current;
     if (!player) return;
     if (playMusic) {
-      if (!player.playing) {
-        player.play();
-      }
+      player.playAsync();
     } else {
-      if (player.playing) {
-        player.pause();
-      }
+      player.pauseAsync();
     }
   }, [playMusic]);
 
