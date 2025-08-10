@@ -70,8 +70,8 @@ export default function ChooseVoieCapacitiesScreen() {
       </Title>
       {capacites?.map((cap: any) => {
         const truncatedDescription =
-          cap.description.length > 30
-            ? cap.description.slice(0, 30) + "..."
+          cap.description.length > 60
+            ? cap.description.slice(0, 60) + "..."
             : cap.description;
 
         return (
