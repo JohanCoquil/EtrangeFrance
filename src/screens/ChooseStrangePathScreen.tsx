@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   View,
   ImageBackground,
@@ -23,9 +23,11 @@ export default function ChooseStrangePathScreen() {
   const { width } = Dimensions.get("window");
   const updateStrangePath = useUpdateStrangePath();
   const { data: strangePaths = [], isLoading } = useStrangePaths();
-  const sortedStrangePaths = [...strangePaths].sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
+
+  // ✅ Mémorise le tri pour ne pas changer la référence à chaque render
+  const sortedStrangePaths = useMemo(() => {
+    return [...strangePaths].sort((a, b) => a.name.localeCompare(b.name));
+  }, [strangePaths]);
 
   const handleConfirm = () => {
     const selected = sortedStrangePaths[currentIndex];
@@ -37,7 +39,6 @@ export default function ChooseStrangePathScreen() {
       { id: characterId, voieId: selected.id, voieScore: 2 },
       {
         onSuccess: () => {
-          //alert(`✅ Voie étrange sélectionnée : ${selected.name}`);
           navigation.navigate("ChooseVoieCapacities", {
             characterId,
             voieId: selected.id,
@@ -46,7 +47,7 @@ export default function ChooseStrangePathScreen() {
         onError: (err) => {
           alert("❌ Erreur lors de l'enregistrement : " + err);
         },
-      },
+      }
     );
   };
 
@@ -73,13 +74,19 @@ export default function ChooseStrangePathScreen() {
         windowSize={3}
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.id.toString()}
+        // ✅ Calcule fixe pour éviter les re-layouts
+        getItemLayout={(_, index) => ({
+          length: width,
+          offset: width * index,
+          index,
+        })}
         onMomentumScrollEnd={(e) =>
           setCurrentIndex(Math.round(e.nativeEvent.contentOffset.x / width))
         }
         className="flex-1"
         renderItem={({ item }) => (
           <View style={{ width }} className="flex-1 px-4">
-            <View style={{ borderRadius: 12 }} className="overflow-hidden">
+            <View style={{ borderRadius: 12, overflow: "hidden" }}>
               <ImageBackground
                 source={
                   item.image_url
@@ -88,13 +95,18 @@ export default function ChooseStrangePathScreen() {
                 }
                 style={{ width: "100%", height: 200 }}
                 imageStyle={{ borderRadius: 12 }}
-                fadeDuration={0}
+                fadeDuration={0} // évite le fondu blanc
               />
             </View>
             <Title className="text-white text-2xl my-4 text-center">
               {item.name}
             </Title>
-            <ScrollView className="flex-1" nestedScrollEnabled>
+            <ScrollView
+              className="flex-1"
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}
+              style={{ flexGrow: 0 }} // ✅ évite le re-mesurage
+            >
               <View className="p-4 bg-black rounded-lg">
                 <Body className="text-gray-200">{item.description}</Body>
               </View>
