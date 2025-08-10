@@ -73,19 +73,22 @@ export default function ChooseStrangePathScreen() {
         className="flex-1"
         renderItem={({ item }) => (
           <View style={{ width }} className="flex-1 px-4">
-            <ImageBackground
-              source={
-                item.image_url
-                  ? { uri: item.image_url }
-                  : require("../../assets/illustrations/background.jpg")
-              }
-              style={{ width: "100%", height: 200 }}
-              imageStyle={{ borderRadius: 12 }}
-            />
+            <View style={{ borderRadius: 12 }} className="overflow-hidden">
+              <ImageBackground
+                source={
+                  item.image_url
+                    ? { uri: item.image_url }
+                    : require("../../assets/illustrations/background.jpg")
+                }
+                style={{ width: "100%", height: 200 }}
+                imageStyle={{ borderRadius: 12 }}
+                fadeDuration={0}
+              />
+            </View>
             <Title className="text-white text-2xl my-4 text-center">
               {item.name}
             </Title>
-            <ScrollView className="flex-1">
+            <ScrollView className="flex-1" nestedScrollEnabled>
               <View className="p-4 bg-black rounded-lg">
                 <Body className="text-gray-200">{item.description}</Body>
               </View>
