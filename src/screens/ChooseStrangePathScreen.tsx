@@ -75,6 +75,7 @@ export default function ChooseStrangePathScreen() {
   // --- Swipe horizontal fiable (le parent prend la main) ---
   const [isPanning, setIsPanning] = useState(false);
   const SWIPE_DIST = 80; // px : distance minimale pour valider un swipe
+  const SWIPE_VEL = 600; // px/s : vitesse minimale pour valider un swipe
 
   const panResponder = useRef(
     PanResponder.create({
