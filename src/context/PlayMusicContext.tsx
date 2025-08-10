@@ -10,7 +10,7 @@ type PlayMusicContextType = {
 const PlayMusicContext = createContext<PlayMusicContextType | undefined>(undefined);
 
 export const PlayMusicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [playMusic, setPlayMusic] = useState(true);
+  const [playMusic, setPlayMusic] = useState(false);
   const playerRef = useRef<AudioPlayer | null>(null);
 
   useEffect(() => {
