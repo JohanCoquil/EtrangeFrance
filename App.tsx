@@ -73,10 +73,6 @@ function NavigationWithMusic() {
   return (
     <NavigationContainer
       ref={navigationRef}
-      onReady={() => {
-        const name = navigationRef.getCurrentRoute()?.name;
-        setPlayMusic(name !== 'Session');
-      }}
       onStateChange={() => {
         const name = navigationRef.getCurrentRoute()?.name;
         setPlayMusic(name !== 'Session');

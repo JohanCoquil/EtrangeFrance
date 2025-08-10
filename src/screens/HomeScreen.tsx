@@ -17,6 +17,7 @@ import { TabParamList, RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
 import { syncDatabase } from '@/data/sync';
 import { createAudioPlayer, AudioPlayer, setAudioModeAsync } from 'expo-audio';
+import { usePlayMusic } from '@/context/PlayMusicContext';
 
 type Props = BottomTabScreenProps<TabParamList, 'Home'>;
 
@@ -35,32 +36,20 @@ export default function HomeScreen({ navigation }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [nextIndex, setNextIndex] = useState(1);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [syncing, setSyncing] = useState(!hasSyncedOnce);
+  const [initModal, setInitModal] = useState(!hasSyncedOnce);
+  const [syncing, setSyncing] = useState(false);
+  const [showAnimation, setShowAnimation] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const rootNavigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const minitelPlayer = useRef<AudioPlayer | null>(null);
 
+  const { setPlayMusic } = usePlayMusic();
+
   const handleEnterAgency = () => {
     rootNavigation.navigate('Auth');
   };
-
-  useEffect(() => {
-    if (hasSyncedOnce) return;
-    const run = async () => {
-      setSyncing(true);
-      try {
-        await syncDatabase();
-      } catch (e) {
-        console.error('Database sync failed', e);
-      } finally {
-        hasSyncedOnce = true;
-        setSyncing(false);
-      }
-    };
-    run();
-  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -96,13 +85,28 @@ export default function HomeScreen({ navigation }: Props) {
   }, []);
 
   useEffect(() => {
-    if (syncing) {
+    if (!initModal) return;
+    const run = async () => {
+      setPlayMusic(false);
       minitelPlayer.current?.seekTo(0);
       minitelPlayer.current?.play();
-    } else {
+      await new Promise((res) => setTimeout(res, 8000));
       minitelPlayer.current?.pause();
-    }
-  }, [syncing]);
+      setShowAnimation(true);
+      setPlayMusic(true);
+      setSyncing(true);
+      try {
+        await syncDatabase();
+      } catch (e) {
+        console.error('Database sync failed', e);
+      } finally {
+        setSyncing(false);
+        setInitModal(false);
+        hasSyncedOnce = true;
+      }
+    };
+    run();
+  }, [initModal, setPlayMusic]);
 
   const ScreenContent = () => (
     <ScrollView
@@ -225,18 +229,26 @@ export default function HomeScreen({ navigation }: Props) {
       <ScreenContent />
     </View>
     <Modal
-      visible={syncing}
+      visible={initModal}
       transparent={false}
       animationType="fade"
       onRequestClose={() => {}}
     >
       <View className="flex-1 items-center justify-center bg-black/80">
-        <Image
-          source={require('../../assets/minitel.gif')}
-          className="w-40 h-40 mb-4"
-        />
-        <ActivityIndicator size="large" color="#fff" />
-        <Title className="text-white mt-4">Synchronisation en cours...</Title>
+        {showAnimation && (
+          <>
+            <Image
+              source={require('../../assets/minitel.gif')}
+              className="w-40 h-40 mb-4"
+            />
+            {syncing && <ActivityIndicator size="large" color="#fff" />}
+            {syncing && (
+              <Title className="text-white mt-4">
+                Synchronisation en cours...
+              </Title>
+            )}
+          </>
+        )}
       </View>
     </Modal>
     </>
