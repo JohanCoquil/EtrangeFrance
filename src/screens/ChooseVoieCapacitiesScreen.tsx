@@ -73,42 +73,47 @@ export default function ChooseVoieCapacitiesScreen() {
           cap.description.length > 60
             ? cap.description.slice(0, 60) + "..."
             : cap.description;
+        const rankDescription = cap.rangs?.[levels[cap.id]];
 
         return (
-          <View
-            key={cap.id}
-            className="flex-row justify-between items-center mb-3"
-          >
-            <View className="flex-1 pr-2">
-              <Title className="text-white text-lg">{cap.name}</Title>
-              <Body
-                className="text-gray-300 text-sm"
-                onPress={() => Alert.alert("Description", cap.description)}
-              >
-                {truncatedDescription}
-              </Body>
+          <View key={cap.id} className="mb-3">
+            <View className="flex-row justify-between items-center">
+              <View className="flex-1 pr-2">
+                <Title className="text-white text-lg">{cap.name}</Title>
+                <Body
+                  className="text-gray-300 text-sm"
+                  onPress={() => Alert.alert("Description", cap.description)}
+                >
+                  {truncatedDescription}
+                </Body>
+              </View>
+              <View className="flex-row items-center">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onPress={() => decrement(cap.id)}
+                  className="px-2"
+                >
+                  -
+                </Button>
+                <Body className="text-white mx-2">
+                  {levels[cap.id] || 0}
+                </Body>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onPress={() => increment(cap.id)}
+                  className="px-2"
+                >
+                  +
+                </Button>
+              </View>
             </View>
-            <View className="flex-row items-center">
-              <Button
-                size="sm"
-                variant="secondary"
-                onPress={() => decrement(cap.id)}
-                className="px-2"
-              >
-                -
-              </Button>
-              <Body className="text-white mx-2">
-                {levels[cap.id] || 0}
+            {rankDescription && (
+              <Body className="text-gray-200 text-xs mt-1">
+                {rankDescription}
               </Body>
-              <Button
-                size="sm"
-                variant="secondary"
-                onPress={() => increment(cap.id)}
-                className="px-2"
-              >
-                +
-              </Button>
-            </View>
+            )}
           </View>
         );
       })}
