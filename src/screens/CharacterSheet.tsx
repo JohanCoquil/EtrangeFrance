@@ -1,6 +1,10 @@
 import React, { useRef, useEffect, useState } from "react";
 import { View, TextInput, Dimensions, ScrollView } from "react-native";
-import { Audio } from "expo-av";
+import {
+  Audio,
+  InterruptionModeAndroid,
+  InterruptionModeIOS,
+} from "expo-av";
 import { PanGestureHandler, State } from "react-native-gesture-handler";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { Layout, Title, Body, Caption } from "../components/ui";
@@ -87,8 +91,8 @@ export default function CharacterSheet() {
     const setup = async () => {
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
-        interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_MIX_WITH_OTHERS,
-        interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DUCK_OTHERS,
+        interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
         shouldDuckAndroid: true,
       });
       const { sound } = await Audio.Sound.createAsync(

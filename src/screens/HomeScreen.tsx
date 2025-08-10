@@ -14,7 +14,13 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Audio, Video } from 'expo-av';
+import {
+  Audio,
+  Video,
+  InterruptionModeAndroid,
+  InterruptionModeIOS,
+  ResizeMode,
+} from 'expo-av';
 import { TabParamList, RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
 import { syncDatabase } from '@/data/sync';
@@ -76,8 +82,8 @@ export default function HomeScreen({ navigation }: Props) {
     const setup = async () => {
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
-        interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_MIX_WITH_OTHERS,
-        interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DUCK_OTHERS,
+        interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
         shouldDuckAndroid: true,
       });
       const { sound } = await Audio.Sound.createAsync(
@@ -261,7 +267,7 @@ export default function HomeScreen({ navigation }: Props) {
               source={require('../../assets/minitel.mp4')}
               style={{ width: screenWidth * 0.85, aspectRatio: 1, marginBottom: 16 }}
               isLooping
-              resizeMode="contain"
+              resizeMode={ResizeMode.CONTAIN}
             />
             {syncing && <ActivityIndicator size="large" color="#fff" />}
             {syncing && (

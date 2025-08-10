@@ -1,6 +1,10 @@
 // src/context/PlayMusicContext.tsx
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { Audio } from 'expo-av';
+import {
+  Audio,
+  InterruptionModeAndroid,
+  InterruptionModeIOS,
+} from 'expo-av';
 
 type PlayMusicContextType = {
   playMusic: boolean;
@@ -17,8 +21,8 @@ export const PlayMusicProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const setup = async () => {
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
-        interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_MIX_WITH_OTHERS,
-        interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DUCK_OTHERS,
+        interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
         shouldDuckAndroid: true,
         staysActiveInBackground: true,
       });
