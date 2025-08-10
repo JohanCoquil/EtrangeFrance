@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { View, ImageBackground, Dimensions, FlatList } from "react-native";
+import {
+  View,
+  ImageBackground,
+  Dimensions,
+  FlatList,
+  ScrollView,
+} from "react-native";
 import { Layout, Title, Body, Button } from "../components/ui";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -65,21 +71,25 @@ export default function ChooseStrangePathScreen() {
         onMomentumScrollEnd={(e) =>
           setCurrentIndex(Math.round(e.nativeEvent.contentOffset.x / itemWidth))
         }
+        className="flex-1"
         renderItem={({ item }) => (
-          <ImageBackground
-            source={
-              item.image_url
-                ? { uri: item.image_url }
-                : require("../../assets/illustrations/background.jpg")
-            }
-            style={{ width: itemWidth, height: 300, marginRight: 16 }}
-            className="rounded-xl overflow-hidden justify-end"
-          >
-            <View className="bg-black/60 p-4">
-              <Title className="text-white text-2xl mb-2">{item.name}</Title>
+          <View style={{ width: itemWidth, marginRight: 16 }} className="flex-1">
+            <ImageBackground
+              source={
+                item.image_url
+                  ? { uri: item.image_url }
+                  : require("../../assets/illustrations/background.jpg")
+              }
+              style={{ width: "100%", height: 200 }}
+              className="rounded-xl overflow-hidden"
+            />
+            <Title className="text-white text-2xl my-4 text-center">
+              {item.name}
+            </Title>
+            <ScrollView className="flex-1">
               <Body className="text-gray-200">{item.description}</Body>
-            </View>
-          </ImageBackground>
+            </ScrollView>
+          </View>
         )}
       />
 
