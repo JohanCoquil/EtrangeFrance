@@ -6,7 +6,12 @@ const API_URL = "https://api.scriptonautes.net/api/records";
 export async function syncDatabase() {
   const db = getDb();
   await pushLocalChanges(db);
-  await pullRemoteData(db);
+  await db.execAsync('PRAGMA foreign_keys = OFF;');
+  try {
+    await pullRemoteData(db);
+  } finally {
+    await db.execAsync('PRAGMA foreign_keys = ON;');
+  }
 }
 
 async function pushLocalChanges(db: SQLite.SQLiteDatabase) {
