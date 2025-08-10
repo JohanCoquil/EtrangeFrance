@@ -7,6 +7,7 @@ import {
   Animated,
   Modal,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
@@ -15,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { TabParamList, RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
 import { syncDatabase } from '@/data/sync';
+import { createAudioPlayer, AudioPlayer, setAudioModeAsync } from 'expo-audio';
 
 type Props = BottomTabScreenProps<TabParamList, 'Home'>;
 
@@ -38,6 +40,7 @@ export default function HomeScreen({ navigation }: Props) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const rootNavigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const minitelPlayer = useRef<AudioPlayer | null>(null);
 
   const handleEnterAgency = () => {
     rootNavigation.navigate('Auth');
@@ -77,6 +80,29 @@ export default function HomeScreen({ navigation }: Props) {
 
     return () => clearInterval(interval);
   }, [nextIndex]);
+
+  useEffect(() => {
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      interruptionMode: 'mixWithOthers',
+      interruptionModeAndroid: 'duckOthers',
+    });
+    const player = createAudioPlayer(require('../../sounds/minitel.mp3'));
+    minitelPlayer.current = player;
+    return () => {
+      player.remove();
+      minitelPlayer.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (syncing) {
+      minitelPlayer.current?.seekTo(0);
+      minitelPlayer.current?.play();
+    } else {
+      minitelPlayer.current?.pause();
+    }
+  }, [syncing]);
 
   const ScreenContent = () => (
     <ScrollView
@@ -205,6 +231,10 @@ export default function HomeScreen({ navigation }: Props) {
       onRequestClose={() => {}}
     >
       <View className="flex-1 items-center justify-center bg-black/80">
+        <Image
+          source={require('../../assets/minitel.gif')}
+          className="w-40 h-40 mb-4"
+        />
         <ActivityIndicator size="large" color="#fff" />
         <Title className="text-white mt-4">Synchronisation en cours...</Title>
       </View>
