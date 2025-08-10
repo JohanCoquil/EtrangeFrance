@@ -43,7 +43,7 @@ export default function ChooseStrangePathScreen() {
         onError: (err) => {
           alert("❌ Erreur lors de l'enregistrement : " + err);
         },
-      }
+      },
     );
   };
 
@@ -80,13 +80,15 @@ export default function ChooseStrangePathScreen() {
                   : require("../../assets/illustrations/background.jpg")
               }
               style={{ width: "100%", height: 200 }}
-              className="rounded-xl overflow-hidden"
+              imageStyle={{ borderRadius: 12 }}
             />
             <Title className="text-white text-2xl my-4 text-center">
               {item.name}
             </Title>
             <ScrollView className="flex-1">
-              <Body className="text-gray-200">{item.description}</Body>
+              <View className="p-4 bg-black rounded-lg">
+                <Body className="text-gray-200">{item.description}</Body>
+              </View>
             </ScrollView>
           </View>
         )}
@@ -106,4 +108,3 @@ export default function ChooseStrangePathScreen() {
     </Layout>
   );
 }
-
