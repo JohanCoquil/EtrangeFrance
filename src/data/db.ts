@@ -37,6 +37,7 @@ export const initDb = async () => {
     CREATE TABLE IF NOT EXISTS voie_capacite (
       voie_id INTEGER NOT NULL,
       capacite_id INTEGER NOT NULL,
+      distant_id INTEGER DEFAULT 0,
       PRIMARY KEY (voie_id, capacite_id),
       FOREIGN KEY (voie_id) REFERENCES voies_etranges(id) ON DELETE CASCADE,
       FOREIGN KEY (capacite_id) REFERENCES capacites(id) ON DELETE CASCADE
@@ -492,8 +493,16 @@ export const initDb = async () => {
       (4, 64),
       (7, 64);
   `);
-
+  
   // Ensure new columns exist for older databases
+  const voieCapaciteCols = await database.getAllAsync("PRAGMA table_info(voie_capacite);");
+  const hasVcDistantId = voieCapaciteCols.some((c: any) => c.name === "distant_id");
+  if (!hasVcDistantId) {
+    await database.execAsync(
+      "ALTER TABLE voie_capacite ADD COLUMN distant_id INTEGER DEFAULT 0;"
+    );
+  }
+
   const columns = await database.getAllAsync("PRAGMA table_info(characters);");
   const hasProfessionId = columns.some((c: any) => c.name === "profession_id");
   if (!hasProfessionId) {
