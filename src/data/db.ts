@@ -110,6 +110,11 @@ export const initDb = async () => {
       memoire INTEGER DEFAULT 1,
       volonte INTEGER DEFAULT 1,
       sante INTEGER DEFAULT 0,
+      origines TEXT,
+      rencontres TEXT,
+      notes TEXT,
+      equipement TEXT,
+      fetiches TEXT,
       FOREIGN KEY (profession_id) REFERENCES professions(id),
       FOREIGN KEY (hobby_id) REFERENCES hobbies(id),
       FOREIGN KEY (voie_id) REFERENCES voies_etranges(id)
@@ -470,6 +475,40 @@ export const initDb = async () => {
   if (!hasSante) {
     await database.execAsync(
       "ALTER TABLE characters ADD COLUMN sante INTEGER DEFAULT 0;"
+    );
+  }
+  const hasOrigines = columns.some((c: any) => c.name === "origines");
+  if (!hasOrigines) {
+    await database.execAsync(
+      "ALTER TABLE characters ADD COLUMN origines TEXT;",
+    );
+  }
+
+  const hasRencontres = columns.some((c: any) => c.name === "rencontres");
+  if (!hasRencontres) {
+    await database.execAsync(
+      "ALTER TABLE characters ADD COLUMN rencontres TEXT;",
+    );
+  }
+
+  const hasNotes = columns.some((c: any) => c.name === "notes");
+  if (!hasNotes) {
+    await database.execAsync(
+      "ALTER TABLE characters ADD COLUMN notes TEXT;",
+    );
+  }
+
+  const hasEquipement = columns.some((c: any) => c.name === "equipement");
+  if (!hasEquipement) {
+    await database.execAsync(
+      "ALTER TABLE characters ADD COLUMN equipement TEXT;",
+    );
+  }
+
+  const hasFetiches = columns.some((c: any) => c.name === "fetiches");
+  if (!hasFetiches) {
+    await database.execAsync(
+      "ALTER TABLE characters ADD COLUMN fetiches TEXT;",
     );
   }
 
