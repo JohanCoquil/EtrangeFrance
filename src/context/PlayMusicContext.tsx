@@ -16,6 +16,7 @@ const PlayMusicContext = createContext<PlayMusicContextType | undefined>(undefin
 export const PlayMusicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [playMusic, setPlayMusic] = useState(false);
   const playerRef = useRef<Audio.Sound | null>(null);
+  const [playerReady, setPlayerReady] = useState(false);
 
   useEffect(() => {
     const setup = async () => {
@@ -31,9 +32,7 @@ export const PlayMusicProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         { isLooping: true }
       );
       playerRef.current = sound;
-      if (playMusic) {
-        sound.playAsync();
-      }
+      setPlayerReady(true);
     };
     setup();
     return () => {
@@ -44,13 +43,13 @@ export const PlayMusicProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   useEffect(() => {
     const player = playerRef.current;
-    if (!player) return;
+    if (!playerReady || !player) return;
     if (playMusic) {
       player.playAsync();
     } else {
       player.pauseAsync();
     }
-  }, [playMusic]);
+  }, [playMusic, playerReady]);
 
   return (
     <PlayMusicContext.Provider value={{ playMusic, setPlayMusic }}>
