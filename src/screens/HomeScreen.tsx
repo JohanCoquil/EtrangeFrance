@@ -40,6 +40,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [initModal, setInitModal] = useState(!hasSyncedOnce);
   const [syncing, setSyncing] = useState(false);
   const [showAnimation, setShowAnimation] = useState(false);
+  const [minitelLoaded, setMinitelLoaded] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const rootNavigation =
@@ -78,6 +79,7 @@ export default function HomeScreen({ navigation }: Props) {
         require('../../sounds/minitel.mp3')
       );
       minitelPlayer.current = sound;
+      setMinitelLoaded(true);
     };
     setup();
     return () => {
@@ -87,7 +89,7 @@ export default function HomeScreen({ navigation }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!initModal) return;
+    if (!initModal || !minitelLoaded) return;
     const run = async () => {
       setPlayMusic(false);
       await minitelPlayer.current?.setPositionAsync(0);
@@ -108,7 +110,7 @@ export default function HomeScreen({ navigation }: Props) {
       hasSyncedOnce = true;
     };
     run();
-  }, [initModal, setPlayMusic]);
+  }, [initModal, setPlayMusic, minitelLoaded]);
 
   useEffect(() => {
     if (showAnimation) {
