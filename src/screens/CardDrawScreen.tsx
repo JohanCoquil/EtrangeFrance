@@ -8,33 +8,43 @@ import Animated, {
   cancelAnimation,
 } from 'react-native-reanimated';
 import { suits, values } from '../data/deck';
-import FlippableCard from '../components/game/FlippableCard';
+import Card from '../components/game/Carte';
 
-const NUM_BACK_CARDS = 5;
+// Nombre de dos de cartes affichés pendant le mélange
+const NUM_BACK_CARDS = 10;
+
+// Génère des facteurs aléatoires pour les animations de chaque carte
+const generateRandomFactors = () =>
+  Array.from({ length: NUM_BACK_CARDS }, () => ({
+    dirX: Math.random() > 0.5 ? 1 : -1,
+    dirY: Math.random() > 0.5 ? 1 : -1,
+    ampX: Math.random() * 1.5 + 0.5, // amplitude horizontale
+    ampY: Math.random() * 0.5, // légère variation verticale
+    rot: (Math.random() - 0.5) * 1, // rotation aléatoire
+  }));
 
 export default function CardDrawScreen() {
   const [isShuffling, setIsShuffling] = useState(false);
   const [drawnCard, setDrawnCard] = useState<{ value: string; suit: { symbol: string; color: string } } | null>(null);
+  const [randomFactors, setRandomFactors] = useState(generateRandomFactors);
 
   const translateX = useSharedValue(0);
 
-  const animStyles = Array.from({ length: NUM_BACK_CARDS }, (_, i) =>
+  const animStyles = randomFactors.map(({ dirX, dirY, ampX, ampY, rot }) =>
     useAnimatedStyle(() => ({
       transform: [
-        {
-          translateX: translateX.value * ((i % 2 === 0 ? 1 : -1) * (i + 1) * 0.2),
-        },
-        {
-          rotate: `${translateX.value * (i % 2 === 0 ? 0.2 : -0.2)}deg`,
-        },
+        { translateX: translateX.value * dirX * ampX },
+        { translateY: translateX.value * dirY * ampY },
+        { rotate: `${translateX.value * rot}deg` },
       ],
     }))
   );
 
   const handlePress = () => {
     if (!isShuffling && !drawnCard) {
+      setRandomFactors(generateRandomFactors());
       setIsShuffling(true);
-      translateX.value = withRepeat(withTiming(10, { duration: 150 }), -1, true);
+      translateX.value = withRepeat(withTiming(15, { duration: 150 }), -1, true);
     } else if (isShuffling) {
       setIsShuffling(false);
       cancelAnimation(translateX);
@@ -63,7 +73,7 @@ export default function CardDrawScreen() {
       {/* Carte tirée */}
       {drawnCard && (
         <View style={styles.drawnCard}>
-          <FlippableCard value={drawnCard.value} suit={drawnCard.suit} />
+          <Card value={drawnCard.value} suit={drawnCard.suit} />
         </View>
       )}
     </Pressable>

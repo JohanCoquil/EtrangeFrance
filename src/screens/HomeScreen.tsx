@@ -5,13 +5,26 @@ import {
   Dimensions,
   ImageBackground,
   Animated,
+  Modal,
+  ActivityIndicator,
+  Text,
+  Linking
 } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
+import {
+  Audio,
+  Video,
+  InterruptionModeAndroid,
+  InterruptionModeIOS,
+  ResizeMode,
+} from 'expo-av';
 import { TabParamList, RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
+import { syncDatabase } from '@/data/sync';
+import { usePlayMusic } from '@/context/PlayMusicContext';
 
 type Props = BottomTabScreenProps<TabParamList, 'Home'>;
 
@@ -24,14 +37,23 @@ const backgrounds = [
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
+let hasSyncedOnce = false;
+
 export default function HomeScreen({ navigation }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [nextIndex, setNextIndex] = useState(1);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [initModal, setInitModal] = useState(!hasSyncedOnce);
+  const [syncing, setSyncing] = useState(false);
+  const [showAnimation, setShowAnimation] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const rootNavigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const minitelPlayer = useRef<Audio.Sound | null>(null);
+  const videoRef = useRef<Video>(null);
+
+  const { setPlayMusic } = usePlayMusic();
 
   const handleEnterAgency = () => {
     rootNavigation.navigate('Auth');
@@ -56,6 +78,55 @@ export default function HomeScreen({ navigation }: Props) {
     return () => clearInterval(interval);
   }, [nextIndex]);
 
+  useEffect(() => {
+    const setup = async () => {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+        shouldDuckAndroid: true,
+      });
+      const { sound } = await Audio.Sound.createAsync(
+        require('../../sounds/minitel.mp3')
+      );
+      minitelPlayer.current = sound;
+    };
+    setup();
+    return () => {
+      minitelPlayer.current?.unloadAsync();
+      minitelPlayer.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!initModal) return;
+    const run = async () => {
+      setPlayMusic(false);
+      await minitelPlayer.current?.replayAsync();
+      await new Promise((res) => setTimeout(res, 12000));
+      await minitelPlayer.current?.pauseAsync();
+      setShowAnimation(true);
+      setPlayMusic(true);
+      setSyncing(true);
+      try {
+        await syncDatabase();
+      } catch (e) {
+        console.error('Database sync failed', e);
+      } finally {
+        setSyncing(false);
+        setInitModal(false);
+        hasSyncedOnce = true;
+      }
+    };
+    run();
+  }, [initModal, setPlayMusic]);
+
+  useEffect(() => {
+    if (showAnimation) {
+      videoRef.current?.replayAsync();
+    }
+  }, [showAnimation]);
+
   const ScreenContent = () => (
     <ScrollView
       contentContainerStyle={{
@@ -68,10 +139,10 @@ export default function HomeScreen({ navigation }: Props) {
       }}
     >
       <View className="mb-8">
-        <Title className="text-blue-100 text-center text-4xl font-bold mb-2 tracking-wider">
+        <Title className="text-white text-center text-4xl font-bold mb-2 tracking-wider">
           ÉTRANGE
         </Title>
-        <Title className="text-blue-100 text-center text-5xl font-bold tracking-widest">
+        <Title className="text-white text-center text-5xl font-bold tracking-widest">
           FRANCE
         </Title>
         <Caption className="text-white text-center mt-2 tracking-widest uppercase">
@@ -107,9 +178,15 @@ export default function HomeScreen({ navigation }: Props) {
         <Caption className="text-gray-400 text-center">
           Assistant JDR Étrange France • Version 1.0.0
         </Caption>
-        <Caption className="text-gray-500 text-center mt-1">
-          Le jeu de rôles Étrange France est une création originale de Fletch.
-        </Caption>
+       <Caption className="text-gray-500 text-center mt-1">
+  Le jeu de rôles Étrange France est une création originale de{" "}
+  <Text
+    style={{ color: "#3b82f6", textDecorationLine: "underline" }}
+    onPress={() => Linking.openURL("https://etrange-france.fr/")}
+  >
+    Fletch
+  </Text>.
+</Caption>
       </View>
 
       <Button
@@ -132,6 +209,7 @@ export default function HomeScreen({ navigation }: Props) {
   );
 
   return (
+    <>
     <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
       {/* Image actuelle */}
       <ImageBackground
@@ -175,5 +253,32 @@ export default function HomeScreen({ navigation }: Props) {
       {/* Contenu */}
       <ScreenContent />
     </View>
+    <Modal
+      visible={initModal}
+      transparent={false}
+      animationType="fade"
+      onRequestClose={() => {}}
+    >
+      <View className="flex-1 items-center justify-center bg-black/80">
+        {showAnimation && (
+          <>
+            <Video
+              ref={videoRef}
+              source={require('../../assets/minitel.mp4')}
+              style={{ width: screenWidth * 0.85, aspectRatio: 1, marginBottom: 16 }}
+              isLooping
+              resizeMode={ResizeMode.CONTAIN}
+            />
+            {syncing && <ActivityIndicator size="large" color="#fff" />}
+            {syncing && (
+              <Title className="text-white mt-4">
+                Récupération des dossiers de l'agence Khole en cours...
+              </Title>
+            )}
+          </>
+        )}
+      </View>
+    </Modal>
+    </>
   );
 }

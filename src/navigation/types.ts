@@ -5,9 +5,13 @@ export type RootStackParamList = {
   Auth: undefined;
   CreateCharacter: undefined;
   ChooseProfession: { characterId: string };
+  ChooseHobbie: { characterId: string };
+  ChooseStrangePath: { characterId: string };
+  ChooseVoieCapacities: { characterId: string; voieId: number };
   Characters: undefined;
   Deck: undefined;
   CardDraw: undefined;
+  CharacterSheet: { characterId: string };
   // Ajoutez d'autres écrans modaux ou stack ici si nécessaire
 };
 
