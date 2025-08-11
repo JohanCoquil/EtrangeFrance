@@ -1,4 +1,4 @@
-// src/components/Card.tsx
+// src/components/game/Carte.tsx
 import React from 'react';
 import { Svg, Rect, Text } from 'react-native-svg';
 
