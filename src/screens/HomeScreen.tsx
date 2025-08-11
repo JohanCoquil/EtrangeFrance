@@ -14,13 +14,7 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import {
-  Audio,
-  Video,
-  InterruptionModeAndroid,
-  InterruptionModeIOS,
-  ResizeMode,
-} from 'expo-av';
+import { Audio, Video, ResizeMode } from 'expo-av';
 import { TabParamList, RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
 import { syncDatabase } from '@/data/sync';
@@ -80,12 +74,6 @@ export default function HomeScreen({ navigation }: Props) {
 
   useEffect(() => {
     const setup = async () => {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
-        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
-        shouldDuckAndroid: true,
-      });
       const { sound } = await Audio.Sound.createAsync(
         require('../../sounds/minitel.mp3')
       );
@@ -102,9 +90,10 @@ export default function HomeScreen({ navigation }: Props) {
     if (!initModal) return;
     const run = async () => {
       setPlayMusic(false);
-      await minitelPlayer.current?.replayAsync();
+      await minitelPlayer.current?.setPositionAsync(0);
+      await minitelPlayer.current?.playAsync();
       await new Promise((res) => setTimeout(res, 12000));
-      await minitelPlayer.current?.pauseAsync();
+      await minitelPlayer.current?.stopAsync();
       setShowAnimation(true);
       setPlayMusic(true);
       setSyncing(true);
@@ -112,11 +101,11 @@ export default function HomeScreen({ navigation }: Props) {
         await syncDatabase();
       } catch (e) {
         console.error('Database sync failed', e);
-      } finally {
-        setSyncing(false);
-        setInitModal(false);
-        hasSyncedOnce = true;
       }
+      await new Promise((res) => setTimeout(res, 5000));
+      setSyncing(false);
+      setInitModal(false);
+      hasSyncedOnce = true;
     };
     run();
   }, [initModal, setPlayMusic]);
@@ -271,9 +260,9 @@ export default function HomeScreen({ navigation }: Props) {
             />
             {syncing && <ActivityIndicator size="large" color="#fff" />}
             {syncing && (
-              <Title className="text-white mt-4">
+              <Body className="text-white mt-4 text-center text-lg">
                 Récupération des dossiers de l'agence Khole en cours...
-              </Title>
+              </Body>
             )}
           </>
         )}
