@@ -266,7 +266,7 @@ export default function HomeScreen({ navigation }: Props) {
       onRequestClose={() => {}}
     >
       <ImageBackground
-        source={require('../../assets/illustrations/intro.png')}
+        source={require('../../assets/illustrations/intro.jpg')}
         resizeMode="cover"
         style={{ flex: 1 }}
         blurRadius={5}
