@@ -144,7 +144,7 @@ export default function ChooseStrangePathScreen() {
               <ImageBackground
                 source={
                   item.image_url
-                    ? { uri: item.image_url } // si local, préfère un mapping require(...)
+                    ? { uri: "https://api.scriptonautes.net/assets/" + item.image_url } // si local, préfère un mapping require(...)
                     : require("../../assets/illustrations/background.jpg")
                 }
                 style={{ width: "100%", height: 220 }}
