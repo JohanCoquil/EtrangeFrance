@@ -79,7 +79,7 @@ export default function ChooseVoieCapacitiesScreen() {
         )
           .filter(([rank]) => Number(rank) <= level)
           .sort((a, b) => Number(a[0]) - Number(b[0]))
-          .map(([, desc]) => desc);
+          .map(([, desc]) => ' - ' + desc);
 
         return (
           <View key={cap.id} className="mb-3">
