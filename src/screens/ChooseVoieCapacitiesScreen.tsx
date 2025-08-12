@@ -73,7 +73,11 @@ export default function ChooseVoieCapacitiesScreen() {
           cap.description.length > 60
             ? cap.description.slice(0, 60) + "..."
             : cap.description;
-        const rankDescription = cap.rangs?.[levels[cap.id]];
+        const level = levels[cap.id] || 0;
+        const rankDescriptions = Object.entries(cap.rangs || {})
+          .filter(([rank]) => Number(rank) <= level)
+          .sort((a, b) => Number(a[0]) - Number(b[0]))
+          .map(([, desc]) => desc);
 
         return (
           <View key={cap.id} className="mb-3">
@@ -109,10 +113,14 @@ export default function ChooseVoieCapacitiesScreen() {
                 </Button>
               </View>
             </View>
-            {rankDescription && (
-              <Body className="text-gray-200 text-xs mt-1">
-                {rankDescription}
-              </Body>
+            {rankDescriptions.length > 0 && (
+              <View className="mt-1">
+                {rankDescriptions.map((desc, index) => (
+                  <Body key={index} className="text-gray-200 text-xs">
+                    {desc}
+                  </Body>
+                ))}
+              </View>
             )}
           </View>
         );
