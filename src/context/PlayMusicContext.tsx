@@ -1,22 +1,30 @@
 // src/context/PlayMusicContext.tsx
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import {
-  Audio,
-  InterruptionModeAndroid,
-  InterruptionModeIOS,
-} from 'expo-av';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
+import { AppState, AppStateStatus } from "react-native";
 
 type PlayMusicContextType = {
   playMusic: boolean;
   setPlayMusic: (value: boolean) => void;
 };
 
-const PlayMusicContext = createContext<PlayMusicContextType | undefined>(undefined);
+const PlayMusicContext = createContext<PlayMusicContextType | undefined>(
+  undefined,
+);
 
-export const PlayMusicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const PlayMusicProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [playMusic, setPlayMusic] = useState(false);
   const playerRef = useRef<Audio.Sound | null>(null);
   const [playerReady, setPlayerReady] = useState(false);
+  const appState = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => {
     const setup = async () => {
@@ -25,11 +33,11 @@ export const PlayMusicProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
         interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
         shouldDuckAndroid: true,
-        staysActiveInBackground: true,
+        staysActiveInBackground: false,
       });
       const { sound } = await Audio.Sound.createAsync(
-        require('../../sounds/13-Enigmatic-Shadows.mp3'),
-        { isLooping: true }
+        require("../../sounds/13-Enigmatic-Shadows.mp3"),
+        { isLooping: true },
       );
       playerRef.current = sound;
       setPlayerReady(true);
@@ -44,11 +52,25 @@ export const PlayMusicProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     const player = playerRef.current;
     if (!playerReady || !player) return;
-    if (playMusic) {
+    if (playMusic && appState.current === "active") {
       player.playAsync();
     } else {
       player.pauseAsync();
     }
+  }, [playMusic, playerReady]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState.match(/inactive|background/)) {
+        playerRef.current?.pauseAsync();
+      } else if (nextAppState === "active" && playMusic && playerReady) {
+        playerRef.current?.playAsync();
+      }
+      appState.current = nextAppState;
+    });
+    return () => {
+      subscription.remove();
+    };
   }, [playMusic, playerReady]);
 
   return (
@@ -61,7 +83,7 @@ export const PlayMusicProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 export const usePlayMusic = () => {
   const ctx = useContext(PlayMusicContext);
   if (!ctx) {
-    throw new Error('usePlayMusic must be used within a PlayMusicProvider');
+    throw new Error("usePlayMusic must be used within a PlayMusicProvider");
   }
   return ctx;
 };
