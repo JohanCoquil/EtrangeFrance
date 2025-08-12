@@ -74,7 +74,9 @@ export default function ChooseVoieCapacitiesScreen() {
             ? cap.description.slice(0, 60) + "..."
             : cap.description;
         const level = levels[cap.id] || 0;
-        const rankDescriptions = Object.entries(cap.rangs || {})
+        const rankDescriptions: string[] = (
+          Object.entries(cap.rangs || {}) as [string, string][]
+        )
           .filter(([rank]) => Number(rank) <= level)
           .sort((a, b) => Number(a[0]) - Number(b[0]))
           .map(([, desc]) => desc);
