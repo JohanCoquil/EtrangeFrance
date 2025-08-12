@@ -89,6 +89,21 @@ export default function HomeScreen({ navigation }: Props) {
   }, []);
 
   useEffect(() => {
+    const loadVideo = async () => {
+      if (videoRef.current) {
+        await videoRef.current.loadAsync(
+          require('../../assets/minitel.mp4'),
+          { isLooping: true, shouldPlay: false }
+        );
+      }
+    };
+    loadVideo();
+    return () => {
+      videoRef.current?.unloadAsync();
+    };
+  }, []);
+
+  useEffect(() => {
     if (!initModal || !minitelLoaded) return;
     const run = async () => {
       setPlayMusic(false);
@@ -251,21 +266,22 @@ export default function HomeScreen({ navigation }: Props) {
       onRequestClose={() => {}}
     >
       <View className="flex-1 items-center justify-center bg-black/80">
-        {showAnimation && (
+        <Video
+          ref={videoRef}
+          style={{
+            width: screenWidth * 0.85,
+            aspectRatio: 1,
+            marginBottom: 16,
+            opacity: showAnimation ? 1 : 0,
+          }}
+          resizeMode={ResizeMode.CONTAIN}
+        />
+        {showAnimation && syncing && (
           <>
-            <Video
-              ref={videoRef}
-              source={require('../../assets/minitel.mp4')}
-              style={{ width: screenWidth * 0.85, aspectRatio: 1, marginBottom: 16 }}
-              isLooping
-              resizeMode={ResizeMode.CONTAIN}
-            />
-            {syncing && <ActivityIndicator size="large" color="#fff" />}
-            {syncing && (
-              <Body className="text-white mt-4 text-center text-lg">
-                Récupération des dossiers de l'agence Khole en cours...
-              </Body>
-            )}
+            <ActivityIndicator size="large" color="#fff" />
+            <Body className="text-white mt-4 text-center text-lg">
+              Récupération des dossiers de l'agence Khole en cours...
+            </Body>
           </>
         )}
       </View>
