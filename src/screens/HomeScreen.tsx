@@ -265,26 +265,33 @@ export default function HomeScreen({ navigation }: Props) {
       animationType="fade"
       onRequestClose={() => {}}
     >
-      <View className="flex-1 items-center justify-center bg-black/80">
-        <Video
-          ref={videoRef}
-          style={{
-            width: screenWidth * 0.85,
-            aspectRatio: 1,
-            marginBottom: 16,
-            opacity: showAnimation ? 1 : 0,
-          }}
-          resizeMode={ResizeMode.CONTAIN}
-        />
-        {showAnimation && syncing && (
-          <>
-            <ActivityIndicator size="large" color="#fff" />
-            <Body className="text-white mt-4 text-center text-lg">
-              Récupération des dossiers de l'agence Khole en cours...
-            </Body>
-          </>
-        )}
-      </View>
+      <ImageBackground
+        source={require('../../assets/illustrations/background2.jpg')}
+        resizeMode="cover"
+        style={{ flex: 1 }}
+        blurRadius={5}
+      >
+        <View className="flex-1 items-center justify-center bg-black/60">
+          <Video
+            ref={videoRef}
+            style={{
+              width: screenWidth * 0.85,
+              aspectRatio: 1,
+              marginBottom: 16,
+              opacity: showAnimation ? 1 : 0,
+            }}
+            resizeMode={ResizeMode.CONTAIN}
+          />
+          {showAnimation && syncing && (
+            <>
+              <ActivityIndicator size="large" color="#fff" />
+              <Body className="text-white mt-4 text-center text-lg">
+                Récupération des dossiers de l'agence Khole en cours...
+              </Body>
+            </>
+          )}
+        </View>
+      </ImageBackground>
     </Modal>
     </>
   );
