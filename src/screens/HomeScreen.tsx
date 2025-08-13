@@ -180,11 +180,11 @@ export default function HomeScreen({ navigation }: Props) {
           Etrange France se déroule dans un monde reflet du notre, où le surnaturel existe.
           Les mages, les fées, les mythes, les dieux anciens le parcourent depuis toujours.
         </Body>
-        <Body className="text-blue-100 text-center leading-relaxed mb-4">
+        <Body className="text-white text-center leading-relaxed mb-4">
           Nous sommes en 1989. La semaine passée, le mur de Berlin est tombé !
           À l'abris des regards, des agences de détectives privés surveillent, enquêtent et règlent les conflits du monde de l'étrange.
         </Body>
-        <Caption className="text-gray-300 text-center italic">
+        <Caption className="text-white text-center italic">
           "1989. Le monde change. La technologie change. L'occulte aussi..."
         </Caption>
       </View>
@@ -200,10 +200,10 @@ export default function HomeScreen({ navigation }: Props) {
       </Button>
 
       <View className="mt-8">
-        <Caption className="text-gray-400 text-center">
+        <Caption className="text-white text-center">
           Assistant JDR Étrange France • Version 1.0.0
         </Caption>
-       <Caption className="text-gray-500 text-center mt-1">
+       <Caption className="text-white text-center mt-1">
   Le jeu de rôles Étrange France est une création originale de{" "}
   <Text
     style={{ color: "#3b82f6", textDecorationLine: "underline" }}
