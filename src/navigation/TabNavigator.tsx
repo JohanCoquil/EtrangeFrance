@@ -1,3 +1,6 @@
+import React from 'react';
+import { TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from '../screens/HomeScreen';
 import CharactersScreen from '../screens/CharactersScreen';
@@ -5,6 +8,7 @@ import AgencyScreen from '../screens/AgencyScreen';
 import SessionScreen from '../screens/SessionScreen';
 import DeckScreen from '../screens/DeckScreen';
 import CardDrawScreen from '../screens/CardDrawScreen';
+import { usePlayMusic } from '@/context/PlayMusicContext';
 
 export type TabParamList = {
   Home: undefined;
@@ -16,6 +20,23 @@ export type TabParamList = {
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();
+
+function SoundToggleButton() {
+  const { musicEnabled, setMusicEnabled } = usePlayMusic();
+
+  return (
+    <TouchableOpacity
+      onPress={() => setMusicEnabled(!musicEnabled)}
+      style={{ marginRight: 16 }}
+    >
+      <Ionicons
+        name={musicEnabled ? 'volume-high' : 'volume-mute'}
+        size={24}
+        color="#ffffff"
+      />
+    </TouchableOpacity>
+  );
+}
 
 export default function TabNavigator() {
   return (
@@ -38,7 +59,8 @@ export default function TabNavigator() {
         component={HomeScreen}
         options={{
           title: 'Accueil',
-          tabBarIcon: () => null // Vous pouvez ajouter des icônes plus tard
+          tabBarIcon: () => null, // Vous pouvez ajouter des icônes plus tard
+          headerRight: () => <SoundToggleButton />,
         }}
       />
       <Tab.Screen
