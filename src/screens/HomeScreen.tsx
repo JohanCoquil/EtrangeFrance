@@ -266,10 +266,10 @@ export default function HomeScreen({ navigation }: Props) {
       onRequestClose={() => {}}
     >
       <ImageBackground
-        source={require('../../assets/illustrations/intro.jpg')}
+        source={require('../../assets/illustrations/intro.png')}
         resizeMode="cover"
         style={{ flex: 1 }}
-        blurRadius={5}
+        blurRadius={0}
       >
         <View className="flex-1 items-center justify-center bg-black/60">
           <Video
