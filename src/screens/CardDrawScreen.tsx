@@ -26,7 +26,10 @@ const generateRandomFactors = () =>
 
 export default function CardDrawScreen() {
   const [isShuffling, setIsShuffling] = useState(false);
-  const [drawnCard, setDrawnCard] = useState<{ value: string; suit: { symbol: string; color: string } } | null>(null);
+  const [drawnCards, setDrawnCards] = useState<
+    { value: string; suit: { symbol: string; color: string } }[] | null
+  >(null);
+  const [chosenIndex, setChosenIndex] = useState<number | null>(null);
   const [randomFactors, setRandomFactors] = useState(generateRandomFactors);
   const [mode, setMode] = useState<'classic' | 'advantage' | 'disadvantage'>('classic');
 
@@ -50,7 +53,7 @@ export default function CardDrawScreen() {
   const valueOrder = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 
   const handlePress = () => {
-    if (!isShuffling && !drawnCard) {
+    if (!isShuffling && !drawnCards) {
       setRandomFactors(generateRandomFactors());
       setIsShuffling(true);
       translateX.value = withRepeat(withTiming(15, { duration: 150 }), -1, true);
@@ -61,19 +64,26 @@ export default function CardDrawScreen() {
 
       const card1 = drawRandomCard();
       if (mode === 'classic') {
-        setDrawnCard(card1);
+        setDrawnCards([card1]);
+        setChosenIndex(0);
       } else {
         const card2 = drawRandomCard();
         const rank1 = valueOrder.indexOf(card1.value);
         const rank2 = valueOrder.indexOf(card2.value);
-        if (mode === 'advantage') {
-          setDrawnCard(rank1 >= rank2 ? card1 : card2);
-        } else {
-          setDrawnCard(rank1 <= rank2 ? card1 : card2);
-        }
+        const chosen =
+          mode === 'advantage'
+            ? rank1 >= rank2
+              ? 0
+              : 1
+            : rank1 <= rank2
+              ? 0
+              : 1;
+        setDrawnCards([card1, card2]);
+        setChosenIndex(chosen);
       }
-    } else if (drawnCard) {
-      setDrawnCard(null);
+    } else if (drawnCards) {
+      setDrawnCards(null);
+      setChosenIndex(null);
     }
   };
 
@@ -114,9 +124,17 @@ export default function CardDrawScreen() {
           </Animated.View>
         ))}
 
-        {drawnCard && (
-          <View style={styles.drawnCard}>
-            <Card value={drawnCard.value} suit={drawnCard.suit} />
+        {drawnCards && (
+          <View style={styles.drawnCardsContainer}>
+            {drawnCards.map((card, index) => (
+              <View key={index} style={styles.singleCard}>
+                <Card
+                  value={card.value}
+                  suit={card.suit}
+                  crossed={drawnCards.length > 1 && index !== chosenIndex}
+                />
+              </View>
+            ))}
           </View>
         )}
       </Pressable>
@@ -156,5 +174,9 @@ const styles = StyleSheet.create({
     borderColor: '#666',
   },
   backText: { color: '#888', fontSize: 14, fontWeight: 'bold' },
-  drawnCard: { marginTop: -240 },
+  drawnCardsContainer: {
+    marginTop: -240,
+    flexDirection: 'row',
+  },
+  singleCard: { marginHorizontal: 10 },
 });
