@@ -131,10 +131,10 @@ export default function HomeScreen({ navigation }: Props) {
 
   const handleSkipIntro = async () => {
     setIntroSkipped(true);
+    setPlayMusic(false);
     await minitelPlayer.current?.stopAsync();
     await videoRef.current?.stopAsync();
-    setShowAnimation(true);
-    setPlayMusic(true);
+    setShowAnimation(false);
     setSyncing(true);
     try {
       await syncDatabase();
@@ -285,7 +285,7 @@ export default function HomeScreen({ navigation }: Props) {
             }}
             resizeMode={ResizeMode.CONTAIN}
           />
-          {showAnimation && syncing && (
+          {syncing && (
             <>
               <ActivityIndicator size="large" color="#fff" />
               <Body className="text-white mt-4 text-center text-lg">
