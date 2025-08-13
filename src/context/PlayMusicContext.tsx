@@ -12,6 +12,8 @@ import { AppState, AppStateStatus } from "react-native";
 type PlayMusicContextType = {
   playMusic: boolean;
   setPlayMusic: (value: boolean) => void;
+  musicEnabled: boolean;
+  setMusicEnabled: (value: boolean) => void;
 };
 
 const PlayMusicContext = createContext<PlayMusicContextType | undefined>(
@@ -22,6 +24,7 @@ export const PlayMusicProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [playMusic, setPlayMusic] = useState(false);
+  const [musicEnabled, setMusicEnabled] = useState(true);
   const playerRef = useRef<Audio.Sound | null>(null);
   const [playerReady, setPlayerReady] = useState(false);
   const appState = useRef<AppStateStatus>(AppState.currentState);
@@ -52,18 +55,23 @@ export const PlayMusicProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const player = playerRef.current;
     if (!playerReady || !player) return;
-    if (playMusic && appState.current === "active") {
+    if (playMusic && musicEnabled && appState.current === "active") {
       player.playAsync();
     } else {
       player.pauseAsync();
     }
-  }, [playMusic, playerReady]);
+  }, [playMusic, playerReady, musicEnabled]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextAppState) => {
       if (nextAppState.match(/inactive|background/)) {
         playerRef.current?.pauseAsync();
-      } else if (nextAppState === "active" && playMusic && playerReady) {
+      } else if (
+        nextAppState === "active" &&
+        playMusic &&
+        playerReady &&
+        musicEnabled
+      ) {
         playerRef.current?.playAsync();
       }
       appState.current = nextAppState;
@@ -71,10 +79,12 @@ export const PlayMusicProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       subscription.remove();
     };
-  }, [playMusic, playerReady]);
+  }, [playMusic, playerReady, musicEnabled]);
 
   return (
-    <PlayMusicContext.Provider value={{ playMusic, setPlayMusic }}>
+    <PlayMusicContext.Provider
+      value={{ playMusic, setPlayMusic, musicEnabled, setMusicEnabled }}
+    >
       {children}
     </PlayMusicContext.Provider>
   );
