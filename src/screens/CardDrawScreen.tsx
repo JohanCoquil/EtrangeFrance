@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { suits, values } from '../data/deck';
 import Card from '../components/game/Carte';
+import { Button } from '../components/ui';
 
 // Nombre de dos de cartes affichés pendant le mélange
 const NUM_BACK_CARDS = 10;
@@ -27,6 +28,7 @@ export default function CardDrawScreen() {
   const [isShuffling, setIsShuffling] = useState(false);
   const [drawnCard, setDrawnCard] = useState<{ value: string; suit: { symbol: string; color: string } } | null>(null);
   const [randomFactors, setRandomFactors] = useState(generateRandomFactors);
+  const [mode, setMode] = useState<'classic' | 'advantage' | 'disadvantage'>('classic');
 
   const translateX = useSharedValue(0);
 
@@ -40,6 +42,13 @@ export default function CardDrawScreen() {
     }))
   );
 
+  const drawRandomCard = () => ({
+    suit: suits[Math.floor(Math.random() * suits.length)],
+    value: values[Math.floor(Math.random() * values.length)],
+  });
+
+  const valueOrder = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+
   const handlePress = () => {
     if (!isShuffling && !drawnCard) {
       setRandomFactors(generateRandomFactors());
@@ -50,38 +59,81 @@ export default function CardDrawScreen() {
       cancelAnimation(translateX);
       translateX.value = 0;
 
-      // tirer une carte
-      const suit = suits[Math.floor(Math.random() * suits.length)];
-      const value = values[Math.floor(Math.random() * values.length)];
-      setDrawnCard({ value, suit });
+      const card1 = drawRandomCard();
+      if (mode === 'classic') {
+        setDrawnCard(card1);
+      } else {
+        const card2 = drawRandomCard();
+        const rank1 = valueOrder.indexOf(card1.value);
+        const rank2 = valueOrder.indexOf(card2.value);
+        if (mode === 'advantage') {
+          setDrawnCard(rank1 >= rank2 ? card1 : card2);
+        } else {
+          setDrawnCard(rank1 <= rank2 ? card1 : card2);
+        }
+      }
     } else if (drawnCard) {
       setDrawnCard(null);
     }
   };
 
   return (
-    <Pressable style={styles.container} onPress={handlePress}>
-      {/* Pile de cartes pour le shuffle */}
-      {Array.from({ length: NUM_BACK_CARDS }).map((_, i) => (
-        <Animated.View key={i} style={[styles.deck, animStyles[i]]}>
-          <View style={styles.cardBack}>
-            <Text style={styles.backText}>Étrange France</Text>
-          </View>
-        </Animated.View>
-      ))}
+    <View style={styles.container}>
+      <View style={styles.modeSelector}>
+        <Button
+          size="sm"
+          variant={mode === 'classic' ? 'primary' : 'secondary'}
+          onPress={() => setMode('classic')}
+          className="mx-1"
+        >
+          Tirage classique
+        </Button>
+        <Button
+          size="sm"
+          variant={mode === 'advantage' ? 'primary' : 'secondary'}
+          onPress={() => setMode('advantage')}
+          className="mx-1"
+        >
+          Avantage
+        </Button>
+        <Button
+          size="sm"
+          variant={mode === 'disadvantage' ? 'primary' : 'secondary'}
+          onPress={() => setMode('disadvantage')}
+          className="mx-1"
+        >
+          Désavantage
+        </Button>
+      </View>
+      <Pressable style={styles.pressableArea} onPress={handlePress}>
+        {Array.from({ length: NUM_BACK_CARDS }).map((_, i) => (
+          <Animated.View key={i} style={[styles.deck, animStyles[i]]}>
+            <View style={styles.cardBack}>
+              <Text style={styles.backText}>Étrange France</Text>
+            </View>
+          </Animated.View>
+        ))}
 
-      {/* Carte tirée */}
-      {drawnCard && (
-        <View style={styles.drawnCard}>
-          <Card value={drawnCard.value} suit={drawnCard.suit} />
-        </View>
-      )}
-    </Pressable>
+        {drawnCard && (
+          <View style={styles.drawnCard}>
+            <Card value={drawnCard.value} suit={drawnCard.suit} />
+          </View>
+        )}
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1 },
+  pressableArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  modeSelector: {
+    position: 'absolute',
+    top: 40,
+    flexDirection: 'row',
+    alignSelf: 'center',
+    zIndex: 1,
+  },
   deck: {
     width: 140,
     height: 200,

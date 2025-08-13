@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { View, Alert } from "react-native";
-import { Layout, Title, Body, Button } from "../components/ui";
+import { ScrollView, View, Alert } from "react-native";
+import { Layout, Title, Body, Button, Card } from "../components/ui";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
@@ -64,11 +64,12 @@ export default function ChooseVoieCapacitiesScreen() {
   }
 
   return (
-    <Layout backgroundColor="gradient" className="px-4 py-6">
-      <Title className="text-center text-white text-2xl mb-4">
-        Choisis tes capacités
-      </Title>
-      {capacites?.map((cap: any) => {
+    <Layout backgroundColor="gradient" className="flex-1 px-4 py-6">
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 24 }}>
+        <Title className="text-center text-white text-2xl mb-4">
+          Choisis tes capacités
+        </Title>
+        {capacites?.map((cap: any) => {
         const truncatedDescription =
           cap.description.length > 60
             ? cap.description.slice(0, 60) + "..."
@@ -82,12 +83,12 @@ export default function ChooseVoieCapacitiesScreen() {
           .map(([, desc]) => ' - ' + desc);
 
         return (
-          <View key={cap.id} className="mb-3">
+          <Card key={cap.id} className="mb-4">
             <View className="flex-row justify-between items-center">
               <View className="flex-1 pr-2">
-                <Title className="text-white text-lg">{cap.name}</Title>
+                <Title className="text-lg text-gray-900">{cap.name}</Title>
                 <Body
-                  className="text-gray-300 text-sm"
+                  className="text-gray-700 text-sm"
                   onPress={() => Alert.alert("Description", cap.description)}
                 >
                   {truncatedDescription}
@@ -102,9 +103,7 @@ export default function ChooseVoieCapacitiesScreen() {
                 >
                   -
                 </Button>
-                <Body className="text-white mx-2">
-                  {levels[cap.id] || 0}
-                </Body>
+                <Body className="mx-2">{levels[cap.id] || 0}</Body>
                 <Button
                   size="sm"
                   variant="secondary"
@@ -116,23 +115,24 @@ export default function ChooseVoieCapacitiesScreen() {
               </View>
             </View>
             {rankDescriptions.length > 0 && (
-              <View className="mt-1">
+              <View className="mt-2">
                 {rankDescriptions.map((desc, index) => (
-                  <Body key={index} className="text-gray-200 text-xs">
+                  <Body key={index} className="text-gray-700 text-xs">
                     {desc}
                   </Body>
                 ))}
               </View>
             )}
-          </View>
+          </Card>
         );
       })}
-      <Body className="text-white mb-4">
-        Points restants : {2 - totalPoints}
-      </Body>
-      <Button variant="primary" onPress={handleConfirm} className="mt-2">
-        Valider
-      </Button>
+        <Body className="text-white mb-4">
+          Points restants : {2 - totalPoints}
+        </Body>
+        <Button variant="primary" onPress={handleConfirm} className="mt-2">
+          Valider
+        </Button>
+      </ScrollView>
     </Layout>
   );
 }

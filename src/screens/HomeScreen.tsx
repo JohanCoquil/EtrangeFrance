@@ -41,6 +41,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [syncing, setSyncing] = useState(false);
   const [showAnimation, setShowAnimation] = useState(false);
   const [minitelLoaded, setMinitelLoaded] = useState(false);
+  const [introSkipped, setIntroSkipped] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const rootNavigation =
@@ -104,13 +105,14 @@ export default function HomeScreen({ navigation }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!initModal || !minitelLoaded) return;
+    if (!initModal || !minitelLoaded || introSkipped) return;
     const run = async () => {
       setPlayMusic(false);
       await minitelPlayer.current?.setPositionAsync(0);
       await minitelPlayer.current?.playAsync();
       await new Promise((res) => setTimeout(res, 12000));
       await minitelPlayer.current?.stopAsync();
+      if (introSkipped) return;
       setShowAnimation(true);
       setPlayMusic(true);
       setSyncing(true);
@@ -125,7 +127,24 @@ export default function HomeScreen({ navigation }: Props) {
       hasSyncedOnce = true;
     };
     run();
-  }, [initModal, setPlayMusic, minitelLoaded]);
+  }, [initModal, setPlayMusic, minitelLoaded, introSkipped]);
+
+  const handleSkipIntro = async () => {
+    setIntroSkipped(true);
+    await minitelPlayer.current?.stopAsync();
+    await videoRef.current?.stopAsync();
+    setShowAnimation(true);
+    setPlayMusic(true);
+    setSyncing(true);
+    try {
+      await syncDatabase();
+    } catch (e) {
+      console.error('Database sync failed', e);
+    }
+    setSyncing(false);
+    setInitModal(false);
+    hasSyncedOnce = true;
+  };
 
   useEffect(() => {
     if (showAnimation) {
@@ -194,22 +213,6 @@ export default function HomeScreen({ navigation }: Props) {
   </Text>.
 </Caption>
       </View>
-
-      <Button
-        onPress={() => navigation.navigate('Deck')}
-        variant="secondary"
-        className="w-full bg-purple-800/80 border border-purple-600"
-      >
-        <Body className="text-purple-200">Jeu de cartes</Body>
-      </Button>
-
-      <Button
-        onPress={() => navigation.navigate('CardDraw')}
-        variant="secondary"
-        className="w-full bg-purple-800/80 border border-purple-600"
-      >
-        <Body className="text-purple-200">Tirage</Body>
-      </Button>
 
     </ScrollView>
   );
@@ -290,6 +293,12 @@ export default function HomeScreen({ navigation }: Props) {
               </Body>
             </>
           )}
+          <Body
+            className="text-blue-300 underline mt-4"
+            onPress={handleSkipIntro}
+          >
+            Passer l'intro
+          </Body>
         </View>
       </ImageBackground>
     </Modal>
