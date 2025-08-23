@@ -203,7 +203,7 @@ export default function CardDrawScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: '#111827' },
   characterName: {
     position: 'absolute',
     top: 10,
