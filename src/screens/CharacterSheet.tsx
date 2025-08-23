@@ -230,7 +230,7 @@ export default function CharacterSheet() {
                     <Body className="text-white">
                       {character.voie_name}
                       {character.voie_name === "Druide" && character.divinity_name
-                        ? ` (${character.divinity_name})`
+                        ? ` (${character.divinity_name}${character.divinity_domaine ? ` - ${character.divinity_domaine}` : ""})`
                         : ""}
                     </Body>
                     <Body className="text-white">{character.voie_score}</Body>

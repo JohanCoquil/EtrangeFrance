@@ -181,7 +181,7 @@ export function useCharacters() {
       const db = getDb();
       const result = await db.getAllAsync(`
         SELECT c.*, p.name AS profession_name, h.name AS hobby_name, v.name AS voie_name
-        , d.name AS divinity_name
+        , d.name AS divinity_name, d.domaine AS divinity_domaine
         FROM characters c
         LEFT JOIN professions p ON c.profession_id = p.id
         LEFT JOIN hobbies h ON c.hobby_id = h.id
