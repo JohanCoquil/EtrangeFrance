@@ -75,10 +75,16 @@ const CardFlip = forwardRef<CardFlipRef, CardFlipProps>(
 
     return (
       <View style={style}>
-        <Animated.View style={frontAnimatedStyle}>
+        <Animated.View
+          style={frontAnimatedStyle}
+          pointerEvents={flipped ? "none" : "auto"}
+        >
           {childArray[0] ?? null}
         </Animated.View>
-        <Animated.View style={backAnimatedStyle}>
+        <Animated.View
+          style={backAnimatedStyle}
+          pointerEvents={flipped ? "auto" : "none"}
+        >
           {childArray[1] ?? null}
         </Animated.View>
       </View>
