@@ -11,7 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { suits, values } from '../data/deck';
 import Card from '../components/game/Carte';
-import { Button } from '../components/ui';
+import { Button, Layout } from '../components/ui';
 
 // Nombre de dos de cartes affichés pendant le mélange
 const NUM_BACK_CARDS = 10;
@@ -19,7 +19,7 @@ const NUM_BACK_CARDS = 10;
 // Conversion de millimètres en unités indépendantes de la densité
 const mmToDp = (mm: number) => (mm * 160) / 25.4;
 // Décale l'affichage du résultat juste en dessous du deck
-const RESULT_OFFSET = mmToDp(40);
+const RESULT_OFFSET = mmToDp(20);
 
 // Génère des facteurs aléatoires pour les animations de chaque carte
 const generateRandomFactors = () =>
@@ -129,7 +129,7 @@ export default function CardDrawScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <Layout backgroundColor="gradient" className="relative flex-1">
       <View style={styles.modeSelector}>
         <Button
           size="sm"
@@ -198,12 +198,11 @@ export default function CardDrawScreen() {
           </Text>
         </View>
       )}
-    </View>
+    </Layout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#111827' },
   characterName: {
     position: 'absolute',
     top: 90,
