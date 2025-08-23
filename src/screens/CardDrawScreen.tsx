@@ -130,7 +130,6 @@ export default function CardDrawScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.characterName}>{characterName}</Text>
       <View style={styles.modeSelector}>
         <Button
           size="sm"
@@ -157,6 +156,7 @@ export default function CardDrawScreen() {
           Désavantage
         </Button>
       </View>
+      <Text style={styles.characterName}>{characterName}</Text>
       <Pressable style={styles.pressableArea} onPress={handlePress}>
         {Array.from({ length: NUM_BACK_CARDS }).map((_, i) => (
           <Animated.View key={i} style={[styles.deck, animStyles[i]]}>
@@ -206,10 +206,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#111827' },
   characterName: {
     position: 'absolute',
-    top: 10,
+    top: 90,
     alignSelf: 'center',
     color: '#fff',
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
     zIndex: 2,
   },
