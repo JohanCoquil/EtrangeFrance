@@ -47,8 +47,11 @@ export default function ChooseVoieCapacitiesScreen() {
       { characterId, capacites: data },
       {
         onSuccess: () => {
-          //alert("✅ Capacités enregistrées");
-          navigation.navigate("MainTabs", { screen: "Characters" });
+          if (voieId === 2) {
+            navigation.navigate("ChooseDivinity", { characterId });
+          } else {
+            navigation.navigate("MainTabs", { screen: "Characters" });
+          }
         },
         onError: (err) => alert("❌ Erreur : " + err),
       }

@@ -227,7 +227,12 @@ export default function CharacterSheet() {
               {character.voie_name ? (
                 <>
                   <View className="flex-row justify-between">
-                    <Body className="text-white">{character.voie_name}</Body>
+                    <Body className="text-white">
+                      {character.voie_name}
+                      {character.voie_name === "Druide" && character.divinity_name
+                        ? ` (${character.divinity_name})`
+                        : ""}
+                    </Body>
                     <Body className="text-white">{character.voie_score}</Body>
                   </View>
                   {capacites && capacites.length > 0 ? (

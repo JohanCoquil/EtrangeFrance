@@ -109,6 +109,28 @@ export function useUpdateStrangePath() {
   });
 }
 
+export function useUpdateDivinity() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      divinityId,
+    }: {
+      id: string;
+      divinityId: number;
+    }) => {
+      const db = getDb();
+      await db.runAsync(
+        "UPDATE characters SET divinity_id = ? WHERE id = ?",
+        [divinityId, id]
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["characters"] });
+    },
+  });
+}
+
 export function useUpdateCharacterSheet() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -159,10 +181,12 @@ export function useCharacters() {
       const db = getDb();
       const result = await db.getAllAsync(`
         SELECT c.*, p.name AS profession_name, h.name AS hobby_name, v.name AS voie_name
+        , d.name AS divinity_name
         FROM characters c
         LEFT JOIN professions p ON c.profession_id = p.id
         LEFT JOIN hobbies h ON c.hobby_id = h.id
         LEFT JOIN voies_etranges v ON c.voie_id = v.id
+        LEFT JOIN druide_divinites d ON c.divinity_id = d.id
       `);
       return result;
     },

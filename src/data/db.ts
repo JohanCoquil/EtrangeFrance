@@ -99,6 +99,13 @@ export const initDb = async () => {
     );
     CREATE INDEX IF NOT EXISTS idx_profession_skills_skill_id ON profession_skills(skill_id);
 
+    CREATE TABLE IF NOT EXISTS druide_divinites (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      domaine TEXT,
+      description TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS characters (
       id TEXT PRIMARY KEY,
       distant_id INTEGER DEFAULT 0,
@@ -108,6 +115,7 @@ export const initDb = async () => {
       profession_score INTEGER DEFAULT 0,
       hobby_id INTEGER,
       hobby_score INTEGER DEFAULT 0,
+      divinity_id INTEGER,
       voie_id INTEGER,
       voie_score INTEGER DEFAULT 0,
       intelligence INTEGER DEFAULT 1,
@@ -124,6 +132,7 @@ export const initDb = async () => {
       fetiches TEXT,
       FOREIGN KEY (profession_id) REFERENCES professions(id),
       FOREIGN KEY (hobby_id) REFERENCES hobbies(id),
+      FOREIGN KEY (divinity_id) REFERENCES druide_divinites(id),
       FOREIGN KEY (voie_id) REFERENCES voies_etranges(id)
     );
 
@@ -143,6 +152,13 @@ export const initDb = async () => {
   if (!hasProfessionId) {
     await database.execAsync(
       "ALTER TABLE characters ADD COLUMN profession_id INTEGER;"
+    );
+  }
+
+  const hasDivinityId = columns.some((c: any) => c.name === "divinity_id");
+  if (!hasDivinityId) {
+    await database.execAsync(
+      "ALTER TABLE characters ADD COLUMN divinity_id INTEGER;"
     );
   }
 
@@ -189,6 +205,9 @@ export const initDb = async () => {
 
   await database.execAsync(
     "CREATE INDEX IF NOT EXISTS idx_characters_profession_id ON characters(profession_id);"
+  );
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_characters_divinity_id ON characters(divinity_id);"
   );
 
 };
