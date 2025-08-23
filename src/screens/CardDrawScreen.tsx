@@ -18,7 +18,8 @@ const NUM_BACK_CARDS = 10;
 
 // Conversion de millimètres en unités indépendantes de la densité
 const mmToDp = (mm: number) => (mm * 160) / 25.4;
-const RESULT_OFFSET = mmToDp(50);
+// Décale l'affichage du résultat juste en dessous du deck
+const RESULT_OFFSET = mmToDp(40);
 
 // Génère des facteurs aléatoires pour les animations de chaque carte
 const generateRandomFactors = () =>
