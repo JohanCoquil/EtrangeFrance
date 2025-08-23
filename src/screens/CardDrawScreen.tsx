@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, View, StyleSheet, Text } from 'react-native';
+import { RouteProp, useRoute } from '@react-navigation/native';
+import { RootStackParamList } from '../navigation/types';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -25,6 +27,9 @@ const generateRandomFactors = () =>
   }));
 
 export default function CardDrawScreen() {
+  const route = useRoute<RouteProp<RootStackParamList, 'CardDraw'>>();
+  const { difficulty, statName, statValue = 0, extraName, extraValue = 0 } =
+    route.params;
   const [isShuffling, setIsShuffling] = useState(false);
   const [drawnCards, setDrawnCards] = useState<
     { value: string; suit: { symbol: string; color: string } }[] | null
@@ -32,6 +37,8 @@ export default function CardDrawScreen() {
   const [chosenIndex, setChosenIndex] = useState<number | null>(null);
   const [randomFactors, setRandomFactors] = useState(generateRandomFactors);
   const [mode, setMode] = useState<'classic' | 'advantage' | 'disadvantage'>('classic');
+  const [cardValue, setCardValue] = useState<number | null>(null);
+  const [result, setResult] = useState<number | null>(null);
 
   const translateX = useSharedValue(0);
 
@@ -51,6 +58,21 @@ export default function CardDrawScreen() {
   });
 
   const valueOrder = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+  const cardValues: Record<string, number> = {
+    '2': 2,
+    '3': 3,
+    '4': 4,
+    '5': 5,
+    '6': 6,
+    '7': 7,
+    '8': 8,
+    '9': 9,
+    '10': 10,
+    J: 11,
+    Q: 12,
+    K: 13,
+    A: 14,
+  };
 
   const handlePress = () => {
     if (!isShuffling && !drawnCards) {
@@ -66,6 +88,9 @@ export default function CardDrawScreen() {
       if (mode === 'classic') {
         setDrawnCards([card1]);
         setChosenIndex(0);
+        const cv = cardValues[card1.value];
+        setCardValue(cv);
+        setResult(cv + statValue + extraValue);
       } else {
         const card2 = drawRandomCard();
         const rank1 = valueOrder.indexOf(card1.value);
@@ -80,10 +105,15 @@ export default function CardDrawScreen() {
               : 1;
         setDrawnCards([card1, card2]);
         setChosenIndex(chosen);
+        const cv = chosen === 0 ? cardValues[card1.value] : cardValues[card2.value];
+        setCardValue(cv);
+        setResult(cv + statValue + extraValue);
       }
     } else if (drawnCards) {
       setDrawnCards(null);
       setChosenIndex(null);
+       setCardValue(null);
+       setResult(null);
     }
   };
 
@@ -138,6 +168,24 @@ export default function CardDrawScreen() {
           </View>
         )}
       </Pressable>
+      {result !== null && cardValue !== null && (
+        <View style={styles.resultBox}>
+          <Text style={styles.resultText}>{`${[
+            `Carte: ${cardValue}`,
+            statName ? `${statName}: ${statValue}` : null,
+            extraName ? `${extraName}: ${extraValue}` : null,
+          ]
+            .filter(Boolean)
+            .join(' + ')} = ${result}`}</Text>
+          <Text
+            style={[styles.resultText, {
+              color: result >= difficulty ? '#22c55e' : '#ef4444',
+            }]}
+          >
+            {result >= difficulty ? 'REUSSITE' : 'ECHEC'} (Difficulté {difficulty})
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -179,4 +227,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   singleCard: { marginHorizontal: 10 },
+  resultBox: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    padding: 12,
+    borderWidth: 2,
+    borderColor: '#fff',
+    backgroundColor: '#1f2937',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  resultText: { color: '#fff', fontWeight: 'bold', textAlign: 'center' },
 });

@@ -7,7 +7,6 @@ import CharactersScreen from '../screens/CharactersScreen';
 import AgencyScreen from '../screens/AgencyScreen';
 import SessionScreen from '../screens/SessionScreen';
 import DeckScreen from '../screens/DeckScreen';
-import CardDrawScreen from '../screens/CardDrawScreen';
 import { usePlayMusic } from '@/context/PlayMusicContext';
 
 export type TabParamList = {
@@ -16,7 +15,6 @@ export type TabParamList = {
   Agency: undefined;
   Session: undefined;
   Deck: undefined;
-  CardDraw: undefined;
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -95,14 +93,6 @@ export default function TabNavigator() {
           tabBarIcon: () => null
         }}
       />
-      <Tab.Screen
-        name="CardDraw"
-        component={CardDrawScreen}
-        options={{
-          title: 'CardDraw',
-          tabBarIcon: () => null
-        }}
-      />
     </Tab.Navigator>
   );
-} 
+}

@@ -1,20 +1,35 @@
 import React, { useRef, useEffect, useState } from "react";
-import { View, TextInput, Dimensions, ScrollView } from "react-native";
+import {
+  View,
+  TextInput,
+  Dimensions,
+  ScrollView,
+  Pressable,
+  Modal,
+} from "react-native";
 import {
   Audio,
   InterruptionModeAndroid,
   InterruptionModeIOS,
 } from "expo-av";
 import { PanGestureHandler, State } from "react-native-gesture-handler";
-import { RouteProp, useRoute } from "@react-navigation/native";
-import { Layout, Title, Body, Caption } from "../components/ui";
+import {
+  RouteProp,
+  useRoute,
+  useNavigation,
+} from "@react-navigation/native";
+import { Layout, Title, Body, Caption, Button } from "../components/ui";
 import { RootStackParamList } from "../navigation/types";
 import { useCharacters, useUpdateCharacterSheet } from "@/api/charactersLocal";
 import { useCharacterCapacites } from "@/api/capacitiesLocal";
 import CardFlip, { CardFlipRef } from "@/components/CardFlip";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Dices } from "lucide-react-native";
 
 export default function CharacterSheet() {
   const route = useRoute<RouteProp<RootStackParamList, "CharacterSheet">>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { characterId } = route.params;
   const { width, height } = Dimensions.get("window");
   const cardRef = useRef<CardFlipRef>(null);
@@ -27,6 +42,12 @@ export default function CharacterSheet() {
   const [notes, setNotes] = useState("");
   const [equipement, setEquipement] = useState("");
   const [fetiches, setFetiches] = useState("");
+  const [selectedStat, setSelectedStat] = useState<string | null>(null);
+  const [selectedExtra, setSelectedExtra] = useState<
+    | { type: string; id?: number; name: string; value: number }
+    | null
+  >(null);
+  const [showDifficulty, setShowDifficulty] = useState(false);
   const updateSheet = useUpdateCharacterSheet();
   const { data: characters, isLoading } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
@@ -86,6 +107,41 @@ export default function CharacterSheet() {
     { label: "Volonté", value: character.volonte },
     { label: "Santé", value: character.sante },
   ];
+
+  const difficulties = [
+    { label: "Facile", value: 5 },
+    { label: "Normal", value: 10 },
+    { label: "Difficile", value: 12 },
+    { label: "Très difficile", value: 15 },
+    { label: "Quasi impossible", value: 20 },
+  ];
+
+  const handleSelectExtra = (
+    item: { type: string; id?: number; name: string; value: number }
+  ) => {
+    if (
+      selectedExtra &&
+      selectedExtra.type === item.type &&
+      selectedExtra.id === item.id &&
+      selectedExtra.name === item.name
+    ) {
+      setSelectedExtra(null);
+    } else {
+      setSelectedExtra(item);
+    }
+  };
+
+  const handleDifficultySelect = (value: number) => {
+    const statObj = stats.find((s) => s.label === selectedStat);
+    navigation.navigate("CardDraw", {
+      difficulty: value,
+      statName: selectedStat || undefined,
+      statValue: statObj?.value,
+      extraName: selectedExtra?.name,
+      extraValue: selectedExtra?.value,
+    });
+    setShowDifficulty(false);
+  };
 
   useEffect(() => {
     const setup = async () => {
@@ -155,6 +211,16 @@ export default function CharacterSheet() {
 
   return (
     <Layout backgroundColor="gradient" className="flex-1">
+      <Pressable
+        className="absolute top-4 right-4 z-10"
+        disabled={!selectedStat && !selectedExtra}
+        onPress={() => setShowDifficulty(true)}
+      >
+        <Dices
+          size={32}
+          color={selectedStat || selectedExtra ? "#fff" : "#666"}
+        />
+      </Pressable>
       <CardFlip style={{ width, height }} ref={cardRef}>
         <PanGestureHandler
           onHandlerStateChange={frontPan.onHandlerStateChange}
@@ -177,15 +243,48 @@ export default function CharacterSheet() {
               <Title className="text-white text-xl font-semibold mb-3">
                 Caractéristiques
               </Title>
-              {stats.map((stat) => (
-                <View
-                  key={stat.label}
-                  className="flex-row justify-between mb-1"
-                >
-                  <Body className="text-white">{stat.label}</Body>
-                  <Body className="text-white">{stat.value}</Body>
-                </View>
-              ))}
+              {stats.map((stat) => {
+                if (stat.label === "Santé") {
+                  return (
+                    <View
+                      key={stat.label}
+                      className="flex-row justify-between mb-1"
+                    >
+                      <Body className="text-white">{stat.label}</Body>
+                      <Body className="text-white">{stat.value}</Body>
+                    </View>
+                  );
+                }
+                const isSelected = selectedStat === stat.label;
+                return (
+                  <Pressable
+                    key={stat.label}
+                    onPress={() =>
+                      setSelectedStat(isSelected ? null : stat.label)
+                    }
+                    className={`flex-row justify-between mb-1 p-1 rounded ${
+                      isSelected
+                        ? "border border-yellow-400 bg-yellow-400/10"
+                        : ""
+                    }`}
+                  >
+                    <Body
+                      className={`text-white ${
+                        isSelected ? "font-bold text-yellow-400" : ""
+                      }`}
+                    >
+                      {stat.label}
+                    </Body>
+                    <Body
+                      className={`text-white ${
+                        isSelected ? "font-bold text-yellow-400" : ""
+                      }`}
+                    >
+                      {stat.value}
+                    </Body>
+                  </Pressable>
+                );
+              })}
             </View>
 
             <View className="bg-gray-800/70 rounded-2xl p-4 mb-5 border border-green-600">
@@ -193,14 +292,40 @@ export default function CharacterSheet() {
                 Métier & Spécialités
               </Title>
               {character.profession_name ? (
-                <View className="flex-row justify-between">
-                  <Body className="text-white">
-                    {character.profession_name}
-                  </Body>
-                  <Body className="text-white">
-                    {character.profession_score}
-                  </Body>
-                </View>
+                (() => {
+                  const isSelected = selectedExtra?.type === "profession";
+                  return (
+                    <Pressable
+                      className={`flex-row justify-between p-1 rounded ${
+                        isSelected
+                          ? "border border-yellow-400 bg-yellow-400/10"
+                          : ""
+                      }`}
+                      onPress={() =>
+                        handleSelectExtra({
+                          type: "profession",
+                          name: character.profession_name,
+                          value: character.profession_score,
+                        })
+                      }
+                    >
+                      <Body
+                        className={`text-white ${
+                          isSelected ? "font-bold text-yellow-400" : ""
+                        }`}
+                      >
+                        {character.profession_name}
+                      </Body>
+                      <Body
+                        className={`text-white ${
+                          isSelected ? "font-bold text-yellow-400" : ""
+                        }`}
+                      >
+                        {character.profession_score}
+                      </Body>
+                    </Pressable>
+                  );
+                })()
               ) : (
                 <Body className="text-white">Aucun</Body>
               )}
@@ -211,10 +336,40 @@ export default function CharacterSheet() {
                 Hobbies
               </Title>
               {character.hobby_name ? (
-                <View className="flex-row justify-between">
-                  <Body className="text-white">{character.hobby_name}</Body>
-                  <Body className="text-white">{character.hobby_score}</Body>
-                </View>
+                (() => {
+                  const isSelected = selectedExtra?.type === "hobby";
+                  return (
+                    <Pressable
+                      className={`flex-row justify-between p-1 rounded ${
+                        isSelected
+                          ? "border border-yellow-400 bg-yellow-400/10"
+                          : ""
+                      }`}
+                      onPress={() =>
+                        handleSelectExtra({
+                          type: "hobby",
+                          name: character.hobby_name,
+                          value: character.hobby_score,
+                        })
+                      }
+                    >
+                      <Body
+                        className={`text-white ${
+                          isSelected ? "font-bold text-yellow-400" : ""
+                        }`}
+                      >
+                        {character.hobby_name}
+                      </Body>
+                      <Body
+                        className={`text-white ${
+                          isSelected ? "font-bold text-yellow-400" : ""
+                        }`}
+                      >
+                        {character.hobby_score}
+                      </Body>
+                    </Pressable>
+                  );
+                })()
               ) : (
                 <Body className="text-white">Aucun</Body>
               )}
@@ -226,25 +381,90 @@ export default function CharacterSheet() {
               </Title>
               {character.voie_name ? (
                 <>
-                  <View className="flex-row justify-between">
-                    <Body className="text-white">
-                      {character.voie_name}
-                      {character.voie_name === "Druide" && character.divinity_name
-                        ? ` (${character.divinity_name}${character.divinity_domaine ? ` - ${character.divinity_domaine}` : ""})`
-                        : ""}
-                    </Body>
-                    <Body className="text-white">{character.voie_score}</Body>
-                  </View>
-                  {capacites && capacites.length > 0 ? (
-                    capacites.map((cap: any) => (
-                      <View
-                        key={cap.id}
-                        className="flex-row justify-between ml-4 mt-1"
+                  {(() => {
+                    const isSelected = selectedExtra?.type === "voie";
+                    return (
+                      <Pressable
+                        className={`flex-row justify-between p-1 rounded ${
+                          isSelected
+                            ? "border border-yellow-400 bg-yellow-400/10"
+                            : ""
+                        }`}
+                        onPress={() =>
+                          handleSelectExtra({
+                            type: "voie",
+                            name: character.voie_name,
+                            value: character.voie_score,
+                          })
+                        }
                       >
-                        <Body className="text-purple-200">{cap.name}</Body>
-                        <Body className="text-purple-200">{cap.level}</Body>
-                      </View>
-                    ))
+                        <Body
+                          className={`text-white ${
+                            isSelected ? "font-bold text-yellow-400" : ""
+                          }`}
+                        >
+                          {character.voie_name}
+                          {character.voie_name === "Druide" && character.divinity_name
+                            ? ` (${character.divinity_name}${
+                                character.divinity_domaine
+                                  ? ` - ${character.divinity_domaine}`
+                                  : ""
+                              })`
+                            : ""}
+                        </Body>
+                        <Body
+                          className={`text-white ${
+                            isSelected ? "font-bold text-yellow-400" : ""
+                          }`}
+                        >
+                          {character.voie_score}
+                        </Body>
+                      </Pressable>
+                    );
+                  })()}
+                  {capacites && capacites.length > 0 ? (
+                    capacites.map((cap: any) => {
+                      const isCap =
+                        selectedExtra?.type === "capacity" &&
+                        selectedExtra.id === cap.id;
+                      return (
+                        <Pressable
+                          key={cap.id}
+                          className={`flex-row justify-between ml-4 mt-1 p-1 rounded ${
+                            isCap
+                              ? "border border-yellow-400 bg-yellow-400/10"
+                              : ""
+                          }`}
+                          onPress={() =>
+                            handleSelectExtra({
+                              type: "capacity",
+                              id: cap.id,
+                              name: cap.name,
+                              value: cap.level,
+                            })
+                          }
+                        >
+                          <Body
+                            className={`${
+                              isCap
+                                ? "font-bold text-yellow-400"
+                                : "text-purple-200"
+                            }`}
+                          >
+                            {cap.name}
+                          </Body>
+                          <Body
+                            className={`${
+                              isCap
+                                ? "font-bold text-yellow-400"
+                                : "text-purple-200"
+                            }`}
+                          >
+                            {cap.level}
+                          </Body>
+                        </Pressable>
+                      );
+                    })
                   ) : (
                     <Body className="text-white">Aucune capacité</Body>
                   )}
@@ -385,6 +605,30 @@ export default function CharacterSheet() {
           </Layout>
         </PanGestureHandler>
       </CardFlip>
+      <Modal visible={showDifficulty} transparent animationType="fade">
+        <View className="flex-1 bg-black/60 justify-center items-center">
+          <View className="bg-gray-800 p-4 rounded-xl w-4/5">
+            <Title className="text-white text-center mb-4">
+              Niveau de difficulté
+            </Title>
+            {difficulties.map((d) => (
+              <Button
+                key={d.value}
+                className="mb-2"
+                onPress={() => handleDifficultySelect(d.value)}
+              >
+                {d.label} ({d.value})
+              </Button>
+            ))}
+            <Button
+              variant="secondary"
+              onPress={() => setShowDifficulty(false)}
+            >
+              Annuler
+            </Button>
+          </View>
+        </View>
+      </Modal>
     </Layout>
   );
 }
