@@ -16,6 +16,10 @@ import { Button } from '../components/ui';
 // Nombre de dos de cartes affichés pendant le mélange
 const NUM_BACK_CARDS = 10;
 
+// Conversion de millimètres en unités indépendantes de la densité
+const mmToDp = (mm: number) => (mm * 160) / 25.4;
+const RESULT_OFFSET = mmToDp(50);
+
 // Génère des facteurs aléatoires pour les animations de chaque carte
 const generateRandomFactors = () =>
   Array.from({ length: NUM_BACK_CARDS }, () => ({
@@ -229,7 +233,7 @@ const styles = StyleSheet.create({
   singleCard: { marginHorizontal: 10 },
   resultBox: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 20 + RESULT_OFFSET,
     left: 20,
     right: 20,
     padding: 12,
