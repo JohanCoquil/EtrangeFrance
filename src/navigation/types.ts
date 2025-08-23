@@ -8,6 +8,7 @@ export type RootStackParamList = {
   ChooseHobbie: { characterId: string };
   ChooseStrangePath: { characterId: string };
   ChooseVoieCapacities: { characterId: string; voieId: number };
+  ChooseDivinity: { characterId: string };
   Characters: undefined;
   Deck: undefined;
   CardDraw: undefined;
