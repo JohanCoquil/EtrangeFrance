@@ -139,6 +139,7 @@ export default function CharacterSheet() {
       statValue: statObj?.value,
       extraName: selectedExtra?.name,
       extraValue: selectedExtra?.value,
+      characterName: character.name,
     });
     setShowDifficulty(false);
   };
