@@ -33,8 +33,14 @@ const generateRandomFactors = () =>
 
 export default function CardDrawScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'CardDraw'>>();
-  const { difficulty, statName, statValue = 0, extraName, extraValue = 0 } =
-    route.params;
+  const {
+    difficulty,
+    statName,
+    statValue = 0,
+    extraName,
+    extraValue = 0,
+    characterName,
+  } = route.params;
   const [isShuffling, setIsShuffling] = useState(false);
   const [drawnCards, setDrawnCards] = useState<
     { value: string; suit: { symbol: string; color: string } }[] | null
@@ -124,6 +130,7 @@ export default function CardDrawScreen() {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.characterName}>{characterName}</Text>
       <View style={styles.modeSelector}>
         <Button
           size="sm"
@@ -197,6 +204,14 @@ export default function CardDrawScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  characterName: {
+    position: 'absolute',
+    top: 10,
+    alignSelf: 'center',
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
   pressableArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   modeSelector: {
     position: 'absolute',

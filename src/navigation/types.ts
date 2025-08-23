@@ -17,6 +17,7 @@ export type RootStackParamList = {
     statValue?: number;
     extraName?: string;
     extraValue?: number;
+    characterName: string;
   };
   CharacterSheet: { characterId: string };
   // Ajoutez d'autres écrans modaux ou stack ici si nécessaire
