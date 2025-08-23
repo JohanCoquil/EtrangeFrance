@@ -11,7 +11,13 @@ export type RootStackParamList = {
   ChooseDivinity: { characterId: string };
   Characters: undefined;
   Deck: undefined;
-  CardDraw: undefined;
+  CardDraw: {
+    difficulty: number;
+    statName?: string;
+    statValue?: number;
+    extraName?: string;
+    extraValue?: number;
+  };
   CharacterSheet: { characterId: string };
   // Ajoutez d'autres écrans modaux ou stack ici si nécessaire
 };
