@@ -98,9 +98,22 @@ export default function CharacterSheet() {
     return () => clearTimeout(timeout);
   }, [origines, rencontres, notes, equipement, fetiches, characterId]);
 
+  const forceCapacite = capacites?.find((c: any) => c.id === 22);
+  const dexCapacite = capacites?.find((c: any) => c.id === 1);
+
   const stats = [
-    { label: "Force", value: character.force },
-    { label: "Dextérité", value: character.dexterite },
+    {
+      label: "Force",
+      value: character.force + (forceCapacite?.level ?? 0),
+      base: character.force,
+      bonus: forceCapacite?.level ?? 0,
+    },
+    {
+      label: "Dextérité",
+      value: character.dexterite + (dexCapacite?.level ?? 0),
+      base: character.dexterite,
+      bonus: dexCapacite?.level ?? 0,
+    },
     { label: "Intelligence", value: character.intelligence },
     { label: "Charisme", value: character.charisme },
     { label: "Mémoire", value: character.memoire },
@@ -245,6 +258,10 @@ export default function CharacterSheet() {
                 Caractéristiques
               </Title>
               {stats.map((stat) => {
+                const displayValue =
+                  stat.bonus && stat.bonus > 0
+                    ? `${stat.value} (${stat.base} + ${stat.bonus})`
+                    : stat.value;
                 if (stat.label === "Santé") {
                   return (
                     <View
@@ -252,7 +269,7 @@ export default function CharacterSheet() {
                       className="flex-row justify-between mb-1"
                     >
                       <Body className="text-white">{stat.label}</Body>
-                      <Body className="text-white">{stat.value}</Body>
+                      <Body className="text-white">{displayValue}</Body>
                     </View>
                   );
                 }
@@ -281,7 +298,7 @@ export default function CharacterSheet() {
                         isSelected ? "font-bold text-yellow-400" : ""
                       }`}
                     >
-                      {stat.value}
+                      {displayValue}
                     </Body>
                   </Pressable>
                 );
