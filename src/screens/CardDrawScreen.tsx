@@ -95,6 +95,7 @@ export default function CardDrawScreen() {
   };
 
   const valueOrder = [
+    "A",
     "2",
     "3",
     "4",
@@ -107,9 +108,9 @@ export default function CardDrawScreen() {
     "J",
     "Q",
     "K",
-    "A",
   ];
   const cardValues: Record<string, number> = {
+    A: 1,
     "2": 2,
     "3": 3,
     "4": 4,
@@ -122,7 +123,6 @@ export default function CardDrawScreen() {
     J: 10,
     Q: 10,
     K: 10,
-    A: 1,
   };
 
   const handlePress = () => {
