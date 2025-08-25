@@ -1,4 +1,4 @@
-import * as Crypto from 'expo-crypto';
+import * as Crypto from "expo-crypto";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { getDb } from "../data/db";
 
@@ -6,14 +6,14 @@ export function useAddCharacter() {
   const queryClient = useQueryClient();
 
   return useMutation({
-      mutationFn: async (newCharacter: any) => {
-        const id = await Crypto.randomUUID();
-        const character = { id, ...newCharacter };
-        character.sante = (character.force + character.volonte) * 2;
-        character.degats = 0;
+    mutationFn: async (newCharacter: any) => {
+      const id = await Crypto.randomUUID();
+      const character = { id, ...newCharacter };
+      character.sante = (character.force + character.volonte) * 2;
+      character.degats = 0;
 
-        const db = getDb();
-        await db.execAsync(`
+      const db = getDb();
+      await db.execAsync(`
           INSERT INTO characters
             (id, name, profession_id, profession_score, hobby_id, hobby_score, voie_id, voie_score, intelligence, force, dexterite, charisme, memoire, volonte, sante, degats)
           VALUES
@@ -27,17 +27,16 @@ export function useAddCharacter() {
             ${character.charisme}, ${character.memoire}, ${character.volonte}, ${character.sante}, ${character.degats});
         `);
 
-        const defaultCards = '1;2;3;4;5;6;7;8;9;10';
-        const figures = ['Carreau', 'Coeur', 'Trèfle', 'Pique'];
-        for (const fig of figures) {
-          await db.runAsync(
-            "INSERT INTO desk (user_id, figure, cards) VALUES (?, ?, ?)",
-            [character.id, fig, defaultCards]
-          );
-        }
+      const defaultCards = "1;2;3;4;5;6;7;8;9;10";
+      const figures = ["Carreau", "Coeur", "Trèfle", "Pique"];
+      const randomFigure = figures[Math.floor(Math.random() * figures.length)];
+      await db.runAsync(
+        "INSERT INTO desk (user_id, figure, cards) VALUES (?, ?, ?)",
+        [character.id, randomFigure, defaultCards],
+      );
 
-        return character;
-      },
+      return character;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["characters"] });
     },
@@ -60,7 +59,7 @@ export function useUpdateProfession() {
       const db = getDb();
       await db.runAsync(
         "UPDATE characters SET profession_id = ?, profession_score = ? WHERE id = ?",
-        [professionId, professionScore, id]
+        [professionId, professionScore, id],
       );
     },
     onSuccess: () => {
@@ -85,7 +84,7 @@ export function useUpdateHobby() {
       const db = getDb();
       await db.runAsync(
         "UPDATE characters SET hobby_id = ?, hobby_score = ? WHERE id = ?",
-        [hobbyId, hobbyScore, id]
+        [hobbyId, hobbyScore, id],
       );
     },
     onSuccess: () => {
@@ -110,7 +109,7 @@ export function useUpdateStrangePath() {
       const db = getDb();
       await db.runAsync(
         "UPDATE characters SET voie_id = ?, voie_score = ? WHERE id = ?",
-        [voieId, voieScore, id]
+        [voieId, voieScore, id],
       );
     },
     onSuccess: () => {
@@ -130,10 +129,10 @@ export function useUpdateDivinity() {
       divinityId: number;
     }) => {
       const db = getDb();
-      await db.runAsync(
-        "UPDATE characters SET divinity_id = ? WHERE id = ?",
-        [divinityId, id]
-      );
+      await db.runAsync("UPDATE characters SET divinity_id = ? WHERE id = ?", [
+        divinityId,
+        id,
+      ]);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["characters"] });
@@ -162,7 +161,7 @@ export function useUpdateCharacterSheet() {
       const db = getDb();
       await db.runAsync(
         "UPDATE characters SET origines = ?, rencontres = ?, notes = ?, equipement = ?, fetiches = ? WHERE id = ?",
-        [origines, rencontres, notes, equipement, fetiches, id]
+        [origines, rencontres, notes, equipement, fetiches, id],
       );
     },
     onSuccess: () => {
@@ -202,4 +201,3 @@ export function useCharacters() {
     },
   });
 }
-
