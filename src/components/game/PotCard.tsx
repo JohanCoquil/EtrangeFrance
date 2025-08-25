@@ -26,7 +26,7 @@ export default function PotCard({ card, onAddToDeck }: Props) {
         useNativeDriver: false,
       }),
       onPanResponderRelease: (_, gesture) => {
-        if (gesture.dy < -50) {
+        if (gesture.dy > 50) {
           onAddToDeck();
         }
         Animated.spring(pan, {

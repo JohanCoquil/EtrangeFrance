@@ -321,28 +321,30 @@ export default function CardDrawScreen() {
           )}
         </View>
 
-        {result !== null && cardValue !== null && (
-          <View style={styles.resultBox}>
-            <Text style={styles.resultText}>{`${[
-              `Carte: ${cardValue}`,
-              statName ? `${statName}: ${statValue}` : null,
-              extraName ? `${extraName}: ${extraValue}` : null,
-            ]
-              .filter(Boolean)
-              .join(" + ")} = ${result}`}</Text>
-            <Text
-              style={[
-                styles.resultText,
-                {
-                  color: result >= difficulty ? "#22c55e" : "#ef4444",
-                },
-              ]}
-            >
-              {result >= difficulty ? "REUSSITE" : "ECHEC"} (Difficulté{" "}
-              {difficulty})
-            </Text>
-          </View>
-        )}
+        <View style={styles.resultBox}>
+          {result !== null && cardValue !== null && (
+            <>
+              <Text style={styles.resultText}>{`${[
+                `Carte: ${cardValue}`,
+                statName ? `${statName}: ${statValue}` : null,
+                extraName ? `${extraName}: ${extraValue}` : null,
+              ]
+                .filter(Boolean)
+                .join(" + ")} = ${result}`}</Text>
+              <Text
+                style={[
+                  styles.resultText,
+                  {
+                    color: result >= difficulty ? "#22c55e" : "#ef4444",
+                  },
+                ]}
+              >
+                {result >= difficulty ? "REUSSITE" : "ECHEC"} (Difficulté{" "}
+                {difficulty})
+              </Text>
+            </>
+          )}
+        </View>
       </Pressable>
     </Layout>
   );
@@ -418,8 +420,10 @@ const styles = StyleSheet.create({
   backText: { color: "#888", fontSize: 14, fontWeight: "bold" },
   drawnCardsContainer: {
     position: "absolute",
-    bottom: 220,
+    bottom: 100,
+    width: "100%",
     flexDirection: "row",
+    justifyContent: "center",
   },
   singleCard: { marginHorizontal: 10 },
   resultBox: {
@@ -430,6 +434,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#1f2937",
     borderRadius: 8,
     alignItems: "center",
+    minHeight: 72,
+    justifyContent: "center",
   },
   resultText: { color: "#fff", fontWeight: "bold", textAlign: "center" },
 });
