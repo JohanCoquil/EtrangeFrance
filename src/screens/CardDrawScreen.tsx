@@ -14,6 +14,7 @@ import { useDeck } from "@/api/deckLocal";
 import Card from "../components/game/Carte";
 import PotCard, { PotCardType } from "../components/game/PotCard";
 import { Button, Layout } from "../components/ui";
+import { RotateCcw } from "lucide-react-native";
 
 // Nombre de dos de cartes affichés pendant le mélange
 const NUM_BACK_CARDS = 10;
@@ -296,7 +297,7 @@ export default function CardDrawScreen() {
             ))}
         </View>
         <Button size="sm" variant="secondary" onPress={resetDeckAndPot}>
-          Réinitialiser
+          <RotateCcw color="#fff" size={16} />
         </Button>
       </View>
       <Text style={styles.characterName}>{characterName}</Text>
