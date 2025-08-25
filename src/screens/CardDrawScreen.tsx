@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Pressable, View, StyleSheet, Text } from "react-native";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/types";
@@ -12,6 +12,7 @@ import Animated, {
 import { suits } from "../data/deck";
 import { useDeck } from "@/api/deckLocal";
 import Card from "../components/game/Carte";
+import PotCard, { PotCardType } from "../components/game/PotCard";
 import { Button, Layout } from "../components/ui";
 
 // Nombre de dos de cartes affichés pendant le mélange
@@ -55,6 +56,13 @@ export default function CardDrawScreen() {
   );
   const [cardValue, setCardValue] = useState<number | null>(null);
   const [result, setResult] = useState<number | null>(null);
+  const [deckCards, setDeckCards] = useState<
+    { value: string; suit: { symbol: string; color: string } }[]
+  >([]);
+  const [potCards, setPotCards] = useState<PotCardType[]>([]);
+  const [initialSuit, setInitialSuit] = useState<
+    { symbol: string; color: string } | null
+  >(null);
 
   const translateX = useSharedValue(0);
 
@@ -68,20 +76,28 @@ export default function CardDrawScreen() {
     })),
   );
 
-  const deckCards = React.useMemo(() => {
-    if (!deckRows)
-      return [] as { value: string; suit: { symbol: string; color: string } }[];
-    const cards: { value: string; suit: { symbol: string; color: string } }[] =
-      [];
+  useEffect(() => {
+    if (!deckRows) return;
+    const cards: { value: string; suit: { symbol: string; color: string } }[] = [];
+    let suitForPot: { symbol: string; color: string } | null = null;
     (deckRows as any[]).forEach((row) => {
       const suit = suits.find((s) => s.name === row.figure);
       if (suit && row.cards) {
-        row.cards.split(";").forEach((val: string) => {
+        row.cards.split(';').forEach((val: string) => {
           cards.push({ value: val, suit });
         });
+        if (!suitForPot) suitForPot = suit;
       }
     });
-    return cards;
+    setDeckCards(cards);
+    if (suitForPot) {
+      setInitialSuit(suitForPot);
+      setPotCards([
+        { value: 'J', suit: suitForPot, faceUp: false, inDeck: false },
+        { value: 'Q', suit: suitForPot, faceUp: false, inDeck: false },
+        { value: 'K', suit: suitForPot, faceUp: false, inDeck: false },
+      ]);
+    }
   }, [deckRows]);
 
   const drawRandomCard = (exclude: number[] = []) => {
@@ -92,6 +108,66 @@ export default function CardDrawScreen() {
     const index =
       availableIndices[Math.floor(Math.random() * availableIndices.length)];
     return { card: deckCards[index], index };
+  };
+
+  const addPotCardToDeck = (value: string) => {
+    const potCard = potCards.find(
+      (c) => c.value === value && !c.inDeck && !c.faceUp,
+    );
+    if (!potCard) return;
+    setDeckCards((prev) => [...prev, { value: potCard.value, suit: potCard.suit }]);
+    setPotCards((prev) =>
+      prev.map((c) => (c.value === value ? { ...c, inDeck: true } : c)),
+    );
+  };
+
+  const handleDrawnPotCards = (
+    cards: { value: string; suit: { symbol: string; color: string } }[],
+  ) => {
+    cards.forEach((card) => {
+      const potCard = potCards.find(
+        (c) => c.value === card.value && c.inDeck,
+      );
+      if (potCard) {
+        setDeckCards((prev) =>
+          prev.filter(
+            (c) =>
+              !(
+                c.value === card.value &&
+                c.suit.symbol === card.suit.symbol
+              ),
+          ),
+        );
+        setPotCards((prev) =>
+          prev.map((c) =>
+            c.value === card.value ? { ...c, inDeck: false, faceUp: true } : c,
+          ),
+        );
+      }
+    });
+  };
+
+  const resetDeckAndPot = () => {
+    if (!deckRows || !initialSuit) return;
+    const cards: { value: string; suit: { symbol: string; color: string } }[] = [];
+    (deckRows as any[]).forEach((row) => {
+      const suit = suits.find((s) => s.name === row.figure);
+      if (suit && row.cards) {
+        row.cards.split(';').forEach((val: string) => {
+          cards.push({ value: val, suit });
+        });
+      }
+    });
+    setDeckCards(cards);
+    setPotCards([
+      { value: 'J', suit: initialSuit, faceUp: false, inDeck: false },
+      { value: 'Q', suit: initialSuit, faceUp: false, inDeck: false },
+      { value: 'K', suit: initialSuit, faceUp: false, inDeck: false },
+    ]);
+    setDrawnCards(null);
+    setChosenIndex(null);
+    setCardValue(null);
+    setResult(null);
   };
 
   const valueOrder = [
@@ -148,6 +224,7 @@ export default function CardDrawScreen() {
         const cv = cardValues[card1.value];
         setCardValue(cv);
         setResult(cv + statValue + extraValue);
+        handleDrawnPotCards([card1]);
       } else {
         const secondDraw = drawRandomCard([index1]);
         if (!secondDraw) return;
@@ -168,6 +245,7 @@ export default function CardDrawScreen() {
           chosen === 0 ? cardValues[card1.value] : cardValues[card2.value];
         setCardValue(cv);
         setResult(cv + statValue + extraValue);
+        handleDrawnPotCards([card1, card2]);
       }
     } else if (drawnCards) {
       setDrawnCards(null);
@@ -203,6 +281,22 @@ export default function CardDrawScreen() {
           className="mx-1"
         >
           Désavantage
+        </Button>
+      </View>
+      <View style={styles.potRow}>
+        <View style={styles.pot}>
+          {potCards
+            .filter((c) => !c.inDeck)
+            .map((c) => (
+              <PotCard
+                key={c.value}
+                card={c}
+                onAddToDeck={() => addPotCardToDeck(c.value)}
+              />
+            ))}
+        </View>
+        <Button size="sm" variant="secondary" onPress={resetDeckAndPot}>
+          Réinitialiser
         </Button>
       </View>
       <Text style={styles.characterName}>{characterName}</Text>
@@ -258,7 +352,7 @@ export default function CardDrawScreen() {
 const styles = StyleSheet.create({
   characterName: {
     position: "absolute",
-    top: 90,
+    top: 210,
     alignSelf: "center",
     color: "#fff",
     fontSize: 24,
@@ -272,6 +366,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignSelf: "center",
     zIndex: 1,
+  },
+  potRow: {
+    position: "absolute",
+    top: 100,
+    flexDirection: "row",
+    alignSelf: "center",
+    alignItems: "center",
+    zIndex: 2,
+  },
+  pot: {
+    flexDirection: "row",
+    borderWidth: 2,
+    borderColor: "#fff",
+    padding: 4,
+    borderRadius: 8,
+    marginRight: 8,
   },
   deck: {
     width: 140,
