@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import { Pressable, View, StyleSheet, Text } from 'react-native';
-import { RouteProp, useRoute } from '@react-navigation/native';
-import { RootStackParamList } from '../navigation/types';
+import React, { useState } from "react";
+import { Pressable, View, StyleSheet, Text } from "react-native";
+import { RouteProp, useRoute } from "@react-navigation/native";
+import { RootStackParamList } from "../navigation/types";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
   withTiming,
   cancelAnimation,
-} from 'react-native-reanimated';
-import { suits } from '../data/deck';
-import { useDeck } from '@/api/deckLocal';
-import Card from '../components/game/Carte';
-import { Button, Layout } from '../components/ui';
+} from "react-native-reanimated";
+import { suits } from "../data/deck";
+import { useDeck } from "@/api/deckLocal";
+import Card from "../components/game/Carte";
+import { Button, Layout } from "../components/ui";
 
 // Nombre de dos de cartes affichés pendant le mélange
 const NUM_BACK_CARDS = 10;
@@ -33,7 +33,7 @@ const generateRandomFactors = () =>
   }));
 
 export default function CardDrawScreen() {
-  const route = useRoute<RouteProp<RootStackParamList, 'CardDraw'>>();
+  const route = useRoute<RouteProp<RootStackParamList, "CardDraw">>();
   const {
     difficulty,
     statName,
@@ -50,7 +50,9 @@ export default function CardDrawScreen() {
   >(null);
   const [chosenIndex, setChosenIndex] = useState<number | null>(null);
   const [randomFactors, setRandomFactors] = useState(generateRandomFactors);
-  const [mode, setMode] = useState<'classic' | 'advantage' | 'disadvantage'>('classic');
+  const [mode, setMode] = useState<"classic" | "advantage" | "disadvantage">(
+    "classic",
+  );
   const [cardValue, setCardValue] = useState<number | null>(null);
   const [result, setResult] = useState<number | null>(null);
 
@@ -63,16 +65,18 @@ export default function CardDrawScreen() {
         { translateY: translateX.value * dirY * ampY },
         { rotate: `${translateX.value * rot}deg` },
       ],
-    }))
+    })),
   );
 
   const deckCards = React.useMemo(() => {
-    if (!deckRows) return [] as { value: string; suit: { symbol: string; color: string } }[];
-    const cards: { value: string; suit: { symbol: string; color: string } }[] = [];
+    if (!deckRows)
+      return [] as { value: string; suit: { symbol: string; color: string } }[];
+    const cards: { value: string; suit: { symbol: string; color: string } }[] =
+      [];
     (deckRows as any[]).forEach((row) => {
       const suit = suits.find((s) => s.name === row.figure);
       if (suit && row.cards) {
-        row.cards.split(';').forEach((val: string) => {
+        row.cards.split(";").forEach((val: string) => {
           cards.push({ value: val, suit });
         });
       }
@@ -80,22 +84,41 @@ export default function CardDrawScreen() {
     return cards;
   }, [deckRows]);
 
-  const drawRandomCard = () => {
-    if (deckCards.length === 0) return null;
-    return deckCards[Math.floor(Math.random() * deckCards.length)];
+  const drawRandomCard = (exclude: number[] = []) => {
+    const availableIndices = deckCards
+      .map((_, i) => i)
+      .filter((i) => !exclude.includes(i));
+    if (availableIndices.length === 0) return null;
+    const index =
+      availableIndices[Math.floor(Math.random() * availableIndices.length)];
+    return { card: deckCards[index], index };
   };
 
-  const valueOrder = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+  const valueOrder = [
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "J",
+    "Q",
+    "K",
+    "A",
+  ];
   const cardValues: Record<string, number> = {
-    '2': 2,
-    '3': 3,
-    '4': 4,
-    '5': 5,
-    '6': 6,
-    '7': 7,
-    '8': 8,
-    '9': 9,
-    '10': 10,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5,
+    "6": 6,
+    "7": 7,
+    "8": 8,
+    "9": 9,
+    "10": 10,
     J: 10,
     Q: 10,
     K: 10,
@@ -107,26 +130,32 @@ export default function CardDrawScreen() {
       if (deckCards.length === 0) return;
       setRandomFactors(generateRandomFactors());
       setIsShuffling(true);
-      translateX.value = withRepeat(withTiming(15, { duration: 150 }), -1, true);
+      translateX.value = withRepeat(
+        withTiming(15, { duration: 150 }),
+        -1,
+        true,
+      );
     } else if (isShuffling) {
       setIsShuffling(false);
       cancelAnimation(translateX);
       translateX.value = 0;
-      const card1 = drawRandomCard();
-      if (!card1) return;
-      if (mode === 'classic') {
+      const firstDraw = drawRandomCard();
+      if (!firstDraw) return;
+      const { card: card1, index: index1 } = firstDraw;
+      if (mode === "classic") {
         setDrawnCards([card1]);
         setChosenIndex(0);
         const cv = cardValues[card1.value];
         setCardValue(cv);
         setResult(cv + statValue + extraValue);
       } else {
-        const card2 = drawRandomCard();
-        if (!card2) return;
+        const secondDraw = drawRandomCard([index1]);
+        if (!secondDraw) return;
+        const { card: card2 } = secondDraw;
         const rank1 = valueOrder.indexOf(card1.value);
         const rank2 = valueOrder.indexOf(card2.value);
         const chosen =
-          mode === 'advantage'
+          mode === "advantage"
             ? rank1 >= rank2
               ? 0
               : 1
@@ -135,7 +164,8 @@ export default function CardDrawScreen() {
               : 1;
         setDrawnCards([card1, card2]);
         setChosenIndex(chosen);
-        const cv = chosen === 0 ? cardValues[card1.value] : cardValues[card2.value];
+        const cv =
+          chosen === 0 ? cardValues[card1.value] : cardValues[card2.value];
         setCardValue(cv);
         setResult(cv + statValue + extraValue);
       }
@@ -152,24 +182,24 @@ export default function CardDrawScreen() {
       <View style={styles.modeSelector}>
         <Button
           size="sm"
-          variant={mode === 'classic' ? 'primary' : 'secondary'}
-          onPress={() => setMode('classic')}
+          variant={mode === "classic" ? "primary" : "secondary"}
+          onPress={() => setMode("classic")}
           className="mx-1"
         >
           Tirage classique
         </Button>
         <Button
           size="sm"
-          variant={mode === 'advantage' ? 'primary' : 'secondary'}
-          onPress={() => setMode('advantage')}
+          variant={mode === "advantage" ? "primary" : "secondary"}
+          onPress={() => setMode("advantage")}
           className="mx-1"
         >
           Avantage
         </Button>
         <Button
           size="sm"
-          variant={mode === 'disadvantage' ? 'primary' : 'secondary'}
-          onPress={() => setMode('disadvantage')}
+          variant={mode === "disadvantage" ? "primary" : "secondary"}
+          onPress={() => setMode("disadvantage")}
           className="mx-1"
         >
           Désavantage
@@ -207,13 +237,17 @@ export default function CardDrawScreen() {
             extraName ? `${extraName}: ${extraValue}` : null,
           ]
             .filter(Boolean)
-            .join(' + ')} = ${result}`}</Text>
+            .join(" + ")} = ${result}`}</Text>
           <Text
-            style={[styles.resultText, {
-              color: result >= difficulty ? '#22c55e' : '#ef4444',
-            }]}
+            style={[
+              styles.resultText,
+              {
+                color: result >= difficulty ? "#22c55e" : "#ef4444",
+              },
+            ]}
           >
-            {result >= difficulty ? 'REUSSITE' : 'ECHEC'} (Difficulté {difficulty})
+            {result >= difficulty ? "REUSSITE" : "ECHEC"} (Difficulté{" "}
+            {difficulty})
           </Text>
         </View>
       )}
@@ -223,60 +257,60 @@ export default function CardDrawScreen() {
 
 const styles = StyleSheet.create({
   characterName: {
-    position: 'absolute',
+    position: "absolute",
     top: 90,
-    alignSelf: 'center',
-    color: '#fff',
+    alignSelf: "center",
+    color: "#fff",
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     zIndex: 2,
   },
-  pressableArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  pressableArea: { flex: 1, justifyContent: "center", alignItems: "center" },
   modeSelector: {
-    position: 'absolute',
+    position: "absolute",
     top: 40,
-    flexDirection: 'row',
-    alignSelf: 'center',
+    flexDirection: "row",
+    alignSelf: "center",
     zIndex: 1,
   },
   deck: {
     width: 140,
     height: 200,
     borderRadius: 15,
-    backgroundColor: '#1f2937',
+    backgroundColor: "#1f2937",
     borderWidth: 3,
-    borderColor: '#555',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'absolute',
+    borderColor: "#555",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "absolute",
   },
   cardBack: {
     width: 140,
     height: 200,
     borderRadius: 15,
-    backgroundColor: '#111827',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#111827",
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: '#666',
+    borderColor: "#666",
   },
-  backText: { color: '#888', fontSize: 14, fontWeight: 'bold' },
+  backText: { color: "#888", fontSize: 14, fontWeight: "bold" },
   drawnCardsContainer: {
     marginTop: -240,
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   singleCard: { marginHorizontal: 10 },
   resultBox: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20 + RESULT_OFFSET,
     left: 20,
     right: 20,
     padding: 12,
     borderWidth: 2,
-    borderColor: '#fff',
-    backgroundColor: '#1f2937',
+    borderColor: "#fff",
+    backgroundColor: "#1f2937",
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  resultText: { color: '#fff', fontWeight: 'bold', textAlign: 'center' },
+  resultText: { color: "#fff", fontWeight: "bold", textAlign: "center" },
 });
