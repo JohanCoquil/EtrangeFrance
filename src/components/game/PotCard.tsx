@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   },
   backText: {
     color: '#bbb',
-    fontSize: 20,
+    fontSize: 15,
     fontWeight: 'bold',
   },
 });
