@@ -125,6 +125,7 @@ export const initDb = async () => {
       memoire INTEGER DEFAULT 1,
       volonte INTEGER DEFAULT 1,
       sante INTEGER DEFAULT 0,
+      degats INTEGER DEFAULT 0,
       origines TEXT,
       rencontres TEXT,
       notes TEXT,
@@ -166,6 +167,12 @@ export const initDb = async () => {
   if (!hasSante) {
     await database.execAsync(
       "ALTER TABLE characters ADD COLUMN sante INTEGER DEFAULT 0;"
+    );
+  }
+  const hasDegats = columns.some((c: any) => c.name === "degats");
+  if (!hasDegats) {
+    await database.execAsync(
+      "ALTER TABLE characters ADD COLUMN degats INTEGER DEFAULT 0;"
     );
   }
   const hasOrigines = columns.some((c: any) => c.name === "origines");

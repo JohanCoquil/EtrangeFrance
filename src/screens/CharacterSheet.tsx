@@ -98,8 +98,8 @@ export default function CharacterSheet() {
     return () => clearTimeout(timeout);
   }, [origines, rencontres, notes, equipement, fetiches, characterId]);
 
-  const forceCapacite = capacites?.find((c: any) => c.id === 22);
-  const dexCapacite = capacites?.find((c: any) => c.id === 1);
+  const forceCapacite = (capacites as any[])?.find((c: any) => c.id === 22);
+  const dexCapacite = (capacites as any[])?.find((c: any) => c.id === 1);
 
   const stats = [
     {
@@ -118,7 +118,11 @@ export default function CharacterSheet() {
     { label: "Charisme", value: character.charisme },
     { label: "Mémoire", value: character.memoire },
     { label: "Volonté", value: character.volonte },
-    { label: "Santé", value: character.sante },
+    {
+      label: "Santé",
+      value: Math.max(0, character.sante - (character.degats ?? 0)),
+      max: character.sante,
+    },
   ];
 
   const difficulties = [
@@ -259,9 +263,11 @@ export default function CharacterSheet() {
               </Title>
               {stats.map((stat) => {
                 const displayValue =
-                  stat.bonus && stat.bonus > 0
-                    ? `${stat.value} (${stat.base} + ${stat.bonus})`
-                    : stat.value;
+                  stat.label === "Santé"
+                    ? `${stat.value} / ${stat.max}`
+                    : stat.bonus && stat.bonus > 0
+                        ? `${stat.value} (${stat.base} + ${stat.bonus})`
+                        : stat.value;
                 if (stat.label === "Santé") {
                   return (
                     <View
