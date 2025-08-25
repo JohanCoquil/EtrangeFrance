@@ -27,7 +27,7 @@ export function useAddCharacter() {
             ${character.charisme}, ${character.memoire}, ${character.volonte}, ${character.sante}, ${character.degats});
         `);
 
-      const defaultCards = "1;2;3;4;5;6;7;8;9;10";
+      const defaultCards = "A;2;3;4;5;6;7;8;9;10";
       const figures = ["Carreau", "Coeur", "Trèfle", "Pique"];
       const randomFigure = figures[Math.floor(Math.random() * figures.length)];
       await db.runAsync(
