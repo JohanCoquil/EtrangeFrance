@@ -27,6 +27,15 @@ export function useAddCharacter() {
             ${character.charisme}, ${character.memoire}, ${character.volonte}, ${character.sante}, ${character.degats});
         `);
 
+        const defaultCards = '1;2;3;4;5;6;7;8;9;10';
+        const figures = ['Carreau', 'Coeur', 'Trèfle', 'Pique'];
+        for (const fig of figures) {
+          await db.runAsync(
+            "INSERT INTO desk (user_id, figure, cards) VALUES (?, ?, ?)",
+            [character.id, fig, defaultCards]
+          );
+        }
+
         return character;
       },
     onSuccess: () => {
