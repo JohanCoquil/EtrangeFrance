@@ -85,9 +85,8 @@ export default function CardDrawScreen() {
     return deckCards[Math.floor(Math.random() * deckCards.length)];
   };
 
-  const valueOrder = ['1','2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+  const valueOrder = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
   const cardValues: Record<string, number> = {
-    '1': 1,
     '2': 2,
     '3': 3,
     '4': 4,
@@ -97,10 +96,10 @@ export default function CardDrawScreen() {
     '8': 8,
     '9': 9,
     '10': 10,
-    J: 11,
-    Q: 12,
-    K: 13,
-    A: 14,
+    J: 10,
+    Q: 10,
+    K: 10,
+    A: 1,
   };
 
   const handlePress = () => {
@@ -142,9 +141,9 @@ export default function CardDrawScreen() {
       }
     } else if (drawnCards) {
       setDrawnCards(null);
-       setChosenIndex(null);
-       setCardValue(null);
-       setResult(null);
+      setChosenIndex(null);
+      setCardValue(null);
+      setResult(null);
     }
   };
 

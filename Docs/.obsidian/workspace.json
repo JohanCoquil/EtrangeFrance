@@ -1,0 +1,197 @@
+{
+  "main": {
+    "id": "af3228ef0a5be7ce",
+    "type": "split",
+    "children": [
+      {
+        "id": "829d00e81d8e3c2d",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "438b7289c84d1b3d",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "api_professions_skills.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "api_professions_skills"
+            }
+          },
+          {
+            "id": "e78056f31f4adafa",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "LOCAL BDD.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "LOCAL BDD"
+            }
+          }
+        ],
+        "currentTab": 1
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "eca774d2b4c3f9a5",
+    "type": "split",
+    "children": [
+      {
+        "id": "ec828678f4547206",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "d8c17cd5ac0e2aa3",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "235b8b479cb73eee",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "1faf98ce93496ef3",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "11c2b4f395571e22",
+    "type": "split",
+    "children": [
+      {
+        "id": "029df49fc33d2ac8",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "21417921b00abb5b",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "api_professions_skills.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for api_professions_skills"
+            }
+          },
+          {
+            "id": "1006d1f7d489815b",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "api_professions_skills.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from api_professions_skills"
+            }
+          },
+          {
+            "id": "63bba35a6c7abfa7",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "7f348e508ed22ab6",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "api_professions_skills.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of api_professions_skills"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false
+    }
+  },
+  "active": "e78056f31f4adafa",
+  "lastOpenFiles": [
+    "LOCAL BDD.md",
+    "api_professions_skills.md",
+    "Architecture_Recommandee.md",
+    "Corrections_Appliquees.md",
+    "Design_System_Usage.md",
+    "Projet_EtrangeFrance_Synthese.md",
+    "Setup_EtrangeFrance.md",
+    "Structure_BDD.md"
+  ]
+}
