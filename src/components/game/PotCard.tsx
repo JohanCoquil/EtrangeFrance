@@ -67,6 +67,8 @@ const styles = StyleSheet.create({
     width: 70,
     height: 100,
     overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scaledCard: {
     transform: [{ scale: 0.5 }],

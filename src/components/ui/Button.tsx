@@ -1,4 +1,4 @@
-import { Pressable, Text, ViewStyle, TextStyle } from 'react-native';
+import { Pressable, Text } from 'react-native';
 import { ReactNode } from 'react';
 
 interface ButtonProps {
@@ -63,12 +63,15 @@ export default function Button({
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      className={`${getVariantStyles()} ${getSizeStyles()} ${disabled ? 'opacity-50' : ''
-        } ${className}`}
+      className={`${getVariantStyles()} ${getSizeStyles()} ${disabled ? 'opacity-50' : ''} flex items-center justify-center ${className}`}
     >
-      <Text className={`text-white text-center font-semibold ${getTextSizeStyles()}`}>
-        {children}
-      </Text>
+      {typeof children === 'string' || typeof children === 'number' ? (
+        <Text className={`text-white text-center font-semibold ${getTextSizeStyles()}`}>
+          {children}
+        </Text>
+      ) : (
+        children
+      )}
     </Pressable>
   );
-} 
+}
