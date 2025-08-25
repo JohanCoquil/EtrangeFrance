@@ -9,7 +9,8 @@ import Animated, {
   withTiming,
   cancelAnimation,
 } from 'react-native-reanimated';
-import { suits, values } from '../data/deck';
+import { suits } from '../data/deck';
+import { useDeck } from '@/api/deckLocal';
 import Card from '../components/game/Carte';
 import { Button, Layout } from '../components/ui';
 
@@ -40,7 +41,9 @@ export default function CardDrawScreen() {
     extraName,
     extraValue = 0,
     characterName,
+    characterId,
   } = route.params;
+  const { data: deckRows } = useDeck(characterId);
   const [isShuffling, setIsShuffling] = useState(false);
   const [drawnCards, setDrawnCards] = useState<
     { value: string; suit: { symbol: string; color: string } }[] | null
@@ -63,13 +66,28 @@ export default function CardDrawScreen() {
     }))
   );
 
-  const drawRandomCard = () => ({
-    suit: suits[Math.floor(Math.random() * suits.length)],
-    value: values[Math.floor(Math.random() * values.length)],
-  });
+  const deckCards = React.useMemo(() => {
+    if (!deckRows) return [] as { value: string; suit: { symbol: string; color: string } }[];
+    const cards: { value: string; suit: { symbol: string; color: string } }[] = [];
+    (deckRows as any[]).forEach((row) => {
+      const suit = suits.find((s) => s.name === row.figure);
+      if (suit && row.cards) {
+        row.cards.split(';').forEach((val: string) => {
+          cards.push({ value: val, suit });
+        });
+      }
+    });
+    return cards;
+  }, [deckRows]);
 
-  const valueOrder = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+  const drawRandomCard = () => {
+    if (deckCards.length === 0) return null;
+    return deckCards[Math.floor(Math.random() * deckCards.length)];
+  };
+
+  const valueOrder = ['1','2','3','4','5','6','7','8','9','10','J','Q','K','A'];
   const cardValues: Record<string, number> = {
+    '1': 1,
     '2': 2,
     '3': 3,
     '4': 4,
@@ -87,6 +105,7 @@ export default function CardDrawScreen() {
 
   const handlePress = () => {
     if (!isShuffling && !drawnCards) {
+      if (deckCards.length === 0) return;
       setRandomFactors(generateRandomFactors());
       setIsShuffling(true);
       translateX.value = withRepeat(withTiming(15, { duration: 150 }), -1, true);
@@ -94,8 +113,8 @@ export default function CardDrawScreen() {
       setIsShuffling(false);
       cancelAnimation(translateX);
       translateX.value = 0;
-
       const card1 = drawRandomCard();
+      if (!card1) return;
       if (mode === 'classic') {
         setDrawnCards([card1]);
         setChosenIndex(0);
@@ -104,6 +123,7 @@ export default function CardDrawScreen() {
         setResult(cv + statValue + extraValue);
       } else {
         const card2 = drawRandomCard();
+        if (!card2) return;
         const rank1 = valueOrder.indexOf(card1.value);
         const rank2 = valueOrder.indexOf(card2.value);
         const chosen =
@@ -122,7 +142,7 @@ export default function CardDrawScreen() {
       }
     } else if (drawnCards) {
       setDrawnCards(null);
-      setChosenIndex(null);
+       setChosenIndex(null);
        setCardValue(null);
        setResult(null);
     }

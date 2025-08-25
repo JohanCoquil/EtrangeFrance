@@ -157,6 +157,7 @@ export default function CharacterSheet() {
       extraName: selectedExtra?.name,
       extraValue: selectedExtra?.value,
       characterName: character.name,
+      characterId: characterId,
     });
     setShowDifficulty(false);
   };

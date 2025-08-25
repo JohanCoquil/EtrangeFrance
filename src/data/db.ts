@@ -137,6 +137,15 @@ export const initDb = async () => {
       FOREIGN KEY (voie_id) REFERENCES voies_etranges(id)
     );
 
+    CREATE TABLE IF NOT EXISTS desk (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      figure TEXT NOT NULL CHECK (figure IN ('Carreau','Coeur','Trèfle','Pique')),
+      cards TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES characters(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_desk_user_id ON desk(user_id);
+
   `);
   
   // Ensure new columns exist for older databases

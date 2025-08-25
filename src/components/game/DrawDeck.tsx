@@ -8,10 +8,12 @@ import Animated, {
   withTiming,
   cancelAnimation,
 } from 'react-native-reanimated';
-import { suits, values } from '../../data/deck';
+import { suits } from '../../data/deck';
+import { useDeck } from '@/api/deckLocal';
 import FlippableCard from './FlippableCard';
 
-export default function DrawDeck() {
+export default function DrawDeck({ characterId }: { characterId: string }) {
+  const { data: deckRows } = useDeck(characterId);
   const [isShuffling, setIsShuffling] = useState(false);
   const [drawnCard, setDrawnCard] = useState<{ value: string; suit: { symbol: string; color: string } } | null>(null);
 
@@ -33,8 +35,28 @@ export default function DrawDeck() {
     opacity: cardOpacity.value,
   }));
 
+  const deckCards = React.useMemo(() => {
+    if (!deckRows) return [] as { value: string; suit: { symbol: string; color: string } }[];
+    const cards: { value: string; suit: { symbol: string; color: string } }[] = [];
+    (deckRows as any[]).forEach((row) => {
+      const suit = suits.find((s) => s.name === row.figure);
+      if (suit && row.cards) {
+        row.cards.split(';').forEach((val: string) => {
+          cards.push({ value: val, suit });
+        });
+      }
+    });
+    return cards;
+  }, [deckRows]);
+
+  const drawRandomCard = () => {
+    if (deckCards.length === 0) return null;
+    return deckCards[Math.floor(Math.random() * deckCards.length)];
+  };
+
   const handlePress = () => {
     if (!isShuffling && !drawnCard) {
+      if (deckCards.length === 0) return;
       // Premier clic : démarrer le mélange
       setIsShuffling(true);
       translateX.value = withRepeat(withTiming(25, { duration: 200 }), -1, true);
@@ -44,10 +66,9 @@ export default function DrawDeck() {
       cancelAnimation(translateX);
       translateX.value = 0;
 
-      // Tirage aléatoire
-      const suit = suits[Math.floor(Math.random() * suits.length)];
-      const value = values[Math.floor(Math.random() * values.length)];
-      setDrawnCard({ value, suit });
+      const card = drawRandomCard();
+      if (!card) return;
+      setDrawnCard(card);
 
       // Animation d’apparition
       cardY.value = 50;
