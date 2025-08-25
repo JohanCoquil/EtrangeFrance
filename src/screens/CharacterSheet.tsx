@@ -642,7 +642,7 @@ export default function CharacterSheet() {
                 className="mb-2"
                 onPress={() => handleDifficultySelect(d.value)}
               >
-                {d.label} ({d.value})
+                {`${d.label} (${d.value})`}
               </Button>
             ))}
             <Button
