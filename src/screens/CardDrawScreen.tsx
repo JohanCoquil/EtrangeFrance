@@ -371,8 +371,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 100,
     flexDirection: "row",
-    alignSelf: "center",
     alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
     zIndex: 2,
   },
   pot: {
@@ -382,6 +383,7 @@ const styles = StyleSheet.create({
     padding: 4,
     borderRadius: 8,
     marginRight: 8,
+    maxWidth: "100%",
   },
   deck: {
     width: 140,

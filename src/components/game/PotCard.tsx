@@ -39,8 +39,10 @@ export default function PotCard({ card, onAddToDeck }: Props) {
 
   if (card.faceUp) {
     return (
-      <View style={[styles.cardContainer, { transform: [{ scale: 0.5 }] }]}> 
-        <Card value={card.value} suit={card.suit} />
+      <View style={styles.cardContainer}>
+        <View style={styles.scaledCard}>
+          <Card value={card.value} suit={card.suit} />
+        </View>
       </View>
     );
   }
@@ -48,10 +50,12 @@ export default function PotCard({ card, onAddToDeck }: Props) {
   return (
     <Animated.View
       {...panResponder.panHandlers}
-      style={[pan.getLayout(), styles.cardContainer, { transform: [{ scale: 0.5 }] }]}
+      style={[pan.getLayout(), styles.cardContainer]}
     >
-      <View style={styles.cardBack}>
-        <Text style={styles.backText}>Étrange France</Text>
+      <View style={styles.scaledCard}>
+        <View style={styles.cardBack}>
+          <Text style={styles.backText}>Étrange France</Text>
+        </View>
       </View>
     </Animated.View>
   );
@@ -60,6 +64,12 @@ export default function PotCard({ card, onAddToDeck }: Props) {
 const styles = StyleSheet.create({
   cardContainer: {
     marginHorizontal: 4,
+    width: 70,
+    height: 100,
+    overflow: 'hidden',
+  },
+  scaledCard: {
+    transform: [{ scale: 0.5 }],
   },
   cardBack: {
     width: 140,
