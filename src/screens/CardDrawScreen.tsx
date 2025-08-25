@@ -19,11 +19,6 @@ import { RotateCcw } from "lucide-react-native";
 // Nombre de dos de cartes affichés pendant le mélange
 const NUM_BACK_CARDS = 10;
 
-// Conversion de millimètres en unités indépendantes de la densité
-const mmToDp = (mm: number) => (mm * 160) / 25.4;
-// Décale l'affichage du résultat juste en dessous du deck
-const RESULT_OFFSET = mmToDp(20);
-
 // Génère des facteurs aléatoires pour les animations de chaque carte
 const generateRandomFactors = () =>
   Array.from({ length: NUM_BACK_CARDS }, () => ({
@@ -302,50 +297,53 @@ export default function CardDrawScreen() {
       </View>
       <Text style={styles.characterName}>{characterName}</Text>
       <Pressable style={styles.pressableArea} onPress={handlePress}>
-        {Array.from({ length: NUM_BACK_CARDS }).map((_, i) => (
-          <Animated.View key={i} style={[styles.deck, animStyles[i]]}>
-            <View style={styles.cardBack}>
-              <Text style={styles.backText}>Étrange France</Text>
-            </View>
-          </Animated.View>
-        ))}
-
-        {drawnCards && (
-          <View style={styles.drawnCardsContainer}>
-            {drawnCards.map((card, index) => (
-              <View key={index} style={styles.singleCard}>
-                <Card
-                  value={card.value}
-                  suit={card.suit}
-                  crossed={drawnCards.length > 1 && index !== chosenIndex}
-                />
+        <View style={styles.deckContainer}>
+          {Array.from({ length: NUM_BACK_CARDS }).map((_, i) => (
+            <Animated.View key={i} style={[styles.deck, animStyles[i]]}>
+              <View style={styles.cardBack}>
+                <Text style={styles.backText}>Étrange France</Text>
               </View>
-            ))}
+            </Animated.View>
+          ))}
+
+          {drawnCards && (
+            <View style={styles.drawnCardsContainer}>
+              {drawnCards.map((card, index) => (
+                <View key={index} style={styles.singleCard}>
+                  <Card
+                    value={card.value}
+                    suit={card.suit}
+                    crossed={drawnCards.length > 1 && index !== chosenIndex}
+                  />
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {result !== null && cardValue !== null && (
+          <View style={styles.resultBox}>
+            <Text style={styles.resultText}>{`${[
+              `Carte: ${cardValue}`,
+              statName ? `${statName}: ${statValue}` : null,
+              extraName ? `${extraName}: ${extraValue}` : null,
+            ]
+              .filter(Boolean)
+              .join(" + ")} = ${result}`}</Text>
+            <Text
+              style={[
+                styles.resultText,
+                {
+                  color: result >= difficulty ? "#22c55e" : "#ef4444",
+                },
+              ]}
+            >
+              {result >= difficulty ? "REUSSITE" : "ECHEC"} (Difficulté{" "}
+              {difficulty})
+            </Text>
           </View>
         )}
       </Pressable>
-      {result !== null && cardValue !== null && (
-        <View style={styles.resultBox}>
-          <Text style={styles.resultText}>{`${[
-            `Carte: ${cardValue}`,
-            statName ? `${statName}: ${statValue}` : null,
-            extraName ? `${extraName}: ${extraValue}` : null,
-          ]
-            .filter(Boolean)
-            .join(" + ")} = ${result}`}</Text>
-          <Text
-            style={[
-              styles.resultText,
-              {
-                color: result >= difficulty ? "#22c55e" : "#ef4444",
-              },
-            ]}
-          >
-            {result >= difficulty ? "REUSSITE" : "ECHEC"} (Difficulté{" "}
-            {difficulty})
-          </Text>
-        </View>
-      )}
     </Layout>
   );
 }
@@ -360,7 +358,12 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     zIndex: 2,
   },
-  pressableArea: { flex: 1, justifyContent: "center", alignItems: "center" },
+  pressableArea: {
+    flex: 1,
+    justifyContent: "flex-end",
+    alignItems: "center",
+    paddingBottom: 20,
+  },
   modeSelector: {
     position: "absolute",
     top: 40,
@@ -386,6 +389,11 @@ const styles = StyleSheet.create({
     marginRight: 8,
     maxWidth: "100%",
   },
+  deckContainer: {
+    width: 140,
+    height: 200,
+    marginBottom: 10,
+  },
   deck: {
     width: 140,
     height: 200,
@@ -409,15 +417,13 @@ const styles = StyleSheet.create({
   },
   backText: { color: "#888", fontSize: 14, fontWeight: "bold" },
   drawnCardsContainer: {
-    marginTop: -240,
+    position: "absolute",
+    bottom: 220,
     flexDirection: "row",
   },
   singleCard: { marginHorizontal: 10 },
   resultBox: {
-    position: "absolute",
-    bottom: 20 + RESULT_OFFSET,
-    left: 20,
-    right: 20,
+    marginHorizontal: 20,
     padding: 12,
     borderWidth: 2,
     borderColor: "#fff",
