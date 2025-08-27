@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Pressable, View, StyleSheet, Text, Modal } from "react-native";
+import { Pressable, View, StyleSheet, Text } from "react-native";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/types";
 import Animated, {
@@ -13,7 +13,7 @@ import { suits } from "../data/deck";
 import { useDeck } from "@/api/deckLocal";
 import Card from "../components/game/Carte";
 import PotCard, { PotCardType } from "../components/game/PotCard";
-import { Button, Layout, Title, Body } from "../components/ui";
+import { Button, Layout } from "../components/ui";
 import { RotateCcw } from "lucide-react-native";
 import { useCharacters } from "@/api/charactersLocal";
 
@@ -64,7 +64,7 @@ export default function CardDrawScreen() {
   const [initialSuit, setInitialSuit] = useState<
     { symbol: string; color: string } | null
   >(null);
-  const [triggerModal, setTriggerModal] = useState<string | null>(null);
+  const [triggerDescription, setTriggerDescription] = useState<string | null>(null);
   const triggerEffects = character?.trigger_effects
     ? JSON.parse(character.trigger_effects)
     : [];
@@ -173,6 +173,7 @@ export default function CardDrawScreen() {
     setChosenIndex(null);
     setCardValue(null);
     setResult(null);
+    setTriggerDescription(null);
   };
 
   const valueOrder = [
@@ -206,7 +207,9 @@ export default function CardDrawScreen() {
     K: 10,
   };
 
-  const checkTrigger = (card: { value: string; suit: { symbol: string } }) => {
+  const checkTrigger = (
+    card: { value: string; suit: { symbol: string } },
+  ): string | null => {
     let trig: any = null;
     if (statName) {
       trig = triggerEffects.find(
@@ -225,7 +228,7 @@ export default function CardDrawScreen() {
           t.cardSuit === card.suit.symbol,
       );
     }
-    if (trig) setTriggerModal(trig.description);
+    return trig ? trig.description : null;
   };
 
   const handlePress = () => {
@@ -253,7 +256,12 @@ export default function CardDrawScreen() {
         setCardValue(cv);
         setResult(total);
         handleDrawnPotCards([card1]);
-        checkTrigger(card1);
+        const trigDesc = checkTrigger(card1);
+        if (trigDesc && total >= difficulty) {
+          setTriggerDescription(trigDesc);
+        } else {
+          setTriggerDescription(null);
+        }
       } else {
         const secondDraw = drawRandomCard([index1]);
         if (!secondDraw) return;
@@ -276,13 +284,19 @@ export default function CardDrawScreen() {
         setCardValue(cv);
         setResult(total);
         handleDrawnPotCards([card1, card2]);
-        checkTrigger(chosenCard);
+        const trigDesc = checkTrigger(chosenCard);
+        if (trigDesc && total >= difficulty) {
+          setTriggerDescription(trigDesc);
+        } else {
+          setTriggerDescription(null);
+        }
       }
     } else if (drawnCards) {
       setDrawnCards(null);
       setChosenIndex(null);
       setCardValue(null);
       setResult(null);
+      setTriggerDescription(null);
     }
   };
 
@@ -377,30 +391,13 @@ export default function CardDrawScreen() {
                 {result >= difficulty ? "REUSSITE" : "ECHEC"} (Difficulté{" "}
                 {difficulty})
               </Text>
+              {triggerDescription && (
+                <Text style={styles.triggerText}>{triggerDescription}</Text>
+              )}
             </>
           )}
         </View>
       </Pressable>
-      <Modal
-        visible={!!triggerModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setTriggerModal(null)}
-      >
-        <View className="flex-1 justify-center bg-black/60 p-4">
-          <View className="bg-gray-900 p-4 rounded-lg">
-            <Title className="text-white text-xl mb-2">Effet déclenché</Title>
-            <Body className="text-gray-200 mb-4">{triggerModal}</Body>
-            <Button
-              variant="secondary"
-              onPress={() => setTriggerModal(null)}
-              className="self-end bg-gray-700 border border-gray-500"
-            >
-              Fermer
-            </Button>
-          </View>
-        </View>
-      </Modal>
     </Layout>
   );
 }
@@ -494,4 +491,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   resultText: { color: "#fff", fontWeight: "bold", textAlign: "center" },
+  triggerText: { color: "#22c55e", textAlign: "center", marginTop: 4 },
 });
