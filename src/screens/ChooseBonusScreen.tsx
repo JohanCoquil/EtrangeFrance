@@ -9,6 +9,11 @@ import {
   useCharacters,
   useUpdateCharacterSheet,
 } from "@/api/charactersLocal";
+import {
+  useCapacitesByVoie,
+  useCharacterCapacites,
+  useUpdateCharacterCapacites,
+} from "@/api/capacitiesLocal";
 import { Info } from "lucide-react-native";
 
 const bonusOptions = [
@@ -79,6 +84,8 @@ export default function ChooseBonusScreen() {
   const [objectSpecInput, setObjectSpecInput] = useState("");
   const [objectName, setObjectName] = useState("");
   const [objectSpec, setObjectSpec] = useState("");
+  const [showSpecialiteModal, setShowSpecialiteModal] = useState(false);
+  const [specialiteId, setSpecialiteId] = useState<number | null>(null);
   const [infoModal, setInfoModal] = useState<{
     title: string;
     description: string;
@@ -87,6 +94,13 @@ export default function ChooseBonusScreen() {
   const { data: characters } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
   const updateSheet = useUpdateCharacterSheet();
+  const updateCapacites = useUpdateCharacterCapacites();
+  const { data: characterCapacites } = useCharacterCapacites(characterId);
+  const { data: voieCapacites } = useCapacitesByVoie(character?.voie_id ?? 0);
+  const availableSpecialites =
+    voieCapacites?.filter(
+      (cap: any) => !characterCapacites?.some((c: any) => c.id === cap.id),
+    ) ?? [];
 
   const toggle = (id: string) => {
     if (id === "influence") {
@@ -113,6 +127,17 @@ export default function ChooseBonusScreen() {
       }
       return;
     }
+    if (id === "specialite") {
+      if (selected.includes(id)) {
+        setSelected((prev) => prev.filter((b) => b !== id));
+        setSpecialiteId(null);
+      } else {
+        if (selected.length >= 3) return;
+        setSpecialiteId(null);
+        setShowSpecialiteModal(true);
+      }
+      return;
+    }
     setSelected((prev) => {
       if (prev.includes(id)) {
         return prev.filter((b) => b !== id);
@@ -127,15 +152,6 @@ export default function ChooseBonusScreen() {
       alert("Choisis exactement 3 bonus");
       return;
     }
-    const proceed = () =>
-      updateBonuses.mutate(
-        { id: characterId, bonuses: selected },
-        {
-          onSuccess: () =>
-            navigation.navigate("MainTabs", { screen: "Characters" }),
-          onError: (err) => alert("❌ Erreur : " + err),
-        },
-      );
     if (selected.includes("influence") && !influenceMilieu.trim()) {
       alert("Précise le milieu pour l'influence sociale");
       return;
@@ -147,42 +163,79 @@ export default function ChooseBonusScreen() {
       alert("Précise le nom et la spécificité de l'objet");
       return;
     }
+    if (selected.includes("specialite") && !specialiteId) {
+      alert("Choisis une spécialité étrange");
+      return;
+    }
+
+    const proceed = () =>
+      updateBonuses.mutate(
+        { id: characterId, bonuses: selected },
+        {
+          onSuccess: () =>
+            navigation.navigate("MainTabs", { screen: "Characters" }),
+          onError: (err) => alert("❌ Erreur : " + err),
+        },
+      );
 
     const needsSheetUpdate =
       selected.includes("influence") ||
       selected.includes("objet") ||
       selected.includes("richesse");
 
-    if (needsSheetUpdate) {
-      if (!character) {
-        alert("❌ Erreur : personnage introuvable");
-        return;
+    const updateSheetIfNeeded = () => {
+      if (needsSheetUpdate) {
+        if (!character) {
+          alert("❌ Erreur : personnage introuvable");
+          return;
+        }
+        const newRencontres = selected.includes("influence")
+          ? `${character.rencontres ? character.rencontres + "\n" : ""}Influence sociale augmentée - ${influenceMilieu}`
+          : character.rencontres ?? "";
+        const newFetiches = selected.includes("objet")
+          ? `${character.fetiches ? character.fetiches + "\n" : ""}${objectName} - ${objectSpec}`
+          : character.fetiches ?? "";
+        const newOrigines = selected.includes("richesse")
+          ? `${character.origines ? character.origines + "\n" : ""}Richesse augmentée : Le personnage est particulièrement riche, ce qui le fait passer dans une classe sociale supérieure par rapport à son métier d’origine.`
+          : character.origines ?? "";
+        updateSheet.mutate(
+          {
+            id: characterId,
+            origines: newOrigines,
+            rencontres: newRencontres,
+            notes: character.notes ?? "",
+            equipement: character.equipement ?? "",
+            fetiches: newFetiches,
+          },
+          {
+            onSuccess: proceed,
+            onError: (err) => alert("❌ Erreur : " + err),
+          },
+        );
+      } else {
+        proceed();
       }
-      const newRencontres = selected.includes("influence")
-        ? `${character.rencontres ? character.rencontres + "\n" : ""}Influence sociale augmentée - ${influenceMilieu}`
-        : (character.rencontres ?? "");
-      const newFetiches = selected.includes("objet")
-        ? `${character.fetiches ? character.fetiches + "\n" : ""}${objectName} - ${objectSpec}`
-        : (character.fetiches ?? "");
-      const newOrigines = selected.includes("richesse")
-        ? `${character.origines ? character.origines + "\n" : ""}Richesse augmentée : Le personnage est particulièrement riche, ce qui le fait passer dans une classe sociale supérieure par rapport à son métier d’origine.`
-        : (character.origines ?? "");
-      updateSheet.mutate(
+    };
+
+    if (selected.includes("specialite")) {
+      const currentCaps =
+        characterCapacites?.map((c: any) => ({
+          capaciteId: c.id,
+          level: c.level,
+        })) ?? [];
+      const newCaps = [
+        ...currentCaps,
+        { capaciteId: specialiteId!, level: 1 },
+      ];
+      updateCapacites.mutate(
+        { characterId, capacites: newCaps },
         {
-          id: characterId,
-          origines: newOrigines,
-          rencontres: newRencontres,
-          notes: character.notes ?? "",
-          equipement: character.equipement ?? "",
-          fetiches: newFetiches,
-        },
-        {
-          onSuccess: proceed,
+          onSuccess: updateSheetIfNeeded,
           onError: (err) => alert("❌ Erreur : " + err),
         },
       );
     } else {
-      proceed();
+      updateSheetIfNeeded();
     }
   };
 
@@ -324,6 +377,58 @@ export default function ChooseBonusScreen() {
                   setObjectSpec(objectSpecInput.trim());
                   setSelected((prev) => [...prev, "objet"]);
                   setShowObjectModal(false);
+                }}
+                className="flex-1 ml-2 bg-blue-800 border border-blue-500"
+              >
+                Valider
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showSpecialiteModal} transparent animationType="slide">
+        <View className="flex-1 justify-center bg-black/60 p-4">
+          <View className="bg-gray-900 p-4 rounded-lg max-h-[80%]">
+            <Title className="text-white text-xl mb-2">Spécialité étrange</Title>
+            {availableSpecialites.length > 0 ? (
+              <ScrollView className="mb-3">
+                {availableSpecialites.map((cap: any) => (
+                  <Pressable
+                    key={cap.id}
+                    onPress={() => setSpecialiteId(cap.id)}
+                    className={`p-2 mb-2 rounded ${
+                      specialiteId === cap.id
+                        ? "bg-blue-800 border border-blue-500"
+                        : "bg-gray-800 border border-gray-600"
+                    }`}
+                  >
+                    <Body className="text-white">{cap.name}</Body>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : (
+              <Body className="text-white mb-3">
+                Aucune spécialité disponible
+              </Body>
+            )}
+            <View className="flex-row justify-between">
+              <Button
+                variant="secondary"
+                onPress={() => setShowSpecialiteModal(false)}
+                className="flex-1 mr-2 bg-gray-700 border border-gray-500"
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="secondary"
+                onPress={() => {
+                  if (!specialiteId) {
+                    alert("Choisis une spécialité");
+                    return;
+                  }
+                  setSelected((prev) => [...prev, "specialite"]);
+                  setShowSpecialiteModal(false);
                 }}
                 className="flex-1 ml-2 bg-blue-800 border border-blue-500"
               >
