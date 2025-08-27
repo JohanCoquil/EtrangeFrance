@@ -22,6 +22,7 @@ import { Layout, Title, Body, Caption, Button } from "../components/ui";
 import { RootStackParamList } from "../navigation/types";
 import { useCharacters, useUpdateCharacterSheet } from "@/api/charactersLocal";
 import { useCharacterCapacites } from "@/api/capacitiesLocal";
+import { useCharacterSkills } from "@/api/skillsLocal";
 import CardFlip, { CardFlipRef } from "@/components/CardFlip";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Dices, AlertCircle } from "lucide-react-native";
@@ -55,6 +56,7 @@ export default function CharacterSheet() {
   const { data: characters, isLoading } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
   const { data: capacites } = useCharacterCapacites(characterId);
+  const { data: skills } = useCharacterSkills(characterId);
   const triggerEffects = character?.trigger_effects
     ? JSON.parse(character.trigger_effects)
     : [];
@@ -349,50 +351,117 @@ export default function CharacterSheet() {
                     (t: any) => t.type === "profession",
                   );
                   return (
-                    <Pressable
-                      className={`flex-row justify-between p-1 rounded ${
-                        isSelected
-                          ? "border border-yellow-400 bg-yellow-400/10"
-                          : ""
-                      }`}
-                      onPress={() =>
-                        handleSelectExtra({
-                          type: "profession",
-                          name: character.profession_name,
-                          value: character.profession_score,
-                        })
-                      }
-                    >
-                      <Body
-                        className={`text-white ${
-                          isSelected ? "font-bold text-yellow-400" : ""
+                    <>
+                      <Pressable
+                        className={`flex-row justify-between p-1 rounded ${
+                          isSelected
+                            ? "border border-yellow-400 bg-yellow-400/10"
+                            : ""
                         }`}
+                        onPress={() =>
+                          handleSelectExtra({
+                            type: "profession",
+                            name: character.profession_name,
+                            value: character.profession_score,
+                          })
+                        }
                       >
-                        {character.profession_name}
-                      </Body>
-                      <View className="flex-row items-center">
-                        {trig && (
-                          <Pressable
-                            onPress={() =>
-                              setTriggerInfo({
-                                title: `${character.profession_name} - ${trig.cardValue}${trig.cardSuit}`,
-                                description: trig.description,
-                              })
-                            }
-                            className="mr-1"
-                          >
-                            <AlertCircle size={16} color="#facc15" />
-                          </Pressable>
-                        )}
                         <Body
                           className={`text-white ${
                             isSelected ? "font-bold text-yellow-400" : ""
                           }`}
                         >
-                          {character.profession_score}
+                          {character.profession_name}
                         </Body>
-                      </View>
-                    </Pressable>
+                        <View className="flex-row items-center">
+                          {trig && (
+                            <Pressable
+                              onPress={() =>
+                                setTriggerInfo({
+                                  title: `${character.profession_name} - ${trig.cardValue}${trig.cardSuit}`,
+                                  description: trig.description,
+                                })
+                              }
+                              className="mr-1"
+                            >
+                              <AlertCircle size={16} color="#facc15" />
+                            </Pressable>
+                          )}
+                          <Body
+                            className={`text-white ${
+                              isSelected ? "font-bold text-yellow-400" : ""
+                            }`}
+                          >
+                            {character.profession_score}
+                          </Body>
+                        </View>
+                      </Pressable>
+                      {skills && skills.length > 0 ? (
+                        skills.map((skill: any) => {
+                          const isSkill =
+                            selectedExtra?.type === "skill" &&
+                            selectedExtra.id === skill.id;
+                          const trigSkill = triggerEffects.find(
+                            (t: any) =>
+                              t.type === "skill" && t.name === skill.name,
+                          );
+                          return (
+                            <Pressable
+                              key={skill.id}
+                              className={`flex-row justify-between ml-4 mt-1 p-1 rounded ${
+                                isSkill
+                                  ? "border border-yellow-400 bg-yellow-400/10"
+                                  : ""
+                              }`}
+                              onPress={() =>
+                                handleSelectExtra({
+                                  type: "skill",
+                                  id: skill.id,
+                                  name: skill.name,
+                                  value: skill.level,
+                                })
+                              }
+                            >
+                              <Body
+                                className={`${
+                                  isSkill
+                                    ? "font-bold text-yellow-400"
+                                    : "text-green-200"
+                                }`}
+                              >
+                                {skill.name}
+                              </Body>
+                              <View className="flex-row items-center">
+                                {trigSkill && (
+                                  <Pressable
+                                    onPress={() =>
+                                      setTriggerInfo({
+                                        title: `${skill.name} - ${trigSkill.cardValue}${trigSkill.cardSuit}`,
+                                        description: trigSkill.description,
+                                      })
+                                    }
+                                    className="mr-1"
+                                  >
+                                    <AlertCircle size={16} color="#facc15" />
+                                  </Pressable>
+                                )}
+                                <Body
+                                  className={`${
+                                    isSkill
+                                      ? "font-bold text-yellow-400"
+                                      : "text-green-200"
+                                  }`}
+                                >
+                                  {skill.level}
+                                </Body>
+                              </View>
+                            </Pressable>
+                          );
+                        })
+                      ) : (
+                        <Body className="text-white ml-4">Aucune spécialité</Body>
+                      )}
+                    </>
                   );
                 })()
               ) : (
