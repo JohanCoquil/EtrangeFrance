@@ -131,6 +131,7 @@ export const initDb = async () => {
       notes TEXT,
       equipement TEXT,
       fetiches TEXT,
+      trigger_effects TEXT,
       bonuses TEXT,
       FOREIGN KEY (profession_id) REFERENCES professions(id),
       FOREIGN KEY (hobby_id) REFERENCES hobbies(id),
@@ -217,6 +218,15 @@ export const initDb = async () => {
     if (!hasFetiches) {
       await database.execAsync(
         "ALTER TABLE characters ADD COLUMN fetiches TEXT;",
+      );
+    }
+
+    const hasTriggerEffects = columns.some(
+      (c: any) => c.name === "trigger_effects",
+    );
+    if (!hasTriggerEffects) {
+      await database.execAsync(
+        "ALTER TABLE characters ADD COLUMN trigger_effects TEXT;",
       );
     }
 

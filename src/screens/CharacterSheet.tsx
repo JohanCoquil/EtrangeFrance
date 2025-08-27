@@ -24,7 +24,7 @@ import { useCharacters, useUpdateCharacterSheet } from "@/api/charactersLocal";
 import { useCharacterCapacites } from "@/api/capacitiesLocal";
 import CardFlip, { CardFlipRef } from "@/components/CardFlip";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Dices } from "lucide-react-native";
+import { Dices, AlertCircle } from "lucide-react-native";
 
 export default function CharacterSheet() {
   const route = useRoute<RouteProp<RootStackParamList, "CharacterSheet">>();
@@ -48,10 +48,16 @@ export default function CharacterSheet() {
     | null
   >(null);
   const [showDifficulty, setShowDifficulty] = useState(false);
+  const [triggerInfo, setTriggerInfo] = useState<
+    { title: string; description: string } | null
+  >(null);
   const updateSheet = useUpdateCharacterSheet();
   const { data: characters, isLoading } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
   const { data: capacites } = useCharacterCapacites(characterId);
+  const triggerEffects = character?.trigger_effects
+    ? JSON.parse(character.trigger_effects)
+    : [];
 
   if (isLoading) {
     return (
@@ -156,6 +162,8 @@ export default function CharacterSheet() {
       statValue: statObj?.value,
       extraName: selectedExtra?.name,
       extraValue: selectedExtra?.value,
+      extraType: selectedExtra?.type,
+      extraId: selectedExtra?.id,
       characterName: character.name,
       characterId: characterId,
     });
@@ -281,6 +289,9 @@ export default function CharacterSheet() {
                   );
                 }
                 const isSelected = selectedStat === stat.label;
+                const trig = triggerEffects.find(
+                  (t: any) => t.type === "stat" && t.name === stat.label,
+                );
                 return (
                   <Pressable
                     key={stat.label}
@@ -300,13 +311,28 @@ export default function CharacterSheet() {
                     >
                       {stat.label}
                     </Body>
-                    <Body
-                      className={`text-white ${
-                        isSelected ? "font-bold text-yellow-400" : ""
-                      }`}
-                    >
-                      {displayValue}
-                    </Body>
+                    <View className="flex-row items-center">
+                      {trig && (
+                        <Pressable
+                          onPress={() =>
+                            setTriggerInfo({
+                              title: `${stat.label} - ${trig.cardValue}${trig.cardSuit}`,
+                              description: trig.description,
+                            })
+                          }
+                          className="mr-1"
+                        >
+                          <AlertCircle size={16} color="#facc15" />
+                        </Pressable>
+                      )}
+                      <Body
+                        className={`text-white ${
+                          isSelected ? "font-bold text-yellow-400" : ""
+                        }`}
+                      >
+                        {displayValue}
+                      </Body>
+                    </View>
                   </Pressable>
                 );
               })}
@@ -319,6 +345,9 @@ export default function CharacterSheet() {
               {character.profession_name ? (
                 (() => {
                   const isSelected = selectedExtra?.type === "profession";
+                  const trig = triggerEffects.find(
+                    (t: any) => t.type === "profession",
+                  );
                   return (
                     <Pressable
                       className={`flex-row justify-between p-1 rounded ${
@@ -341,13 +370,28 @@ export default function CharacterSheet() {
                       >
                         {character.profession_name}
                       </Body>
-                      <Body
-                        className={`text-white ${
-                          isSelected ? "font-bold text-yellow-400" : ""
-                        }`}
-                      >
-                        {character.profession_score}
-                      </Body>
+                      <View className="flex-row items-center">
+                        {trig && (
+                          <Pressable
+                            onPress={() =>
+                              setTriggerInfo({
+                                title: `${character.profession_name} - ${trig.cardValue}${trig.cardSuit}`,
+                                description: trig.description,
+                              })
+                            }
+                            className="mr-1"
+                          >
+                            <AlertCircle size={16} color="#facc15" />
+                          </Pressable>
+                        )}
+                        <Body
+                          className={`text-white ${
+                            isSelected ? "font-bold text-yellow-400" : ""
+                          }`}
+                        >
+                          {character.profession_score}
+                        </Body>
+                      </View>
                     </Pressable>
                   );
                 })()
@@ -363,6 +407,9 @@ export default function CharacterSheet() {
               {character.hobby_name ? (
                 (() => {
                   const isSelected = selectedExtra?.type === "hobby";
+                  const trig = triggerEffects.find(
+                    (t: any) => t.type === "hobby",
+                  );
                   return (
                     <Pressable
                       className={`flex-row justify-between p-1 rounded ${
@@ -385,13 +432,28 @@ export default function CharacterSheet() {
                       >
                         {character.hobby_name}
                       </Body>
-                      <Body
-                        className={`text-white ${
-                          isSelected ? "font-bold text-yellow-400" : ""
-                        }`}
-                      >
-                        {character.hobby_score}
-                      </Body>
+                      <View className="flex-row items-center">
+                        {trig && (
+                          <Pressable
+                            onPress={() =>
+                              setTriggerInfo({
+                                title: `${character.hobby_name} - ${trig.cardValue}${trig.cardSuit}`,
+                                description: trig.description,
+                              })
+                            }
+                            className="mr-1"
+                          >
+                            <AlertCircle size={16} color="#facc15" />
+                          </Pressable>
+                        )}
+                        <Body
+                          className={`text-white ${
+                            isSelected ? "font-bold text-yellow-400" : ""
+                          }`}
+                        >
+                          {character.hobby_score}
+                        </Body>
+                      </View>
                     </Pressable>
                   );
                 })()
@@ -408,6 +470,9 @@ export default function CharacterSheet() {
                 <>
                   {(() => {
                     const isSelected = selectedExtra?.type === "voie";
+                    const trig = triggerEffects.find(
+                      (t: any) => t.type === "voie",
+                    );
                     return (
                       <Pressable
                         className={`flex-row justify-between p-1 rounded ${
@@ -437,13 +502,28 @@ export default function CharacterSheet() {
                               })`
                             : ""}
                         </Body>
-                        <Body
-                          className={`text-white ${
-                            isSelected ? "font-bold text-yellow-400" : ""
-                          }`}
-                        >
-                          {character.voie_score}
-                        </Body>
+                        <View className="flex-row items-center">
+                          {trig && (
+                            <Pressable
+                              onPress={() =>
+                                setTriggerInfo({
+                                  title: `${character.voie_name} - ${trig.cardValue}${trig.cardSuit}`,
+                                  description: trig.description,
+                                })
+                              }
+                              className="mr-1"
+                            >
+                              <AlertCircle size={16} color="#facc15" />
+                            </Pressable>
+                          )}
+                          <Body
+                            className={`text-white ${
+                              isSelected ? "font-bold text-yellow-400" : ""
+                            }`}
+                          >
+                            {character.voie_score}
+                          </Body>
+                        </View>
                       </Pressable>
                     );
                   })()}
@@ -452,6 +532,9 @@ export default function CharacterSheet() {
                       const isCap =
                         selectedExtra?.type === "capacity" &&
                         selectedExtra.id === cap.id;
+                      const trigCap = triggerEffects.find(
+                        (t: any) => t.type === "capacity" && t.id === cap.id,
+                      );
                       return (
                         <Pressable
                           key={cap.id}
@@ -478,15 +561,30 @@ export default function CharacterSheet() {
                           >
                             {cap.name}
                           </Body>
-                          <Body
-                            className={`${
-                              isCap
-                                ? "font-bold text-yellow-400"
-                                : "text-purple-200"
-                            }`}
-                          >
-                            {cap.level}
-                          </Body>
+                          <View className="flex-row items-center">
+                            {trigCap && (
+                              <Pressable
+                                onPress={() =>
+                                  setTriggerInfo({
+                                    title: `${cap.name} - ${trigCap.cardValue}${trigCap.cardSuit}`,
+                                    description: trigCap.description,
+                                  })
+                                }
+                                className="mr-1"
+                              >
+                                <AlertCircle size={16} color="#facc15" />
+                              </Pressable>
+                            )}
+                            <Body
+                              className={`${
+                                isCap
+                                  ? "font-bold text-yellow-400"
+                                  : "text-purple-200"
+                              }`}
+                            >
+                              {cap.level}
+                            </Body>
+                          </View>
                         </Pressable>
                       );
                     })
@@ -630,6 +728,21 @@ export default function CharacterSheet() {
           </Layout>
         </PanGestureHandler>
       </CardFlip>
+      <Modal visible={!!triggerInfo} transparent animationType="fade">
+        <View className="flex-1 justify-center bg-black/60 p-4">
+          <View className="bg-gray-900 p-4 rounded-lg">
+            <Title className="text-white text-xl mb-2">{triggerInfo?.title}</Title>
+            <Body className="text-gray-200 mb-4">{triggerInfo?.description}</Body>
+            <Button
+              variant="secondary"
+              onPress={() => setTriggerInfo(null)}
+              className="self-end bg-gray-700 border border-gray-500"
+            >
+              Fermer
+            </Button>
+          </View>
+        </View>
+      </Modal>
       <Modal visible={showDifficulty} transparent animationType="fade">
         <View className="flex-1 bg-black/60 justify-center items-center">
           <View className="bg-gray-800 p-4 rounded-xl w-4/5">

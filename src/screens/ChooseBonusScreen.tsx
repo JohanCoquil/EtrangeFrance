@@ -8,6 +8,7 @@ import {
   useUpdateBonuses,
   useCharacters,
   useUpdateCharacterSheet,
+  useUpdateTriggerEffects,
 } from "@/api/charactersLocal";
 import {
   useCapacitesByVoie,
@@ -15,6 +16,9 @@ import {
   useUpdateCharacterCapacites,
 } from "@/api/capacitiesLocal";
 import { Info } from "lucide-react-native";
+import { useDeck } from "@/api/deckLocal";
+import { suits } from "../data/deck";
+import Carte from "@/components/game/Carte";
 
 const bonusOptions = [
   {
@@ -86,6 +90,11 @@ export default function ChooseBonusScreen() {
   const [objectSpec, setObjectSpec] = useState("");
   const [showSpecialiteModal, setShowSpecialiteModal] = useState(false);
   const [specialiteId, setSpecialiteId] = useState<number | null>(null);
+  const [showEffectModal, setShowEffectModal] = useState(false);
+  const [effectTarget, setEffectTarget] = useState<any | null>(null);
+  const [effectCard, setEffectCard] = useState<string | null>(null);
+  const [effectDescriptionInput, setEffectDescriptionInput] = useState("");
+  const [triggerEffect, setTriggerEffect] = useState<any | null>(null);
   const [infoModal, setInfoModal] = useState<{
     title: string;
     description: string;
@@ -94,6 +103,7 @@ export default function ChooseBonusScreen() {
   const { data: characters } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
   const updateSheet = useUpdateCharacterSheet();
+  const updateTriggers = useUpdateTriggerEffects();
   const updateCapacites = useUpdateCharacterCapacites();
   const { data: characterCapacites } = useCharacterCapacites(characterId);
   const { data: voieCapacites } = useCapacitesByVoie(character?.voie_id ?? 0);
@@ -101,6 +111,55 @@ export default function ChooseBonusScreen() {
     voieCapacites?.filter(
       (cap: any) => !characterCapacites?.some((c: any) => c.id === cap.id),
     ) ?? [];
+  const { data: deckRows } = useDeck(characterId);
+  const deckSuit =
+    (deckRows && deckRows[0]
+      ? suits.find((s) => s.name === deckRows[0].figure)
+      : suits[0]) || suits[0];
+
+  const effectOptions: any[] = [];
+  if (character) {
+    const stats = [
+      { type: "stat", name: "Force", value: character.force },
+      { type: "stat", name: "Dextérité", value: character.dexterite },
+      { type: "stat", name: "Intelligence", value: character.intelligence },
+      { type: "stat", name: "Charisme", value: character.charisme },
+      { type: "stat", name: "Mémoire", value: character.memoire },
+      { type: "stat", name: "Volonté", value: character.volonte },
+    ].filter((s) => s.value >= 2);
+    effectOptions.push(...stats);
+    if (character.profession_score >= 2 && character.profession_name) {
+      effectOptions.push({
+        type: "profession",
+        name: character.profession_name,
+        value: character.profession_score,
+      });
+    }
+    if (character.hobby_score >= 2 && character.hobby_name) {
+      effectOptions.push({
+        type: "hobby",
+        name: character.hobby_name,
+        value: character.hobby_score,
+      });
+    }
+    if (character.voie_score >= 2 && character.voie_name) {
+      effectOptions.push({
+        type: "voie",
+        name: character.voie_name,
+        value: character.voie_score,
+      });
+    }
+    (characterCapacites ?? []).forEach((c: any) => {
+      if (c.level >= 2) {
+        effectOptions.push({
+          type: "capacity",
+          id: c.id,
+          name: c.name,
+          value: c.level,
+        });
+      }
+    });
+  }
 
   const toggle = (id: string) => {
     if (id === "influence") {
@@ -138,6 +197,19 @@ export default function ChooseBonusScreen() {
       }
       return;
     }
+    if (id === "effet") {
+      if (selected.includes(id)) {
+        setSelected((prev) => prev.filter((b) => b !== id));
+        setTriggerEffect(null);
+      } else {
+        if (selected.length >= 3) return;
+        setEffectTarget(null);
+        setEffectCard(null);
+        setEffectDescriptionInput("");
+        setShowEffectModal(true);
+      }
+      return;
+    }
     setSelected((prev) => {
       if (prev.includes(id)) {
         return prev.filter((b) => b !== id);
@@ -167,6 +239,10 @@ export default function ChooseBonusScreen() {
       alert("Choisis une spécialité étrange");
       return;
     }
+    if (selected.includes("effet") && !triggerEffect) {
+      alert("Définis l'effet déclenché");
+      return;
+    }
 
     const proceed = () =>
       updateBonuses.mutate(
@@ -181,7 +257,8 @@ export default function ChooseBonusScreen() {
     const needsSheetUpdate =
       selected.includes("influence") ||
       selected.includes("objet") ||
-      selected.includes("richesse");
+      selected.includes("richesse") ||
+      selected.includes("effet");
 
     const updateSheetIfNeeded = () => {
       if (needsSheetUpdate) {
@@ -192,26 +269,56 @@ export default function ChooseBonusScreen() {
         const newRencontres = selected.includes("influence")
           ? `${character.rencontres ? character.rencontres + "\n" : ""}Influence sociale augmentée - ${influenceMilieu}`
           : character.rencontres ?? "";
-        const newFetiches = selected.includes("objet")
+        let newFetiches = selected.includes("objet")
           ? `${character.fetiches ? character.fetiches + "\n" : ""}${objectName} - ${objectSpec}`
           : character.fetiches ?? "";
+        let newTriggers = character.trigger_effects
+          ? JSON.parse(character.trigger_effects)
+          : [];
+        if (selected.includes("effet") && triggerEffect) {
+          const cardLabel = `${triggerEffect.cardValue}${triggerEffect.cardSuit}`;
+          newFetiches = `${newFetiches ? newFetiches + "\n" : ""}${triggerEffect.target.name} - ${cardLabel} : ${triggerEffect.description}`;
+          newTriggers = [
+            ...newTriggers,
+            {
+              type: triggerEffect.target.type,
+              id: triggerEffect.target.id,
+              name: triggerEffect.target.name,
+              cardValue: triggerEffect.cardValue,
+              cardSuit: triggerEffect.cardSuit,
+              description: triggerEffect.description,
+            },
+          ];
+        }
         const newOrigines = selected.includes("richesse")
           ? `${character.origines ? character.origines + "\n" : ""}Richesse augmentée : Le personnage est particulièrement riche, ce qui le fait passer dans une classe sociale supérieure par rapport à son métier d’origine.`
           : character.origines ?? "";
-        updateSheet.mutate(
-          {
-            id: characterId,
-            origines: newOrigines,
-            rencontres: newRencontres,
-            notes: character.notes ?? "",
-            equipement: character.equipement ?? "",
-            fetiches: newFetiches,
-          },
-          {
-            onSuccess: proceed,
-            onError: (err) => alert("❌ Erreur : " + err),
-          },
-        );
+        const doSheetUpdate = () =>
+          updateSheet.mutate(
+            {
+              id: characterId,
+              origines: newOrigines,
+              rencontres: newRencontres,
+              notes: character.notes ?? "",
+              equipement: character.equipement ?? "",
+              fetiches: newFetiches,
+            },
+            {
+              onSuccess: proceed,
+              onError: (err) => alert("❌ Erreur : " + err),
+            },
+          );
+        if (selected.includes("effet") && triggerEffect) {
+          updateTriggers.mutate(
+            { id: characterId, triggers: newTriggers },
+            {
+              onSuccess: doSheetUpdate,
+              onError: (err) => alert("❌ Erreur : " + err),
+            },
+          );
+        } else {
+          doSheetUpdate();
+        }
       } else {
         proceed();
       }
@@ -330,6 +437,87 @@ export default function ChooseBonusScreen() {
                   setInfluenceMilieu(influenceInput.trim());
                   setSelected((prev) => [...prev, "influence"]);
                   setShowInfluenceModal(false);
+                }}
+                className="flex-1 ml-2 bg-blue-800 border border-blue-500"
+              >
+                Valider
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showEffectModal} transparent animationType="slide">
+        <View className="flex-1 justify-center bg-black/60 p-4">
+          <View className="bg-gray-900 p-4 rounded-lg max-h-[80%]">
+            <Title className="text-white text-xl mb-2">Effet déclenché</Title>
+            {effectOptions.length > 0 ? (
+              <ScrollView className="mb-3 max-h-40">
+                {effectOptions.map((opt: any, idx: number) => (
+                  <Pressable
+                    key={idx}
+                    onPress={() => setEffectTarget(opt)}
+                    className={`p-2 mb-2 rounded ${
+                      effectTarget === opt
+                        ? "bg-blue-800 border border-blue-500"
+                        : "bg-gray-800 border border-gray-600"
+                    }`}
+                  >
+                    <Body className="text-white">{`${opt.name} (${opt.value})`}</Body>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : (
+              <Body className="text-white mb-3">
+                Aucune option disponible
+              </Body>
+            )}
+            <ScrollView horizontal className="mb-3">
+              {["A", "2", "3", "4", "5", "6", "7", "8", "9", "10"].map((v) => (
+                <Pressable key={v} onPress={() => setEffectCard(v)} className="mr-2">
+                  <View
+                    style={{
+                      transform: [{ scale: 0.6 }],
+                      borderWidth: effectCard === v ? 2 : 0,
+                      borderColor: "#3b82f6",
+                      borderRadius: 8,
+                    }}
+                  >
+                    <Carte value={v} suit={deckSuit} />
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <TextInput
+              placeholder="Description de l'effet"
+              value={effectDescriptionInput}
+              onChangeText={setEffectDescriptionInput}
+              className="border border-blue-500 rounded-lg p-2 mb-3 text-white"
+              placeholderTextColor="#aaa"
+            />
+            <View className="flex-row justify-between">
+              <Button
+                variant="secondary"
+                onPress={() => setShowEffectModal(false)}
+                className="flex-1 mr-2 bg-gray-700 border border-gray-500"
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="secondary"
+                onPress={() => {
+                  if (!effectTarget || !effectCard || !effectDescriptionInput.trim()) {
+                    alert("Veuillez compléter l'effet");
+                    return;
+                  }
+                  setTriggerEffect({
+                    target: effectTarget,
+                    cardValue: effectCard,
+                    cardSuit: deckSuit.symbol,
+                    description: effectDescriptionInput.trim(),
+                  });
+                  setSelected((prev) => [...prev, "effet"]);
+                  setShowEffectModal(false);
                 }}
                 className="flex-1 ml-2 bg-blue-800 border border-blue-500"
               >

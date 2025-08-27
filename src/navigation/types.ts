@@ -18,6 +18,8 @@ export type RootStackParamList = {
     statValue?: number;
     extraName?: string;
     extraValue?: number;
+    extraType?: string;
+    extraId?: number;
     characterName: string;
     characterId: string;
   };
