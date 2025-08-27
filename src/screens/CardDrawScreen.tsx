@@ -211,19 +211,20 @@ export default function CardDrawScreen() {
     card: { value: string; suit: { symbol: string } },
   ): string | null => {
     let trig: any = null;
-    if (statName) {
-      trig = triggerEffects.find(
-        (t: any) =>
-          t.type === "stat" &&
-          t.name === statName &&
-          t.cardValue === card.value &&
-          t.cardSuit === card.suit.symbol,
-      );
-    } else if (extraType) {
+    if (extraType) {
       trig = triggerEffects.find(
         (t: any) =>
           t.type === extraType &&
           (extraType === "capacity" ? t.id === extraId : t.name === extraName) &&
+          t.cardValue === card.value &&
+          t.cardSuit === card.suit.symbol,
+      );
+    }
+    if (!trig && statName) {
+      trig = triggerEffects.find(
+        (t: any) =>
+          t.type === "stat" &&
+          t.name === statName &&
           t.cardValue === card.value &&
           t.cardSuit === card.suit.symbol,
       );
