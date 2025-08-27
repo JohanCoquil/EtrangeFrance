@@ -119,15 +119,6 @@ export default function ChooseBonusScreen() {
 
   const effectOptions: any[] = [];
   if (character) {
-    const stats = [
-      { type: "stat", name: "Force", value: character.force },
-      { type: "stat", name: "Dextérité", value: character.dexterite },
-      { type: "stat", name: "Intelligence", value: character.intelligence },
-      { type: "stat", name: "Charisme", value: character.charisme },
-      { type: "stat", name: "Mémoire", value: character.memoire },
-      { type: "stat", name: "Volonté", value: character.volonte },
-    ].filter((s) => s.value >= 2);
-    effectOptions.push(...stats);
     if (character.profession_score >= 2 && character.profession_name) {
       effectOptions.push({
         type: "profession",
