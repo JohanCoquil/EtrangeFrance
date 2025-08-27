@@ -20,6 +20,10 @@ export type RootStackParamList = {
     extraValue?: number;
     extraType?: string;
     extraId?: number;
+    extra2Name?: string;
+    extra2Value?: number;
+    extra2Type?: string;
+    extra2Id?: number;
     characterName: string;
     characterId: string;
   };

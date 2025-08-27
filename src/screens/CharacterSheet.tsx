@@ -158,6 +158,20 @@ export default function CharacterSheet() {
 
   const handleDifficultySelect = (value: number) => {
     const statObj = stats.find((s) => s.label === selectedStat);
+    const extra2 =
+      selectedExtra?.type === "skill"
+        ? {
+            name: character.profession_name,
+            value: character.profession_score,
+            type: "profession",
+          }
+        : selectedExtra?.type === "capacity"
+          ? {
+              name: character.voie_name,
+              value: character.voie_score,
+              type: "voie",
+            }
+          : null;
     navigation.navigate("CardDraw", {
       difficulty: value,
       statName: selectedStat || undefined,
@@ -166,6 +180,9 @@ export default function CharacterSheet() {
       extraValue: selectedExtra?.value,
       extraType: selectedExtra?.type,
       extraId: selectedExtra?.id,
+      extra2Name: extra2?.name,
+      extra2Value: extra2?.value,
+      extra2Type: extra2?.type,
       characterName: character.name,
       characterId: characterId,
     });

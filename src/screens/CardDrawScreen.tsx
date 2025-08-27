@@ -40,6 +40,10 @@ export default function CardDrawScreen() {
     extraValue = 0,
     extraType,
     extraId,
+    extra2Name,
+    extra2Value = 0,
+    extra2Type,
+    extra2Id,
     characterName,
     characterId,
   } = route.params;
@@ -220,6 +224,15 @@ export default function CardDrawScreen() {
           t.cardSuit === card.suit.symbol,
       );
     }
+    if (!trig && extra2Type) {
+      trig = triggerEffects.find(
+        (t: any) =>
+          t.type === extra2Type &&
+          (extra2Type === "capacity" ? t.id === extra2Id : t.name === extra2Name) &&
+          t.cardValue === card.value &&
+          t.cardSuit === card.suit.symbol,
+      );
+    }
     if (!trig && statName) {
       trig = triggerEffects.find(
         (t: any) =>
@@ -253,7 +266,7 @@ export default function CardDrawScreen() {
         setDrawnCards([card1]);
         setChosenIndex(0);
         const cv = cardValues[card1.value];
-        const total = cv + statValue + extraValue;
+        const total = cv + statValue + extraValue + extra2Value;
         setCardValue(cv);
         setResult(total);
         handleDrawnPotCards([card1]);
@@ -281,7 +294,7 @@ export default function CardDrawScreen() {
         setChosenIndex(chosen);
         const chosenCard = chosen === 0 ? card1 : card2;
         const cv = cardValues[chosenCard.value];
-        const total = cv + statValue + extraValue;
+        const total = cv + statValue + extraValue + extra2Value;
         setCardValue(cv);
         setResult(total);
         handleDrawnPotCards([card1, card2]);
@@ -378,6 +391,7 @@ export default function CardDrawScreen() {
                 `Carte: ${cardValue}`,
                 statName ? `${statName}: ${statValue}` : null,
                 extraName ? `${extraName}: ${extraValue}` : null,
+                extra2Name ? `${extra2Name}: ${extra2Value}` : null,
               ]
                 .filter(Boolean)
                 .join(" + ")} = ${result}`}</Text>
