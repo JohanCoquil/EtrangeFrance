@@ -123,6 +123,11 @@ export default function ChooseBonusScreen() {
   const { data: professionSkills } = useSkillsByProfession(
     character?.profession_id ?? 0,
   );
+  const availableProfessionSkills =
+    (professionSkills ?? []).filter(
+      (skill: any) =>
+        !(characterSkills ?? []).some((s: any) => s.id === skill.id),
+    );
   const { data: deckRows } = useDeck(characterId);
   const deckSuit =
     (deckRows && (deckRows as any)[0]
@@ -622,9 +627,9 @@ export default function ChooseBonusScreen() {
         <View className="flex-1 justify-center bg-black/60 p-4">
           <View className="bg-gray-900 p-4 rounded-lg max-h-[80%]">
             <Title className="text-white text-xl mb-2">Compétence</Title>
-            {professionSkills && professionSkills.length > 0 ? (
+            {availableProfessionSkills.length > 0 ? (
               <ScrollView className="mb-3">
-                {professionSkills.map((skill: any) => (
+                {availableProfessionSkills.map((skill: any) => (
                   <Pressable
                     key={skill.id}
                     onPress={() => setCompetenceId(skill.id)}
