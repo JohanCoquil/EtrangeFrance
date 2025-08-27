@@ -450,7 +450,7 @@ export default function ChooseBonusScreen() {
                     onPress={() => setEffectTarget(opt)}
                     className={`p-2 mb-2 rounded ${
                       effectTarget === opt
-                        ? "bg-blue-800 border border-blue-500"
+                        ? "bg-green-800 border border-green-500"
                         : "bg-gray-800 border border-gray-600"
                     }`}
                   >
@@ -470,7 +470,7 @@ export default function ChooseBonusScreen() {
                     style={{
                       transform: [{ scale: 0.6 }],
                       borderWidth: effectCard === v ? 2 : 0,
-                      borderColor: "#3b82f6",
+                      borderColor: "#22c55e",
                       borderRadius: 8,
                     }}
                   >
