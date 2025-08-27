@@ -113,8 +113,8 @@ export default function ChooseBonusScreen() {
     ) ?? [];
   const { data: deckRows } = useDeck(characterId);
   const deckSuit =
-    (deckRows && deckRows[0]
-      ? suits.find((s) => s.name === deckRows[0].figure)
+    (deckRows && (deckRows as any)[0]
+      ? suits.find((s) => s.name === (deckRows as any)[0].figure)
       : suits[0]) || suits[0];
 
   const effectOptions: any[] = [];
@@ -151,6 +151,8 @@ export default function ChooseBonusScreen() {
       }
     });
   }
+
+  const effectKey = (o: any) => `${o.type}-${o.id ?? o.name}`;
 
   const toggle = (id: string) => {
     if (id === "influence") {
@@ -449,7 +451,7 @@ export default function ChooseBonusScreen() {
                     key={idx}
                     onPress={() => setEffectTarget(opt)}
                     className={`p-2 mb-2 rounded ${
-                      effectTarget === opt
+                      effectTarget && effectKey(effectTarget) === effectKey(opt)
                         ? "bg-green-800 border border-green-500"
                         : "bg-gray-800 border border-gray-600"
                     }`}
