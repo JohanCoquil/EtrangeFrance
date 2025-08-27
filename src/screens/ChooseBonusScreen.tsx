@@ -1,10 +1,14 @@
 import { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { ScrollView, View, TextInput, Modal } from "react-native";
 import { Layout, Title, Body, Button, Card, Caption } from "../components/ui";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
-import { useUpdateBonuses } from "@/api/charactersLocal";
+import {
+  useUpdateBonuses,
+  useCharacters,
+  useUpdateCharacterSheet,
+} from "@/api/charactersLocal";
 
 const bonusOptions = [
   {
@@ -51,9 +55,26 @@ export default function ChooseBonusScreen() {
   const route = useRoute<any>();
   const { characterId } = route.params;
   const [selected, setSelected] = useState<string[]>([]);
+  const [showInfluenceModal, setShowInfluenceModal] = useState(false);
+  const [influenceInput, setInfluenceInput] = useState("");
+  const [influenceMilieu, setInfluenceMilieu] = useState("");
   const updateBonuses = useUpdateBonuses();
+  const { data: characters } = useCharacters();
+  const character: any = characters?.find((c: any) => c.id === characterId);
+  const updateSheet = useUpdateCharacterSheet();
 
   const toggle = (id: string) => {
+    if (id === "influence") {
+      if (selected.includes(id)) {
+        setSelected((prev) => prev.filter((b) => b !== id));
+        setInfluenceMilieu("");
+      } else {
+        if (selected.length >= 3) return;
+        setInfluenceInput("");
+        setShowInfluenceModal(true);
+      }
+      return;
+    }
     setSelected((prev) => {
       if (prev.includes(id)) {
         return prev.filter((b) => b !== id);
@@ -68,21 +89,50 @@ export default function ChooseBonusScreen() {
       alert("Choisis exactement 3 bonus");
       return;
     }
-    updateBonuses.mutate(
-      { id: characterId, bonuses: selected },
-      {
-        onSuccess: () =>
-          navigation.navigate("MainTabs", { screen: "Characters" }),
-        onError: (err) => alert("❌ Erreur : " + err),
+    const proceed = () =>
+      updateBonuses.mutate(
+        { id: characterId, bonuses: selected },
+        {
+          onSuccess: () =>
+            navigation.navigate("MainTabs", { screen: "Characters" }),
+          onError: (err) => alert("❌ Erreur : " + err),
+        },
+      );
+
+    if (selected.includes("influence")) {
+      if (!influenceMilieu.trim()) {
+        alert("Précise le milieu pour l'influence sociale");
+        return;
       }
-    );
+      if (!character) {
+        alert("❌ Erreur : personnage introuvable");
+        return;
+      }
+      const newRencontres = `${character.rencontres ? character.rencontres + "\n" : ""}Influence sociale augmentée - ${influenceMilieu}`;
+      updateSheet.mutate(
+        {
+          id: characterId,
+          origines: character.origines ?? "",
+          rencontres: newRencontres,
+          notes: character.notes ?? "",
+          equipement: character.equipement ?? "",
+          fetiches: character.fetiches ?? "",
+        },
+        {
+          onSuccess: proceed,
+          onError: (err) => alert("❌ Erreur : " + err),
+        },
+      );
+    } else {
+      proceed();
+    }
   };
 
   return (
     <Layout backgroundColor="gradient" className="flex-1 px-4">
       <View className="flex-1">
         <Title className="mb-6 text-center text-white text-3xl font-bold tracking-wide shadow-md">
-          Choisis tes bonus
+          Choisis 3 bonus
         </Title>
         <ScrollView className="flex-1 mb-4" contentContainerStyle={{ paddingBottom: 16 }}>
           {bonusOptions.map((b) => (
@@ -118,9 +168,50 @@ export default function ChooseBonusScreen() {
           </Title>
         </Button>
         <Caption className="text-center mt-2 text-gray-400 italic">
-          Sélectionne trois bonus pour compléter ton histoire.
+          Tu dois sélectionner exactement trois bonus pour compléter ton histoire.
         </Caption>
       </View>
+
+      <Modal visible={showInfluenceModal} transparent animationType="slide">
+        <View className="flex-1 justify-center bg-black/60 p-4">
+          <View className="bg-gray-900 p-4 rounded-lg">
+            <Title className="text-white text-xl mb-2">
+              Milieu concerné
+            </Title>
+            <TextInput
+              placeholder="Nom du milieu"
+              value={influenceInput}
+              onChangeText={setInfluenceInput}
+              className="border border-blue-500 rounded-lg p-2 mb-3 text-white"
+              placeholderTextColor="#aaa"
+            />
+            <View className="flex-row justify-between">
+              <Button
+                variant="secondary"
+                onPress={() => setShowInfluenceModal(false)}
+                className="flex-1 mr-2 bg-gray-700 border border-gray-500"
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="secondary"
+                onPress={() => {
+                  if (!influenceInput.trim()) {
+                    alert("Veuillez saisir un milieu");
+                    return;
+                  }
+                  setInfluenceMilieu(influenceInput.trim());
+                  setSelected((prev) => [...prev, "influence"]);
+                  setShowInfluenceModal(false);
+                }}
+                className="flex-1 ml-2 bg-blue-800 border border-blue-500"
+              >
+                Valider
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Layout>
   );
 }
