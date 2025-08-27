@@ -15,7 +15,7 @@ export function useAddCharacter() {
       const db = getDb();
       await db.execAsync(`
           INSERT INTO characters
-            (id, name, profession_id, profession_score, hobby_id, hobby_score, voie_id, voie_score, intelligence, force, dexterite, charisme, memoire, volonte, sante, degats)
+            (id, name, profession_id, profession_score, hobby_id, hobby_score, voie_id, voie_score, intelligence, force, dexterite, charisme, memoire, volonte, sante, degats, trigger_effects)
           VALUES
             ('${character.id}', '${character.name}', ${
               character.profession_id ?? "NULL"
@@ -24,7 +24,7 @@ export function useAddCharacter() {
               character.hobby_id ?? "NULL"
             }, ${character.hobby_score ?? 0}, ${character.voie_id ?? "NULL"}, ${character.voie_score ?? 0},
             ${character.intelligence}, ${character.force}, ${character.dexterite},
-            ${character.charisme}, ${character.memoire}, ${character.volonte}, ${character.sante}, ${character.degats});
+            ${character.charisme}, ${character.memoire}, ${character.volonte}, ${character.sante}, ${character.degats}, '[]');
         `);
 
       const defaultCards = "A;2;3;4;5;6;7;8;9;10";
@@ -178,6 +178,28 @@ export function useUpdateCharacterSheet() {
       await db.runAsync(
         "UPDATE characters SET origines = ?, rencontres = ?, notes = ?, equipement = ?, fetiches = ? WHERE id = ?",
         [origines, rencontres, notes, equipement, fetiches, id],
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["characters"] });
+    },
+  });
+}
+
+export function useUpdateTriggerEffects() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      triggers,
+    }: {
+      id: string;
+      triggers: any[];
+    }) => {
+      const db = getDb();
+      await db.runAsync(
+        "UPDATE characters SET trigger_effects = ? WHERE id = ?",
+        [JSON.stringify(triggers), id],
       );
     },
     onSuccess: () => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Pressable, View, StyleSheet, Text } from "react-native";
+import { Pressable, View, StyleSheet, Text, Modal } from "react-native";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/types";
 import Animated, {
@@ -13,8 +13,9 @@ import { suits } from "../data/deck";
 import { useDeck } from "@/api/deckLocal";
 import Card from "../components/game/Carte";
 import PotCard, { PotCardType } from "../components/game/PotCard";
-import { Button, Layout } from "../components/ui";
+import { Button, Layout, Title, Body } from "../components/ui";
 import { RotateCcw } from "lucide-react-native";
+import { useCharacters } from "@/api/charactersLocal";
 
 // Nombre de dos de cartes affichés pendant le mélange
 const NUM_BACK_CARDS = 10;
@@ -37,10 +38,14 @@ export default function CardDrawScreen() {
     statValue = 0,
     extraName,
     extraValue = 0,
+    extraType,
+    extraId,
     characterName,
     characterId,
   } = route.params;
   const { data: deckRows } = useDeck(characterId);
+  const { data: characters } = useCharacters();
+  const character: any = characters?.find((c: any) => c.id === characterId);
   const [isShuffling, setIsShuffling] = useState(false);
   const [drawnCards, setDrawnCards] = useState<
     { value: string; suit: { symbol: string; color: string } }[] | null
@@ -59,6 +64,10 @@ export default function CardDrawScreen() {
   const [initialSuit, setInitialSuit] = useState<
     { symbol: string; color: string } | null
   >(null);
+  const [triggerModal, setTriggerModal] = useState<string | null>(null);
+  const triggerEffects = character?.trigger_effects
+    ? JSON.parse(character.trigger_effects)
+    : [];
 
   const translateX = useSharedValue(0);
 
@@ -197,6 +206,28 @@ export default function CardDrawScreen() {
     K: 10,
   };
 
+  const checkTrigger = (card: { value: string; suit: { symbol: string } }) => {
+    let trig: any = null;
+    if (statName) {
+      trig = triggerEffects.find(
+        (t: any) =>
+          t.type === "stat" &&
+          t.name === statName &&
+          t.cardValue === card.value &&
+          t.cardSuit === card.suit.symbol,
+      );
+    } else if (extraType) {
+      trig = triggerEffects.find(
+        (t: any) =>
+          t.type === extraType &&
+          (extraType === "capacity" ? t.id === extraId : t.name === extraName) &&
+          t.cardValue === card.value &&
+          t.cardSuit === card.suit.symbol,
+      );
+    }
+    if (trig) setTriggerModal(trig.description);
+  };
+
   const handlePress = () => {
     if (!isShuffling && !drawnCards) {
       if (deckCards.length === 0) return;
@@ -218,9 +249,11 @@ export default function CardDrawScreen() {
         setDrawnCards([card1]);
         setChosenIndex(0);
         const cv = cardValues[card1.value];
+        const total = cv + statValue + extraValue;
         setCardValue(cv);
-        setResult(cv + statValue + extraValue);
+        setResult(total);
         handleDrawnPotCards([card1]);
+        if (total >= difficulty) checkTrigger(card1);
       } else {
         const secondDraw = drawRandomCard([index1]);
         if (!secondDraw) return;
@@ -237,11 +270,13 @@ export default function CardDrawScreen() {
               : 1;
         setDrawnCards([card1, card2]);
         setChosenIndex(chosen);
-        const cv =
-          chosen === 0 ? cardValues[card1.value] : cardValues[card2.value];
+        const chosenCard = chosen === 0 ? card1 : card2;
+        const cv = cardValues[chosenCard.value];
+        const total = cv + statValue + extraValue;
         setCardValue(cv);
-        setResult(cv + statValue + extraValue);
+        setResult(total);
         handleDrawnPotCards([card1, card2]);
+        if (total >= difficulty) checkTrigger(chosenCard);
       }
     } else if (drawnCards) {
       setDrawnCards(null);
@@ -346,6 +381,21 @@ export default function CardDrawScreen() {
           )}
         </View>
       </Pressable>
+      <Modal visible={!!triggerModal} transparent animationType="fade">
+        <View className="flex-1 justify-center bg-black/60 p-4">
+          <View className="bg-gray-900 p-4 rounded-lg">
+            <Title className="text-white text-xl mb-2">Effet déclenché</Title>
+            <Body className="text-gray-200 mb-4">{triggerModal}</Body>
+            <Button
+              variant="secondary"
+              onPress={() => setTriggerModal(null)}
+              className="self-end bg-gray-700 border border-gray-500"
+            >
+              Fermer
+            </Button>
+          </View>
+        </View>
+      </Modal>
     </Layout>
   );
 }
