@@ -58,6 +58,11 @@ export default function ChooseBonusScreen() {
   const [showInfluenceModal, setShowInfluenceModal] = useState(false);
   const [influenceInput, setInfluenceInput] = useState("");
   const [influenceMilieu, setInfluenceMilieu] = useState("");
+  const [showObjectModal, setShowObjectModal] = useState(false);
+  const [objectNameInput, setObjectNameInput] = useState("");
+  const [objectSpecInput, setObjectSpecInput] = useState("");
+  const [objectName, setObjectName] = useState("");
+  const [objectSpec, setObjectSpec] = useState("");
   const updateBonuses = useUpdateBonuses();
   const { data: characters } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
@@ -72,6 +77,19 @@ export default function ChooseBonusScreen() {
         if (selected.length >= 3) return;
         setInfluenceInput("");
         setShowInfluenceModal(true);
+      }
+      return;
+    }
+    if (id === "objet") {
+      if (selected.includes(id)) {
+        setSelected((prev) => prev.filter((b) => b !== id));
+        setObjectName("");
+        setObjectSpec("");
+      } else {
+        if (selected.length >= 3) return;
+        setObjectNameInput("");
+        setObjectSpecInput("");
+        setShowObjectModal(true);
       }
       return;
     }
@@ -98,17 +116,29 @@ export default function ChooseBonusScreen() {
           onError: (err) => alert("❌ Erreur : " + err),
         },
       );
+    if (selected.includes("influence") && !influenceMilieu.trim()) {
+      alert("Précise le milieu pour l'influence sociale");
+      return;
+    }
+    if (selected.includes("objet") && (!objectName.trim() || !objectSpec.trim())) {
+      alert("Précise le nom et la spécificité de l'objet");
+      return;
+    }
 
-    if (selected.includes("influence")) {
-      if (!influenceMilieu.trim()) {
-        alert("Précise le milieu pour l'influence sociale");
-        return;
-      }
+    const needsSheetUpdate =
+      selected.includes("influence") || selected.includes("objet");
+
+    if (needsSheetUpdate) {
       if (!character) {
         alert("❌ Erreur : personnage introuvable");
         return;
       }
-      const newRencontres = `${character.rencontres ? character.rencontres + "\n" : ""}Influence sociale augmentée - ${influenceMilieu}`;
+      const newRencontres = selected.includes("influence")
+        ? `${character.rencontres ? character.rencontres + "\n" : ""}Influence sociale augmentée - ${influenceMilieu}`
+        : character.rencontres ?? "";
+      const newFetiches = selected.includes("objet")
+        ? `${character.fetiches ? character.fetiches + "\n" : ""}${objectName} - ${objectSpec}`
+        : character.fetiches ?? "";
       updateSheet.mutate(
         {
           id: characterId,
@@ -116,7 +146,7 @@ export default function ChooseBonusScreen() {
           rencontres: newRencontres,
           notes: character.notes ?? "",
           equipement: character.equipement ?? "",
-          fetiches: character.fetiches ?? "",
+          fetiches: newFetiches,
         },
         {
           onSuccess: proceed,
@@ -203,6 +233,53 @@ export default function ChooseBonusScreen() {
                   setInfluenceMilieu(influenceInput.trim());
                   setSelected((prev) => [...prev, "influence"]);
                   setShowInfluenceModal(false);
+                }}
+                className="flex-1 ml-2 bg-blue-800 border border-blue-500"
+              >
+                Valider
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showObjectModal} transparent animationType="slide">
+        <View className="flex-1 justify-center bg-black/60 p-4">
+          <View className="bg-gray-900 p-4 rounded-lg">
+            <Title className="text-white text-xl mb-2">Objet spécial</Title>
+            <TextInput
+              placeholder="Nom de l'objet"
+              value={objectNameInput}
+              onChangeText={setObjectNameInput}
+              className="border border-blue-500 rounded-lg p-2 mb-3 text-white"
+              placeholderTextColor="#aaa"
+            />
+            <TextInput
+              placeholder="Spécificité"
+              value={objectSpecInput}
+              onChangeText={setObjectSpecInput}
+              className="border border-blue-500 rounded-lg p-2 mb-3 text-white"
+              placeholderTextColor="#aaa"
+            />
+            <View className="flex-row justify-between">
+              <Button
+                variant="secondary"
+                onPress={() => setShowObjectModal(false)}
+                className="flex-1 mr-2 bg-gray-700 border border-gray-500"
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="secondary"
+                onPress={() => {
+                  if (!objectNameInput.trim() || !objectSpecInput.trim()) {
+                    alert("Veuillez saisir le nom et la spécificité");
+                    return;
+                  }
+                  setObjectName(objectNameInput.trim());
+                  setObjectSpec(objectSpecInput.trim());
+                  setSelected((prev) => [...prev, "objet"]);
+                  setShowObjectModal(false);
                 }}
                 className="flex-1 ml-2 bg-blue-800 border border-blue-500"
               >
