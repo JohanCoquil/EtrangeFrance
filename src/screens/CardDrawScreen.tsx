@@ -253,7 +253,7 @@ export default function CardDrawScreen() {
         setCardValue(cv);
         setResult(total);
         handleDrawnPotCards([card1]);
-        if (total >= difficulty) checkTrigger(card1);
+        checkTrigger(card1);
       } else {
         const secondDraw = drawRandomCard([index1]);
         if (!secondDraw) return;
@@ -276,7 +276,7 @@ export default function CardDrawScreen() {
         setCardValue(cv);
         setResult(total);
         handleDrawnPotCards([card1, card2]);
-        if (total >= difficulty) checkTrigger(chosenCard);
+        checkTrigger(chosenCard);
       }
     } else if (drawnCards) {
       setDrawnCards(null);
@@ -381,7 +381,12 @@ export default function CardDrawScreen() {
           )}
         </View>
       </Pressable>
-      <Modal visible={!!triggerModal} transparent animationType="fade">
+      <Modal
+        visible={!!triggerModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTriggerModal(null)}
+      >
         <View className="flex-1 justify-center bg-black/60 p-4">
           <View className="bg-gray-900 p-4 rounded-lg">
             <Title className="text-white text-xl mb-2">Effet déclenché</Title>
