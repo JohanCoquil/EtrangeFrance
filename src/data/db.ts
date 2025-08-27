@@ -139,6 +139,17 @@ export const initDb = async () => {
       FOREIGN KEY (voie_id) REFERENCES voies_etranges(id)
     );
 
+    CREATE TABLE IF NOT EXISTS character_skills (
+      distant_id INTEGER DEFAULT 0,
+      character_id TEXT NOT NULL,
+      skill_id INTEGER NOT NULL,
+      level INTEGER NOT NULL,
+      PRIMARY KEY (character_id, skill_id),
+      FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
+      FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_character_skills_character_id ON character_skills(character_id);
+
     CREATE TABLE IF NOT EXISTS desk (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id TEXT NOT NULL,

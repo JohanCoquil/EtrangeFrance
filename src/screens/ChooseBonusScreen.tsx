@@ -15,6 +15,11 @@ import {
   useCharacterCapacites,
   useUpdateCharacterCapacites,
 } from "@/api/capacitiesLocal";
+import {
+  useSkillsByProfession,
+  useCharacterSkills,
+  useUpdateCharacterSkills,
+} from "@/api/skillsLocal";
 import { Info } from "lucide-react-native";
 import { useDeck } from "@/api/deckLocal";
 import { suits } from "../data/deck";
@@ -88,6 +93,8 @@ export default function ChooseBonusScreen() {
   const [objectSpecInput, setObjectSpecInput] = useState("");
   const [objectName, setObjectName] = useState("");
   const [objectSpec, setObjectSpec] = useState("");
+  const [showCompetenceModal, setShowCompetenceModal] = useState(false);
+  const [competenceId, setCompetenceId] = useState<number | null>(null);
   const [showSpecialiteModal, setShowSpecialiteModal] = useState(false);
   const [specialiteId, setSpecialiteId] = useState<number | null>(null);
   const [showEffectModal, setShowEffectModal] = useState(false);
@@ -105,12 +112,17 @@ export default function ChooseBonusScreen() {
   const updateSheet = useUpdateCharacterSheet();
   const updateTriggers = useUpdateTriggerEffects();
   const updateCapacites = useUpdateCharacterCapacites();
+  const updateSkills = useUpdateCharacterSkills();
   const { data: characterCapacites } = useCharacterCapacites(characterId);
   const { data: voieCapacites } = useCapacitesByVoie(character?.voie_id ?? 0);
   const availableSpecialites =
     voieCapacites?.filter(
       (cap: any) => !characterCapacites?.some((c: any) => c.id === cap.id),
     ) ?? [];
+  const { data: characterSkills } = useCharacterSkills(characterId);
+  const { data: professionSkills } = useSkillsByProfession(
+    character?.profession_id ?? 0,
+  );
   const { data: deckRows } = useDeck(characterId);
   const deckSuit =
     (deckRows && (deckRows as any)[0]
@@ -179,6 +191,17 @@ export default function ChooseBonusScreen() {
       }
       return;
     }
+    if (id === "competence") {
+      if (selected.includes(id)) {
+        setSelected((prev) => prev.filter((b) => b !== id));
+        setCompetenceId(null);
+      } else {
+        if (selected.length >= 3) return;
+        setCompetenceId(null);
+        setShowCompetenceModal(true);
+      }
+      return;
+    }
     if (id === "specialite") {
       if (selected.includes(id)) {
         setSelected((prev) => prev.filter((b) => b !== id));
@@ -230,6 +253,10 @@ export default function ChooseBonusScreen() {
     }
     if (selected.includes("specialite") && !specialiteId) {
       alert("Choisis une spécialité étrange");
+      return;
+    }
+    if (selected.includes("competence") && !competenceId) {
+      alert("Choisis une compétence");
       return;
     }
     if (selected.includes("effet") && !triggerEffect) {
@@ -317,25 +344,48 @@ export default function ChooseBonusScreen() {
       }
     };
 
-    if (selected.includes("specialite")) {
-      const currentCaps =
-        characterCapacites?.map((c: any) => ({
-          capaciteId: c.id,
-          level: c.level,
+    const applySpecialite = () => {
+      if (selected.includes("specialite")) {
+        const currentCaps =
+          characterCapacites?.map((c: any) => ({
+            capaciteId: c.id,
+            level: c.level,
+          })) ?? [];
+        const newCaps = [
+          ...currentCaps,
+          { capaciteId: specialiteId!, level: 1 },
+        ];
+        updateCapacites.mutate(
+          { characterId, capacites: newCaps },
+          {
+            onSuccess: updateSheetIfNeeded,
+            onError: (err) => alert("❌ Erreur : " + err),
+          },
+        );
+      } else {
+        updateSheetIfNeeded();
+      }
+    };
+
+    if (selected.includes("competence")) {
+      const currentSkills =
+        characterSkills?.map((s: any) => ({
+          skillId: s.id,
+          level: s.level,
         })) ?? [];
-      const newCaps = [
-        ...currentCaps,
-        { capaciteId: specialiteId!, level: 1 },
+      const newSkills = [
+        ...currentSkills,
+        { skillId: competenceId!, level: 1 },
       ];
-      updateCapacites.mutate(
-        { characterId, capacites: newCaps },
+      updateSkills.mutate(
+        { characterId, skills: newSkills },
         {
-          onSuccess: updateSheetIfNeeded,
+          onSuccess: applySpecialite,
           onError: (err) => alert("❌ Erreur : " + err),
         },
       );
     } else {
-      updateSheetIfNeeded();
+      applySpecialite();
     }
   };
 
@@ -558,6 +608,58 @@ export default function ChooseBonusScreen() {
                   setObjectSpec(objectSpecInput.trim());
                   setSelected((prev) => [...prev, "objet"]);
                   setShowObjectModal(false);
+                }}
+                className="flex-1 ml-2 bg-blue-800 border border-blue-500"
+              >
+                Valider
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showCompetenceModal} transparent animationType="slide">
+        <View className="flex-1 justify-center bg-black/60 p-4">
+          <View className="bg-gray-900 p-4 rounded-lg max-h-[80%]">
+            <Title className="text-white text-xl mb-2">Compétence</Title>
+            {professionSkills && professionSkills.length > 0 ? (
+              <ScrollView className="mb-3">
+                {professionSkills.map((skill: any) => (
+                  <Pressable
+                    key={skill.id}
+                    onPress={() => setCompetenceId(skill.id)}
+                    className={`p-2 mb-2 rounded ${
+                      competenceId === skill.id
+                        ? "bg-blue-800 border border-blue-500"
+                        : "bg-gray-800 border border-gray-600"
+                    }`}
+                  >
+                    <Body className="text-white">{skill.name}</Body>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : (
+              <Body className="text-white mb-3">
+                Aucune compétence disponible
+              </Body>
+            )}
+            <View className="flex-row justify-between">
+              <Button
+                variant="secondary"
+                onPress={() => setShowCompetenceModal(false)}
+                className="flex-1 mr-2 bg-gray-700 border border-gray-500"
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="secondary"
+                onPress={() => {
+                  if (!competenceId) {
+                    alert("Choisis une compétence");
+                    return;
+                  }
+                  setSelected((prev) => [...prev, "competence"]);
+                  setShowCompetenceModal(false);
                 }}
                 className="flex-1 ml-2 bg-blue-800 border border-blue-500"
               >
