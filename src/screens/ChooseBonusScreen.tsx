@@ -126,7 +126,9 @@ export default function ChooseBonusScreen() {
     }
 
     const needsSheetUpdate =
-      selected.includes("influence") || selected.includes("objet");
+      selected.includes("influence") ||
+      selected.includes("objet") ||
+      selected.includes("richesse");
 
     if (needsSheetUpdate) {
       if (!character) {
@@ -139,10 +141,13 @@ export default function ChooseBonusScreen() {
       const newFetiches = selected.includes("objet")
         ? `${character.fetiches ? character.fetiches + "\n" : ""}${objectName} - ${objectSpec}`
         : character.fetiches ?? "";
+      const newOrigines = selected.includes("richesse")
+        ? `${character.origines ? character.origines + "\n" : ""}Richesse augmentée : Le personnage est particulièrement riche, ce qui le fait passer dans une classe sociale supérieure par rapport à son métier d’origine.`
+        : character.origines ?? "";
       updateSheet.mutate(
         {
           id: characterId,
-          origines: character.origines ?? "",
+          origines: newOrigines,
           rencontres: newRencontres,
           notes: character.notes ?? "",
           equipement: character.equipement ?? "",
