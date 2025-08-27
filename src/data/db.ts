@@ -131,6 +131,7 @@ export const initDb = async () => {
       notes TEXT,
       equipement TEXT,
       fetiches TEXT,
+      bonuses TEXT,
       FOREIGN KEY (profession_id) REFERENCES professions(id),
       FOREIGN KEY (hobby_id) REFERENCES hobbies(id),
       FOREIGN KEY (divinity_id) REFERENCES druide_divinites(id),
@@ -212,16 +213,23 @@ export const initDb = async () => {
     );
   }
 
-  const hasFetiches = columns.some((c: any) => c.name === "fetiches");
-  if (!hasFetiches) {
-    await database.execAsync(
-      "ALTER TABLE characters ADD COLUMN fetiches TEXT;",
-    );
-  }
+    const hasFetiches = columns.some((c: any) => c.name === "fetiches");
+    if (!hasFetiches) {
+      await database.execAsync(
+        "ALTER TABLE characters ADD COLUMN fetiches TEXT;",
+      );
+    }
 
-  await database.execAsync(
-    "CREATE INDEX IF NOT EXISTS idx_characters_profession_id ON characters(profession_id);"
-  );
+    const hasBonuses = columns.some((c: any) => c.name === "bonuses");
+    if (!hasBonuses) {
+      await database.execAsync(
+        "ALTER TABLE characters ADD COLUMN bonuses TEXT;",
+      );
+    }
+
+    await database.execAsync(
+      "CREATE INDEX IF NOT EXISTS idx_characters_profession_id ON characters(profession_id);"
+    );
   await database.execAsync(
     "CREATE INDEX IF NOT EXISTS idx_characters_divinity_id ON characters(divinity_id);"
   );

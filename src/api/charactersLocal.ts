@@ -140,6 +140,22 @@ export function useUpdateDivinity() {
   });
 }
 
+export function useUpdateBonuses() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, bonuses }: { id: string; bonuses: string[] }) => {
+      const db = getDb();
+      await db.runAsync(
+        "UPDATE characters SET bonuses = ? WHERE id = ?",
+        [JSON.stringify(bonuses), id],
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["characters"] });
+    },
+  });
+}
+
 export function useUpdateCharacterSheet() {
   const queryClient = useQueryClient();
   return useMutation({

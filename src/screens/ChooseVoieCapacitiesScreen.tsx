@@ -46,13 +46,13 @@ export default function ChooseVoieCapacitiesScreen() {
     updateCapacites.mutate(
       { characterId, capacites: data },
       {
-        onSuccess: () => {
-          if (voieId === 2) {
-            navigation.navigate("ChooseDivinity", { characterId });
-          } else {
-            navigation.navigate("MainTabs", { screen: "Characters" });
-          }
-        },
+          onSuccess: () => {
+            if (voieId === 2) {
+              navigation.navigate("ChooseDivinity", { characterId });
+            } else {
+              navigation.navigate("ChooseBonus", { characterId });
+            }
+          },
         onError: (err) => alert("❌ Erreur : " + err),
       }
     );

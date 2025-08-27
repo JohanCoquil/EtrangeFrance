@@ -23,13 +23,13 @@ export default function ChooseDivinityScreen() {
       return;
     }
     updateDivinity.mutate(
-      { id: characterId, divinityId: selected },
-      {
-        onSuccess: () =>
-          navigation.navigate("MainTabs", { screen: "Characters" }),
-        onError: (err) => alert("❌ Erreur : " + err),
-      }
-    );
+        { id: characterId, divinityId: selected },
+        {
+          onSuccess: () =>
+            navigation.navigate("ChooseBonus", { characterId }),
+          onError: (err) => alert("❌ Erreur : " + err),
+        }
+      );
   };
 
   return (
