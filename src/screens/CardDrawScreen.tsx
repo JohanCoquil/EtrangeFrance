@@ -393,7 +393,9 @@ export default function CardDrawScreen() {
                 {difficulty})
               </Text>
               {triggerDescription && (
-                <Text style={styles.triggerText}>{triggerDescription}</Text>
+                <Text style={styles.triggerText}>
+                  {`Effet spécial : ${triggerDescription}`}
+                </Text>
               )}
             </>
           )}
@@ -492,5 +494,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   resultText: { color: "#fff", fontWeight: "bold", textAlign: "center" },
-  triggerText: { color: "#22c55e", textAlign: "center", marginTop: 4 },
+  triggerText: { color: "#3b82f6", textAlign: "center", marginTop: 4 },
 });
