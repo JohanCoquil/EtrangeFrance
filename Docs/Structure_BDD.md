@@ -101,6 +101,8 @@ CREATE TABLE characters (
     species_id INT REFERENCES species(id),
     profession_id INT REFERENCES professions(id),
     voice_id INT REFERENCES voices(id),
+    avatar VARCHAR(255),
+    avatar_distant VARCHAR(255),
     
     -- Caractéristiques principales
     force INTEGER DEFAULT 8 CHECK (force >= 1 AND force <= 20),

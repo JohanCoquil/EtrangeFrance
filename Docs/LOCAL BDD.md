@@ -42,7 +42,9 @@ CREATE TABLE characters (
   fetiches TEXT,
   trigger_effects TEXT,
   bonuses TEXT,
-  
+  avatar TEXT,               -- Chemin local de l'avatar
+  avatar_distant TEXT,       -- URL distante de l'avatar
+
   -- Clés étrangères
   FOREIGN KEY (profession_id) REFERENCES professions(id),
   FOREIGN KEY (hobby_id) REFERENCES hobbies(id),
@@ -239,6 +241,8 @@ if (!hasProfessionId) {
 - `fetiches` dans `characters`
 - `trigger_effects` dans `characters`
 - `bonuses` dans `characters`
+- `avatar` dans `characters`
+- `avatar_distant` dans `characters`
 - `distant_id` dans `voie_capacite`
 
 ## 📊 **Types TypeScript Correspondants**
@@ -276,10 +280,12 @@ export interface Character {
   };
   
   inventory: Item[];
-  
+
   ownerId: string;
   createdAt: Date;
   updatedAt: Date;
+  avatar?: string;
+  avatar_distant?: string;
 }
 ```
 

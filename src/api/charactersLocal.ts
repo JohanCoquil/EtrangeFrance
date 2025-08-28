@@ -186,6 +186,28 @@ export function useUpdateCharacterSheet() {
   });
 }
 
+export function useUpdateAvatar() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      avatar,
+    }: {
+      id: string;
+      avatar: string;
+    }) => {
+      const db = getDb();
+      await db.runAsync(
+        "UPDATE characters SET avatar = ? WHERE id = ?",
+        [avatar, id],
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["characters"] });
+    },
+  });
+}
+
 export function useUpdateTriggerEffects() {
   const queryClient = useQueryClient();
   return useMutation({

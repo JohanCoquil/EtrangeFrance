@@ -34,11 +34,13 @@ export interface Character {
   
   // Inventaire
   inventory: Item[];
-  
+
   // Métadonnées
   ownerId: string;
   createdAt: Date;
   updatedAt: Date;
+  avatar?: string;
+  avatar_distant?: string;
 }
 
 export interface Item {
