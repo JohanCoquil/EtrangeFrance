@@ -5,6 +5,7 @@ import {
   Dimensions,
   ScrollView,
   Pressable,
+  TouchableOpacity,
   Modal,
   Image,
 } from "react-native";
@@ -301,7 +302,7 @@ export default function CharacterSheet() {
 
   return (
     <Layout backgroundColor="gradient" className="flex-1">
-      <Pressable
+      <TouchableOpacity
         className="absolute top-4 left-4 z-10 w-16 h-16"
         onPress={handleAvatarPress}
         onLongPress={pickAvatar}
@@ -314,7 +315,7 @@ export default function CharacterSheet() {
               : "w-full h-full rounded-full border-2 border-white"
           }
         />
-      </Pressable>
+      </TouchableOpacity>
       <Modal visible={showAvatar} transparent animationType="fade">
         <Pressable
           className="flex-1 bg-black items-center justify-center"
