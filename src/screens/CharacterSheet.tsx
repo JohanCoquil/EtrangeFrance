@@ -207,7 +207,9 @@ export default function CharacterSheet() {
   };
 
   const pickAvatar = async () => {
+    console.log(">>> pickAvatar");
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    console.log(">>> permission result", permission);
     if (!permission.granted) {
       alert("Permission d'accès refusée");
       return;
@@ -239,8 +241,10 @@ export default function CharacterSheet() {
   };
 
   const handleAvatarPress = () => {
+    console.log(">>> handleAvatarPress", { avatar });
     if (avatar) {
       setShowAvatar(true);
+      console.log(">>> Modal should now be visible");
     } else {
       pickAvatar();
     }
@@ -315,9 +319,16 @@ export default function CharacterSheet() {
   return (
     <Layout backgroundColor="gradient" className="flex-1">
       <TouchableOpacity
-        className="absolute top-4 left-4 z-10 w-16 h-16"
-        onPress={handleAvatarPress}
-        onLongPress={pickAvatar}
+        className="absolute top-4 left-4 z-50 w-16 h-16 bg-red-500"
+        style={{ elevation: 999 }}
+        onPress={() => {
+          console.log(">>> onPress");
+          handleAvatarPress();
+        }}
+        onLongPress={() => {
+          console.log(">>> onLongPress");
+          pickAvatar();
+        }}
       >
         <Image
           source={avatarUri ? { uri: avatarUri } : emptyAvatar}
@@ -329,6 +340,10 @@ export default function CharacterSheet() {
         />
       </TouchableOpacity>
       <Modal visible={showAvatar} transparent animationType="fade">
+        {(() => {
+          console.log("Rendering modal", showAvatar);
+          return null;
+        })()}
         <Pressable
           className="flex-1 bg-black items-center justify-center"
           onPress={() => setShowAvatar(false)}
@@ -901,6 +916,14 @@ export default function CharacterSheet() {
           </Layout>
         </PanGestureHandler>
       </CardFlip>
+      <Button
+        onPress={async () => {
+          const res = await ImagePicker.launchImageLibraryAsync();
+          console.log("Picker result", res);
+        }}
+      >
+        Test Picker
+      </Button>
       <Modal visible={!!triggerInfo} transparent animationType="fade">
         <View className="flex-1 justify-center bg-black/60 p-4">
           <View className="bg-gray-900 p-4 rounded-lg">
