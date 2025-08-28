@@ -216,14 +216,12 @@ export default function CharacterSheet() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
+      allowsEditing: false,
     });
     if (!result.canceled) {
       const image = result.assets[0];
-      const relativePath = `assets/illustrations/avatars/${characterId}.png`;
-      const dir = FileSystem.documentDirectory + "assets/illustrations/avatars";
+      const relativePath = `avatars/${characterId}.png`;
+      const dir = FileSystem.documentDirectory + "avatars";
       await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
       try {
         await FileSystem.copyAsync({
@@ -237,6 +235,7 @@ export default function CharacterSheet() {
       }
       setAvatar(relativePath);
       await updateAvatar.mutateAsync({ id: characterId, avatar: relativePath });
+      setShowAvatar(false);
     }
   };
 
@@ -327,10 +326,11 @@ export default function CharacterSheet() {
         />
       </TouchableOpacity>
       <Modal visible={showAvatar} transparent animationType="fade">
-        <Pressable
-          className="flex-1 bg-black items-center justify-center"
-          onPress={() => setShowAvatar(false)}
-        >
+        <View className="flex-1 bg-black/60 items-center justify-center">
+          <Pressable
+            style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}
+            onPress={() => setShowAvatar(false)}
+          />
           <View className="items-center">
             <Image
               source={avatarUri ? { uri: avatarUri } : emptyAvatar}
@@ -339,15 +339,14 @@ export default function CharacterSheet() {
             />
             <Button
               className="mt-4"
-              onPress={() => {
-                setShowAvatar(false);
-                pickAvatar();
+              onPress={async () => {
+                await pickAvatar();
               }}
             >
               Modifier l'avatar
             </Button>
           </View>
-        </Pressable>
+        </View>
       </Modal>
       <Pressable
         className="absolute top-4 right-4 z-10"
