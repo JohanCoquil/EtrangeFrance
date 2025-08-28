@@ -337,7 +337,11 @@ export default function CharacterSheet() {
           color={selectedStat || selectedExtra ? "#fff" : "#666"}
         />
       </Pressable>
-      <CardFlip style={{ width, height }} ref={cardRef}>
+      <CardFlip
+        style={{ width, height }}
+        ref={cardRef}
+        pointerEvents="box-none"
+      >
         <PanGestureHandler
           onHandlerStateChange={frontPan.onHandlerStateChange}
           activeOffsetX={[-40, 40]}

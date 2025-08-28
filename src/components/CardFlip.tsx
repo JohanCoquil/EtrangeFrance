@@ -13,6 +13,7 @@ export interface CardFlipRef {
 interface CardFlipProps {
   children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  pointerEvents?: "auto" | "none" | "box-none" | "box-only";
 }
 
 /**
@@ -20,7 +21,7 @@ interface CardFlipProps {
  * between its first and second child.
  */
 const CardFlip = forwardRef<CardFlipRef, CardFlipProps>(
-  ({ children, style }, ref) => {
+  ({ children, style, pointerEvents = "auto" }, ref) => {
     const animatedValue = useRef(new Animated.Value(0)).current;
     const [flipped, setFlipped] = useState(false);
 
@@ -74,7 +75,7 @@ const CardFlip = forwardRef<CardFlipRef, CardFlipProps>(
     } as any;
 
     return (
-      <View style={style}>
+      <View style={style} pointerEvents={pointerEvents}>
         <Animated.View
           style={frontAnimatedStyle}
           pointerEvents={flipped ? "none" : "auto"}
