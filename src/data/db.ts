@@ -133,6 +133,8 @@ export const initDb = async () => {
       fetiches TEXT,
       trigger_effects TEXT,
       bonuses TEXT,
+      avatar TEXT,
+      avatar_distant TEXT,
       FOREIGN KEY (profession_id) REFERENCES professions(id),
       FOREIGN KEY (hobby_id) REFERENCES hobbies(id),
       FOREIGN KEY (divinity_id) REFERENCES druide_divinites(id),
@@ -245,6 +247,22 @@ export const initDb = async () => {
     if (!hasBonuses) {
       await database.execAsync(
         "ALTER TABLE characters ADD COLUMN bonuses TEXT;",
+      );
+    }
+
+    const hasAvatar = columns.some((c: any) => c.name === "avatar");
+    if (!hasAvatar) {
+      await database.execAsync(
+        "ALTER TABLE characters ADD COLUMN avatar TEXT;",
+      );
+    }
+
+    const hasAvatarDistant = columns.some(
+      (c: any) => c.name === "avatar_distant",
+    );
+    if (!hasAvatarDistant) {
+      await database.execAsync(
+        "ALTER TABLE characters ADD COLUMN avatar_distant TEXT;",
       );
     }
 

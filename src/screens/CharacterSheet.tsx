@@ -6,6 +6,7 @@ import {
   ScrollView,
   Pressable,
   Modal,
+  Image,
 } from "react-native";
 import {
   Audio,
@@ -20,12 +21,18 @@ import {
 } from "@react-navigation/native";
 import { Layout, Title, Body, Caption, Button } from "../components/ui";
 import { RootStackParamList } from "../navigation/types";
-import { useCharacters, useUpdateCharacterSheet } from "@/api/charactersLocal";
+import {
+  useCharacters,
+  useUpdateCharacterSheet,
+  useUpdateAvatar,
+} from "@/api/charactersLocal";
 import { useCharacterCapacites } from "@/api/capacitiesLocal";
 import { useCharacterSkills } from "@/api/skillsLocal";
 import CardFlip, { CardFlipRef } from "@/components/CardFlip";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Dices, AlertCircle } from "lucide-react-native";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
 
 export default function CharacterSheet() {
   const route = useRoute<RouteProp<RootStackParamList, "CharacterSheet">>();
@@ -52,6 +59,9 @@ export default function CharacterSheet() {
   const [triggerInfo, setTriggerInfo] = useState<
     { title: string; description: string } | null
   >(null);
+  const [showAvatar, setShowAvatar] = useState(false);
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const updateAvatar = useUpdateAvatar();
   const updateSheet = useUpdateCharacterSheet();
   const { data: characters, isLoading } = useCharacters();
   const character: any = characters?.find((c: any) => c.id === characterId);
@@ -60,6 +70,9 @@ export default function CharacterSheet() {
   const triggerEffects = character?.trigger_effects
     ? JSON.parse(character.trigger_effects)
     : [];
+  const avatarUri = avatar
+    ? FileSystem.documentDirectory + avatar
+    : undefined;
 
   if (isLoading) {
     return (
@@ -84,6 +97,7 @@ export default function CharacterSheet() {
       setNotes(character.notes ?? "");
       setEquipement(character.equipement ?? "");
       setFetiches(character.fetiches ?? "");
+      setAvatar(character.avatar ?? null);
     }
   }, [character]);
 
@@ -189,6 +203,34 @@ export default function CharacterSheet() {
     setShowDifficulty(false);
   };
 
+  const pickAvatar = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+    if (!result.canceled) {
+      const image = result.assets[0];
+      const relativePath = `assets/illustrations/avatars/${characterId}.png`;
+      const dir = FileSystem.documentDirectory + "assets/illustrations/avatars";
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+      await FileSystem.copyAsync({ from: image.uri, to: FileSystem.documentDirectory + relativePath });
+      setAvatar(relativePath);
+      await updateAvatar.mutateAsync({ id: characterId, avatar: relativePath });
+    }
+  };
+
+  const handleAvatarPress = () => {
+    if (avatar) {
+      setShowAvatar(true);
+    } else {
+      pickAvatar();
+    }
+  };
+
   useEffect(() => {
     const setup = async () => {
       await Audio.setAudioModeAsync({
@@ -257,6 +299,34 @@ export default function CharacterSheet() {
 
   return (
     <Layout backgroundColor="gradient" className="flex-1">
+      <Pressable
+        className="absolute top-4 left-4 z-10"
+        onPress={handleAvatarPress}
+        onLongPress={pickAvatar}
+      >
+        {avatarUri ? (
+          <Image
+            source={{ uri: avatarUri }}
+            className="w-16 h-16 rounded-full"
+          />
+        ) : (
+          <View className="w-16 h-16 rounded-full border-2 border-white" />
+        )}
+      </Pressable>
+      <Modal visible={showAvatar} transparent animationType="fade">
+        <Pressable
+          className="flex-1 bg-black items-center justify-center"
+          onPress={() => setShowAvatar(false)}
+        >
+          {avatarUri && (
+            <Image
+              source={{ uri: avatarUri }}
+              className="w-80 h-80"
+              resizeMode="contain"
+            />
+          )}
+        </Pressable>
+      </Modal>
       <Pressable
         className="absolute top-4 right-4 z-10"
         disabled={!selectedStat && !selectedExtra}
