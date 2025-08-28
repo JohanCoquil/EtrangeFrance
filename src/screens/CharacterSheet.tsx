@@ -300,17 +300,17 @@ export default function CharacterSheet() {
   return (
     <Layout backgroundColor="gradient" className="flex-1">
       <Pressable
-        className="absolute top-4 left-4 z-10"
+        className="absolute top-4 left-4 z-10 w-16 h-16"
         onPress={handleAvatarPress}
         onLongPress={pickAvatar}
       >
         {avatarUri ? (
           <Image
             source={{ uri: avatarUri }}
-            className="w-16 h-16 rounded-full"
+            className="w-full h-full rounded-full"
           />
         ) : (
-          <View className="w-16 h-16 rounded-full border-2 border-white" />
+          <View className="w-full h-full rounded-full border-2 border-white" />
         )}
       </Pressable>
       <Modal visible={showAvatar} transparent animationType="fade">
