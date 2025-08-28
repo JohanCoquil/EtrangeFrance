@@ -219,7 +219,6 @@ export default function CharacterSheet() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
-      useSystemUI: true,
     });
     if (!result.canceled) {
       const image = result.assets[0];
