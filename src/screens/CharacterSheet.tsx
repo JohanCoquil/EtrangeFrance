@@ -214,6 +214,10 @@ export default function CharacterSheet() {
       alert("Permission d'accès refusée");
       return;
     }
+    // Close the avatar modal before opening the picker to avoid it being blocked
+    setShowAvatar(false);
+    // Wait for the modal to close
+    await new Promise((resolve) => setTimeout(resolve, 300));
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false,
@@ -235,7 +239,6 @@ export default function CharacterSheet() {
       }
       setAvatar(relativePath);
       await updateAvatar.mutateAsync({ id: characterId, avatar: relativePath });
-      setShowAvatar(false);
     }
   };
 
@@ -339,9 +342,7 @@ export default function CharacterSheet() {
             />
             <Button
               className="mt-4"
-              onPress={async () => {
-                await pickAvatar();
-              }}
+              onPress={pickAvatar}
             >
               Modifier l'avatar
             </Button>
@@ -909,16 +910,6 @@ export default function CharacterSheet() {
           </Layout>
         </PanGestureHandler>
       </CardFlip>
-      <Button
-        onPress={async () => {
-          const res = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          });
-          console.log("Picker result", res);
-        }}
-      >
-        Test Picker
-      </Button>
       <Modal visible={!!triggerInfo} transparent animationType="fade">
         <View className="flex-1 justify-center bg-black/60 p-4">
           <View className="bg-gray-900 p-4 rounded-lg">
