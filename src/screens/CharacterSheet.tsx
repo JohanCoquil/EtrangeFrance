@@ -219,6 +219,7 @@ export default function CharacterSheet() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
+      useSystemUI: true,
     });
     if (!result.canceled) {
       const image = result.assets[0];
@@ -918,7 +919,9 @@ export default function CharacterSheet() {
       </CardFlip>
       <Button
         onPress={async () => {
-          const res = await ImagePicker.launchImageLibraryAsync();
+          const res = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          });
           console.log("Picker result", res);
         }}
       >
