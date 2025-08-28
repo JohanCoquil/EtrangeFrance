@@ -207,8 +207,14 @@ export default function CharacterSheet() {
   };
 
   const pickAvatar = async () => {
+    console.log("pickAvatar called");
+    alert("pickAvatar called");
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return;
+    if (!permission.granted) {
+      console.log("Media library permission denied");
+      alert("Permission d'accès refusée");
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -220,13 +226,24 @@ export default function CharacterSheet() {
       const relativePath = `assets/illustrations/avatars/${characterId}.png`;
       const dir = FileSystem.documentDirectory + "assets/illustrations/avatars";
       await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-      await FileSystem.copyAsync({ from: image.uri, to: FileSystem.documentDirectory + relativePath });
+      try {
+        await FileSystem.copyAsync({
+          from: image.uri,
+          to: FileSystem.documentDirectory + relativePath,
+        });
+      } catch (error) {
+        console.error("Error copying avatar", error);
+        alert("Erreur lors de la copie de l'avatar");
+        return;
+      }
       setAvatar(relativePath);
       await updateAvatar.mutateAsync({ id: characterId, avatar: relativePath });
     }
   };
 
   const handleAvatarPress = () => {
+    console.log("handleAvatarPress called");
+    alert("handleAvatarPress called");
     if (avatar) {
       setShowAvatar(true);
     } else {
