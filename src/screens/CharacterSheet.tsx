@@ -34,6 +34,8 @@ import { Dices, AlertCircle } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 
+const emptyAvatar = require("../../assets/illustrations/avatars/vide.jpg");
+
 export default function CharacterSheet() {
   const route = useRoute<RouteProp<RootStackParamList, "CharacterSheet">>();
   const navigation =
@@ -304,27 +306,25 @@ export default function CharacterSheet() {
         onPress={handleAvatarPress}
         onLongPress={pickAvatar}
       >
-        {avatarUri ? (
-          <Image
-            source={{ uri: avatarUri }}
-            className="w-full h-full rounded-full"
-          />
-        ) : (
-          <View className="w-full h-full rounded-full border-2 border-white" />
-        )}
+        <Image
+          source={avatarUri ? { uri: avatarUri } : emptyAvatar}
+          className={
+            avatarUri
+              ? "w-full h-full rounded-full"
+              : "w-full h-full rounded-full border-2 border-white"
+          }
+        />
       </Pressable>
       <Modal visible={showAvatar} transparent animationType="fade">
         <Pressable
           className="flex-1 bg-black items-center justify-center"
           onPress={() => setShowAvatar(false)}
         >
-          {avatarUri && (
-            <Image
-              source={{ uri: avatarUri }}
-              className="w-80 h-80"
-              resizeMode="contain"
-            />
-          )}
+          <Image
+            source={avatarUri ? { uri: avatarUri } : emptyAvatar}
+            className="w-80 h-80"
+            resizeMode="contain"
+          />
         </Pressable>
       </Modal>
       <Pressable
