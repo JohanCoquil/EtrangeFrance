@@ -242,13 +242,7 @@ export default function CharacterSheet() {
   };
 
   const handleAvatarPress = () => {
-    console.log(">>> handleAvatarPress", { avatar });
-    if (avatar) {
-      setShowAvatar(true);
-      console.log(">>> Modal should now be visible");
-    } else {
-      pickAvatar();
-    }
+    setShowAvatar(true);
   };
 
   useEffect(() => {
@@ -322,14 +316,7 @@ export default function CharacterSheet() {
       <TouchableOpacity
         className="absolute top-4 left-4 z-50 w-16 h-16 bg-red-500"
         style={{ elevation: 999 }}
-        onPress={() => {
-          console.log(">>> onPress");
-          handleAvatarPress();
-        }}
-        onLongPress={() => {
-          console.log(">>> onLongPress");
-          pickAvatar();
-        }}
+        onPress={handleAvatarPress}
       >
         <Image
           source={avatarUri ? { uri: avatarUri } : emptyAvatar}
@@ -341,19 +328,26 @@ export default function CharacterSheet() {
         />
       </TouchableOpacity>
       <Modal visible={showAvatar} transparent animationType="fade">
-        {(() => {
-          console.log("Rendering modal", showAvatar);
-          return null;
-        })()}
         <Pressable
           className="flex-1 bg-black items-center justify-center"
           onPress={() => setShowAvatar(false)}
         >
-          <Image
-            source={avatarUri ? { uri: avatarUri } : emptyAvatar}
-            className="w-80 h-80"
-            resizeMode="contain"
-          />
+          <View className="items-center">
+            <Image
+              source={avatarUri ? { uri: avatarUri } : emptyAvatar}
+              className="w-80 h-80"
+              resizeMode="contain"
+            />
+            <Button
+              className="mt-4"
+              onPress={() => {
+                setShowAvatar(false);
+                pickAvatar();
+              }}
+            >
+              Modifier l'avatar
+            </Button>
+          </View>
         </Pressable>
       </Modal>
       <Pressable
