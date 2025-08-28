@@ -8,8 +8,6 @@ import {
   TouchableOpacity,
   Modal,
   Image,
-  PermissionsAndroid,
-  Platform,
 } from "react-native";
 import {
   Audio,
@@ -208,33 +206,7 @@ export default function CharacterSheet() {
     setShowDifficulty(false);
   };
 
-  const ensureStoragePermissions = async () => {
-    if (Platform.OS !== "android") {
-      return true;
-    }
-    const permissions = [
-      PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
-      PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-      PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-    ];
-    const statuses = await Promise.all(
-      permissions.map((perm) => PermissionsAndroid.check(perm))
-    );
-    if (statuses.every((status) => status)) {
-      return true;
-    }
-    const result = await PermissionsAndroid.requestMultiple(permissions);
-    return permissions.every(
-      (perm) => result[perm] === PermissionsAndroid.RESULTS.GRANTED
-    );
-  };
-
   const pickAvatar = async () => {
-    const hasPermissions = await ensureStoragePermissions();
-    if (!hasPermissions) {
-      alert("Permission d'accès refusée");
-      return;
-    }
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       alert("Permission d'accès refusée");
