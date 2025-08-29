@@ -218,7 +218,8 @@ export default function CharacterSheet() {
     await new Promise((resolve) => setTimeout(resolve, 300));
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false,
+      allowsEditing: true,
+      aspect: [1, 1],
     });
     if (!result.canceled) {
       const image = result.assets[0];
