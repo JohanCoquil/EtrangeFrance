@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Modal,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
 import { PanGestureHandler, State } from "react-native-gesture-handler";
@@ -62,6 +63,7 @@ export default function CharacterSheet() {
   const [searchQuery, setSearchQuery] = useState("");
   const [officialResults, setOfficialResults] = useState<string[]>([]);
   const [showOfficialPicker, setShowOfficialPicker] = useState(false);
+  const [loadingOfficial, setLoadingOfficial] = useState(false);
   const updateAvatar = useUpdateAvatar();
   const updateSheet = useUpdateCharacterSheet();
   const { data: characters, isLoading } = useCharacters();
@@ -243,9 +245,11 @@ export default function CharacterSheet() {
 
   const pickOfficialAvatar = async () => {
     try {
-      // Close the avatar modal before opening any network request
       setShowAvatar(false);
       await new Promise((resolve) => setTimeout(resolve, 300));
+      setOfficialResults([]);
+      setShowOfficialPicker(true);
+      setLoadingOfficial(true);
 
       const response = await fetch(
         "https://www.instagram.com/api/v1/users/web_profile_info/?username=fletch_gp",
@@ -274,7 +278,6 @@ export default function CharacterSheet() {
         data?.items ||
         [];
 
-      // Try to load more images to reach 100 items
       if (userId) {
         try {
           let cursor =
@@ -307,6 +310,7 @@ export default function CharacterSheet() {
 
       if (!edges.length) {
         alert("Aucune illustration trouvée");
+        setShowOfficialPicker(false);
         return;
       }
 
@@ -332,14 +336,17 @@ export default function CharacterSheet() {
 
       if (!urls.length) {
         alert("Aucune illustration trouvée");
+        setShowOfficialPicker(false);
         return;
       }
 
       setOfficialResults(urls);
-      setShowOfficialPicker(true);
     } catch (error) {
       console.error("Error fetching official avatar", error);
       alert("Erreur lors de la récupération de l'avatar officiel");
+      setShowOfficialPicker(false);
+    } finally {
+      setLoadingOfficial(false);
     }
   };
 
@@ -492,22 +499,37 @@ export default function CharacterSheet() {
             }}
             onPress={() => setShowOfficialPicker(false)}
           />
-          <View className="bg-white p-4 rounded-xl">
-            <View className="flex-row flex-wrap justify-center">
-              {officialResults.map((url, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  className="m-2"
-                  onPress={() => handleSelectOfficialAvatar(url)}
-                >
-                  <Image
-                    source={{ uri: url }}
-                    className="w-32 h-32"
-                    resizeMode="cover"
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
+          <View
+            className="bg-white p-4 rounded-xl w-11/12"
+            style={{ maxHeight: height * 0.9 }}
+          >
+            {loadingOfficial ? (
+              <View className="flex-1 items-center justify-center">
+                <ActivityIndicator size="large" />
+              </View>
+            ) : (
+              <ScrollView
+                contentContainerStyle={{
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  justifyContent: "center",
+                }}
+              >
+                {officialResults.map((url, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    className="m-2"
+                    onPress={() => handleSelectOfficialAvatar(url)}
+                  >
+                    <Image
+                      source={{ uri: url }}
+                      className="w-32 h-32"
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
           </View>
         </View>
       </Modal>
