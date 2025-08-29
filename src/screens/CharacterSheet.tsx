@@ -424,7 +424,14 @@ export default function CharacterSheet() {
             className="bg-white p-4 rounded-xl w-11/12"
             style={{ height: height * 0.95 }}
           >
-            <ScrollView contentContainerStyle={{ alignItems: "center" }}>
+            <ScrollView
+              className="flex-1"
+              contentContainerStyle={{
+                flexGrow: 1,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
               <TouchableOpacity onPress={() => setShowFullImage(true)}>
                 <Image
                   source={avatarUri ? { uri: avatarUri } : emptyAvatar}
