@@ -9,6 +9,7 @@ import {
   Modal,
   Image,
   Alert,
+  BackHandler,
 } from "react-native";
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
 import { PanGestureHandler, State } from "react-native-gesture-handler";
@@ -118,6 +119,26 @@ export default function CharacterSheet() {
     }, 500);
     return () => clearTimeout(timeout);
   }, [origines, rencontres, notes, equipement, fetiches, characterId]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (showFullImage) {
+        setShowFullImage(false);
+        return true;
+      }
+      if (showAvatar) {
+        setShowAvatar(false);
+        return true;
+      }
+      return false;
+    };
+
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      onBackPress
+    );
+    return () => subscription.remove();
+  }, [showAvatar, showFullImage]);
 
   const forceCapacite = (capacites as any[])?.find((c: any) => c.id === 22);
   const dexCapacite = (capacites as any[])?.find((c: any) => c.id === 1);
@@ -369,7 +390,7 @@ export default function CharacterSheet() {
             style={{ height: height * 0.95 }}
           >
             <Pressable
-              className="absolute top-2 right-2"
+              className="absolute top-8 right-2"
               onPress={() => setShowAvatar(false)}
             >
               <X size={24} color="#000" />
