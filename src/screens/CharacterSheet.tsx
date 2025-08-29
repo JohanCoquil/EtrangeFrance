@@ -242,6 +242,45 @@ export default function CharacterSheet() {
     }
   };
 
+  const pickOfficialAvatar = async () => {
+    try {
+      // Close the avatar modal before opening any network request
+      setShowAvatar(false);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const response = await fetch(
+        "https://www.instagram.com/fletch_gp/?__a=1&__d=dis"
+      );
+      const data = await response.json();
+      const edges =
+        data?.graphql?.user?.edge_owner_to_timeline_media?.edges || [];
+      if (!edges.length) {
+        alert("Aucune illustration trouvée");
+        return;
+      }
+      const randomEdge =
+        edges[Math.floor(Math.random() * edges.length)];
+      const imageUrl = randomEdge?.node?.display_url;
+      if (!imageUrl) {
+        alert("Illustration introuvable");
+        return;
+      }
+
+      const relativePath = `avatars/${characterId}.jpg`;
+      const dir = FileSystem.documentDirectory + "avatars";
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+      await FileSystem.downloadAsync(
+        imageUrl,
+        FileSystem.documentDirectory + relativePath
+      );
+      setAvatar(relativePath);
+      await updateAvatar.mutateAsync({ id: characterId, avatar: relativePath });
+    } catch (error) {
+      console.error("Error fetching official avatar", error);
+      alert("Erreur lors de la récupération de l'avatar officiel");
+    }
+  };
+
   const handleAvatarPress = () => {
     setShowAvatar(true);
   };
@@ -345,6 +384,12 @@ export default function CharacterSheet() {
               onPress={pickAvatar}
             >
               Modifier l'avatar
+            </Button>
+            <Button
+              className="mt-2"
+              onPress={pickOfficialAvatar}
+            >
+              Choisir parmi les illustrations officielles
             </Button>
           </View>
         </View>
