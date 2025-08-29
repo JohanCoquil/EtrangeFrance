@@ -25,11 +25,10 @@ import { useCharacterCapacites } from "@/api/capacitiesLocal";
 import { useCharacterSkills } from "@/api/skillsLocal";
 import CardFlip, { CardFlipRef } from "@/components/CardFlip";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Dices, AlertCircle } from "lucide-react-native";
+import { Dices, AlertCircle, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import * as Linking from "expo-linking";
-import CloseIcon from "../../assets/close.svg";
 
 const emptyAvatar = require("../../assets/illustrations/avatars/vide.jpg");
 
@@ -399,7 +398,7 @@ export default function CharacterSheet() {
               className="absolute top-8 right-2"
               onPress={() => setShowAvatar(false)}
             >
-              <CloseIcon width={24} height={24} />
+              <X size={24} color="black" />
             </Pressable>
             <ScrollView
               className="flex-1"
