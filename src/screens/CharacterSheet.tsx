@@ -23,7 +23,7 @@ import { useCharacterCapacites } from "@/api/capacitiesLocal";
 import { useCharacterSkills } from "@/api/skillsLocal";
 import CardFlip, { CardFlipRef } from "@/components/CardFlip";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Dices, AlertCircle } from "lucide-react-native";
+import { Dices, AlertCircle, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import * as Linking from "expo-linking";
@@ -352,9 +352,15 @@ export default function CharacterSheet() {
             onPress={() => setShowAvatar(false)}
           />
           <View
-            className="bg-white p-4 rounded-xl w-11/12"
+            className="bg-white p-4 rounded-xl w-11/12 relative"
             style={{ height: height * 0.95 }}
           >
+            <Pressable
+              className="absolute top-2 right-2"
+              onPress={() => setShowAvatar(false)}
+            >
+              <X size={24} color="#000" />
+            </Pressable>
             <ScrollView
               className="flex-1"
               contentContainerStyle={{
