@@ -334,7 +334,6 @@ export default function CharacterSheet() {
       });
 
       const urls = filtered
-        .slice(0, 4)
         .map(
           (e: any) =>
             e?.node?.display_url ||
@@ -513,9 +512,9 @@ export default function CharacterSheet() {
             }}
             onPress={() => setShowOfficialPicker(false)}
           />
-          <View
+        <View
             className="bg-white p-4 rounded-xl w-11/12"
-            style={{ maxHeight: height * 0.9 }}
+            style={{ height: height * 0.85 }}
           >
             {loadingOfficial ? (
               <View className="flex-1 items-center justify-center">
@@ -523,6 +522,7 @@ export default function CharacterSheet() {
               </View>
             ) : (
               <ScrollView
+                style={{ flex: 1 }}
                 contentContainerStyle={{
                   flexDirection: "row",
                   flexWrap: "wrap",
