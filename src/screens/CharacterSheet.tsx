@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Modal,
   Image,
-  ActivityIndicator,
 } from "react-native";
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
 import { PanGestureHandler, State } from "react-native-gesture-handler";
@@ -27,6 +26,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Dices, AlertCircle } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
+import * as Linking from "expo-linking";
 
 const emptyAvatar = require("../../assets/illustrations/avatars/vide.jpg");
 
@@ -60,10 +60,6 @@ export default function CharacterSheet() {
   } | null>(null);
   const [showAvatar, setShowAvatar] = useState(false);
   const [avatar, setAvatar] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [officialResults, setOfficialResults] = useState<string[]>([]);
-  const [showOfficialPicker, setShowOfficialPicker] = useState(false);
-  const [loadingOfficial, setLoadingOfficial] = useState(false);
   const [showFullImage, setShowFullImage] = useState(false);
   const updateAvatar = useUpdateAvatar();
   const updateSheet = useUpdateCharacterSheet();
@@ -248,77 +244,11 @@ export default function CharacterSheet() {
       await updateAvatar.mutateAsync({ id: characterId, avatar: relativePath });
     }
   };
-
-  const pickOfficialAvatar = async () => {
+  const openOfficialIllustrations = async () => {
     try {
-      setShowAvatar(false);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      setOfficialResults([]);
-      setShowOfficialPicker(true);
-      setLoadingOfficial(true);
-      const query = `site:https://www.instagram.com/fletch_gp/ ${searchQuery}`.trim();
-      const response = await fetch(
-        `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(query)}`,
-        {
-          headers: {
-            "User-Agent": "Mozilla/5.0",
-          },
-        },
-      );
-
-      if (!response.ok) {
-        const text = await response.text();
-        console.error(
-          "Invalid response while fetching official avatar",
-          text,
-        );
-        throw new Error("Invalid response");
-      }
-
-      const html = await response.text();
-      const regex = /"ou":"(.*?)"/g;
-      const urls: string[] = [];
-      let match;
-      while ((match = regex.exec(html)) !== null && urls.length < 50) {
-        urls.push(match[1]);
-      }
-
-      if (!urls.length) {
-        alert("Aucune illustration trouvée");
-        setShowOfficialPicker(false);
-        return;
-      }
-
-      setOfficialResults(urls);
-    } catch (error) {
-      console.error("Error fetching official avatar", error);
-      alert("Erreur lors de la récupération de l'avatar officiel");
-      setShowOfficialPicker(false);
-    } finally {
-      setLoadingOfficial(false);
-    }
-  };
-
-  const handleSelectOfficialAvatar = async (imageUrl: string) => {
-    try {
-      const relativePath = `avatars/${characterId}-${Date.now()}.jpg`;
-      const dir = FileSystem.documentDirectory + "avatars";
-      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-      if (avatar) {
-        await FileSystem.deleteAsync(FileSystem.documentDirectory + avatar, {
-          idempotent: true,
-        });
-      }
-      await FileSystem.downloadAsync(
-        imageUrl,
-        FileSystem.documentDirectory + relativePath,
-      );
-      setAvatar(relativePath);
-      await updateAvatar.mutateAsync({ id: characterId, avatar: relativePath });
-      setShowOfficialPicker(false);
-    } catch (error) {
-      console.error("Error selecting official avatar", error);
-      alert("Erreur lors de la récupération de l'avatar officiel");
+      await Linking.openURL("instagram://user?username=fletch_gp");
+    } catch {
+      Linking.openURL("https://instagram.com/fletch_gp");
     }
   };
 
@@ -442,15 +372,11 @@ export default function CharacterSheet() {
               <Button className="mt-4" onPress={pickAvatar}>
                 Modifier l'avatar
               </Button>
-              <TextInput
-                placeholder="Mots clés"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                className="mt-4 w-64 h-10 bg-gray-200 rounded px-2"
-              />
-              <Button className="mt-4" onPress={pickOfficialAvatar}>
-                Choisir parmi les illustrations officielles
-              </Button>
+              <Pressable className="mt-4" onPress={openOfficialIllustrations}>
+                <Body className="text-blue-600 underline text-center">
+                  En mal d'inspiration ? Consulter les illustrations officielles
+                </Body>
+              </Pressable>
             </ScrollView>
           </View>
         </View>
@@ -471,53 +397,6 @@ export default function CharacterSheet() {
             resizeMode="contain"
           />
         </Pressable>
-      </Modal>
-      <Modal visible={showOfficialPicker} transparent animationType="fade">
-        <View className="flex-1 bg-black/60 items-center justify-center">
-          <Pressable
-            style={{
-              position: "absolute",
-              top: 0,
-              right: 0,
-              bottom: 0,
-              left: 0,
-            }}
-            onPress={() => setShowOfficialPicker(false)}
-          />
-        <View
-            className="bg-white p-4 rounded-xl w-11/12"
-            style={{ height: height * 0.95 }}
-          >
-            {loadingOfficial ? (
-              <View className="flex-1 items-center justify-center">
-                <ActivityIndicator size="large" />
-              </View>
-            ) : (
-              <ScrollView
-                style={{ flex: 1 }}
-                contentContainerStyle={{
-                  flexDirection: "row",
-                  flexWrap: "wrap",
-                  justifyContent: "center",
-                }}
-              >
-                {officialResults.map((url, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    className="m-2"
-                    onPress={() => handleSelectOfficialAvatar(url)}
-                  >
-                    <Image
-                      source={{ uri: url }}
-                      className="w-32 h-32"
-                      resizeMode="cover"
-                    />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-          </View>
-        </View>
       </Modal>
       <Pressable
         className="absolute top-4 right-4 z-10"
