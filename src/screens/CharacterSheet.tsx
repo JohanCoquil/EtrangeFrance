@@ -245,28 +245,28 @@ export default function CharacterSheet() {
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       const response = await fetch(
-        "https://www.instagram.com/fletch_gp/?__a=1&__d=dis",
+        "https://www.instagram.com/api/v1/users/web_profile_info/?username=fletch_gp",
         {
           headers: {
             "User-Agent": "Mozilla/5.0",
-            Accept: "application/json",
+            "x-ig-app-id": "936619743392459",
           },
         },
       );
-      const text = await response.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (err) {
+
+      if (!response.ok) {
+        const text = await response.text();
         console.error(
           "Invalid response while fetching official avatar",
           text,
         );
-        throw err;
+        throw new Error("Invalid response");
       }
 
+      const data = await response.json();
+
       const edges =
-        data?.graphql?.user?.edge_owner_to_timeline_media?.edges ||
+        data?.data?.user?.edge_owner_to_timeline_media?.edges ||
         data?.items ||
         [];
 
