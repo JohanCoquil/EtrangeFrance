@@ -245,7 +245,7 @@ export default function CharacterSheet() {
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       const response = await fetch(
-        "https://www.instagram.com/api/v1/users/web_profile_info/?username=fletch_gp",
+        "https://www.instagram.com/fletch_gp/?__a=1&__d=dis",
         {
           headers: {
             "User-Agent": "Mozilla/5.0",
@@ -258,19 +258,25 @@ export default function CharacterSheet() {
       try {
         data = JSON.parse(text);
       } catch (err) {
-        console.error("Invalid response while fetching official avatar", text);
+        console.error(
+          "Invalid response while fetching official avatar",
+          text,
+        );
         throw err;
       }
+
       const edges =
-        data?.data?.user?.edge_owner_to_timeline_media?.edges ||
         data?.graphql?.user?.edge_owner_to_timeline_media?.edges ||
+        data?.items ||
         [];
+
       if (!edges.length) {
         alert("Aucune illustration trouvée");
         return;
       }
+
       const randomEdge = edges[Math.floor(Math.random() * edges.length)];
-      const imageUrl = randomEdge?.node?.display_url;
+      const imageUrl = randomEdge?.node?.display_url || randomEdge?.display_url;
       if (!imageUrl) {
         alert("Illustration introuvable");
         return;
