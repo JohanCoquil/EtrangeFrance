@@ -270,7 +270,7 @@ export default function CharacterSheet() {
   const openOfficialIllustrations = () => {
     Alert.alert(
       "",
-      "Un personnage vous plait dans les illustrations officielles ?\n\n1/ Faites une capture d’écran de l’illustration que vous aimez\n\n2/ Revenez dans Étrange France et cliquez sur “Choisir une image”\n\n3/ Choisissez votre capture et recadrez si nécessaire 🙂",
+      "Un personnage vous plait dans les illustrations officielles ?\n\n1/ Faites une capture d’écran de l’illustration que vous aimez\n\n2/ Revenez dans Étrange France et cliquez sur “Modifier l'avatar”\n\n3/ Choisissez votre capture et recadrez si nécessaire 🙂",
       [
         { text: "Annuler", style: "cancel" },
         {
