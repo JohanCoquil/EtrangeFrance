@@ -64,37 +64,7 @@ export default function CharacterSheet() {
   const [officialResults, setOfficialResults] = useState<string[]>([]);
   const [showOfficialPicker, setShowOfficialPicker] = useState(false);
   const [loadingOfficial, setLoadingOfficial] = useState(false);
-  const INSTAGRAM_USERNAME = "yoxigenn";
-  const INSTAGRAM_PASSWORD = "FLuyFx05cl5";
-
-  const loginInstagram = async () => {
-    const timestamp = Math.floor(Date.now() / 1000);
-    const res = await fetch(
-      "https://www.instagram.com/api/v1/web/accounts/login/ajax/",
-      {
-        method: "POST",
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-          "X-IG-App-ID": "936619743392459",
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: `username=${encodeURIComponent(
-          INSTAGRAM_USERNAME,
-        )}&enc_password=${encodeURIComponent(
-          `#PWD_INSTAGRAM_BROWSER:0:${timestamp}:${INSTAGRAM_PASSWORD}`,
-        )}`,
-      },
-    );
-
-    if (!res.ok) {
-      const text = await res.text();
-      console.error("Instagram login failed", text);
-      throw new Error("Instagram login failed");
-    }
-
-    const cookie = res.headers.get("set-cookie") || "";
-    return cookie;
-  };
+  const [showFullImage, setShowFullImage] = useState(false);
   const updateAvatar = useUpdateAvatar();
   const updateSheet = useUpdateCharacterSheet();
   const { data: characters, isLoading } = useCharacters();
@@ -286,14 +256,12 @@ export default function CharacterSheet() {
       setOfficialResults([]);
       setShowOfficialPicker(true);
       setLoadingOfficial(true);
-      const cookie = await loginInstagram();
+      const query = `site:https://www.instagram.com/fletch_gp/ ${searchQuery}`.trim();
       const response = await fetch(
-        "https://www.instagram.com/api/v1/users/web_profile_info/?username=fletch_gp",
+        `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(query)}`,
         {
           headers: {
             "User-Agent": "Mozilla/5.0",
-            "x-ig-app-id": "936619743392459",
-            Cookie: cookie,
           },
         },
       );
@@ -307,73 +275,13 @@ export default function CharacterSheet() {
         throw new Error("Invalid response");
       }
 
-      const data = await response.json();
-
-      const userId = data?.data?.user?.id;
-      let edges =
-        data?.data?.user?.edge_owner_to_timeline_media?.edges ||
-        data?.items ||
-        [];
-
-      if (userId) {
-        try {
-          let cursor =
-            data?.data?.user?.edge_owner_to_timeline_media?.page_info?.end_cursor;
-          let hasNext =
-            data?.data?.user?.edge_owner_to_timeline_media?.page_info?.has_next_page;
-          while (edges.length < 100 && hasNext && cursor) {
-            const nextResp = await fetch(
-              `https://www.instagram.com/api/v1/feed/user/${userId}/?count=50&max_id=${cursor}`,
-              {
-                headers: {
-                  "User-Agent": "Mozilla/5.0",
-                  "x-ig-app-id": "936619743392459",
-                  Cookie: cookie,
-                },
-              },
-            );
-            if (!nextResp.ok) break;
-            const nextData = await nextResp.json();
-            const nextItems = nextData?.items || [];
-            edges = edges.concat(nextItems);
-            cursor = nextData?.next_max_id;
-            hasNext = !!cursor;
-          }
-        } catch (err) {
-          console.error("Error fetching instagram feed", err);
-        }
+      const html = await response.text();
+      const regex = /"ou":"(.*?)"/g;
+      const urls: string[] = [];
+      let match;
+      while ((match = regex.exec(html)) !== null && urls.length < 50) {
+        urls.push(match[1]);
       }
-
-      console.log(
-        ">>> Nb d'images totales récupérées :",
-        edges.length,
-      );
-      edges = edges.slice(0, 100);
-
-      if (!edges.length) {
-        alert("Aucune illustration trouvée");
-        setShowOfficialPicker(false);
-        return;
-      }
-
-      const query = searchQuery.trim().toLowerCase();
-      const filtered = edges.filter((edge: any) => {
-        const caption =
-          edge?.node?.edge_media_to_caption?.edges?.[0]?.node?.text ||
-          edge?.caption?.text ||
-          edge?.caption ||
-          "";
-        return query ? caption.toLowerCase().includes(query) : true;
-      });
-
-      const urls = filtered
-        .map(
-          (e: any) =>
-            e?.node?.display_url ||
-            e?.display_url ||
-            e?.image_versions2?.candidates?.[0]?.url,
-        )
-        .filter(Boolean);
 
       if (!urls.length) {
         alert("Aucune illustration trouvée");
@@ -512,26 +420,50 @@ export default function CharacterSheet() {
             }}
             onPress={() => setShowAvatar(false)}
           />
-          <View className="items-center">
-            <Image
-              source={avatarUri ? { uri: avatarUri } : emptyAvatar}
-              className="w-80 h-80"
-              resizeMode="contain"
-            />
-            <TextInput
-              placeholder="Mots clés"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              className="mt-4 w-64 h-10 bg-white rounded px-2"
-            />
-            <Button className="mt-4" onPress={pickAvatar}>
-              Modifier l'avatar
-            </Button>
-            <Button className="mt-2" onPress={pickOfficialAvatar}>
-              Choisir parmi les illustrations officielles
-            </Button>
+          <View
+            className="bg-white p-4 rounded-xl w-11/12"
+            style={{ height: height * 0.95 }}
+          >
+            <ScrollView contentContainerStyle={{ alignItems: "center" }}>
+              <TouchableOpacity onPress={() => setShowFullImage(true)}>
+                <Image
+                  source={avatarUri ? { uri: avatarUri } : emptyAvatar}
+                  className="w-80 h-80"
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+              <Button className="mt-4" onPress={pickAvatar}>
+                Modifier l'avatar
+              </Button>
+              <TextInput
+                placeholder="Mots clés"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                className="mt-4 w-64 h-10 bg-gray-200 rounded px-2"
+              />
+              <Button className="mt-4" onPress={pickOfficialAvatar}>
+                Choisir parmi les illustrations officielles
+              </Button>
+            </ScrollView>
           </View>
         </View>
+      </Modal>
+      <Modal visible={showFullImage} transparent animationType="fade">
+        <Pressable
+          style={{
+            flex: 1,
+            backgroundColor: "black",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+          onPress={() => setShowFullImage(false)}
+        >
+          <Image
+            source={avatarUri ? { uri: avatarUri } : emptyAvatar}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="contain"
+          />
+        </Pressable>
       </Modal>
       <Modal visible={showOfficialPicker} transparent animationType="fade">
         <View className="flex-1 bg-black/60 items-center justify-center">
@@ -547,7 +479,7 @@ export default function CharacterSheet() {
           />
         <View
             className="bg-white p-4 rounded-xl w-11/12"
-            style={{ height: height * 0.85 }}
+            style={{ height: height * 0.95 }}
           >
             {loadingOfficial ? (
               <View className="flex-1 items-center justify-center">
