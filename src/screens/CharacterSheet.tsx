@@ -225,10 +225,15 @@ export default function CharacterSheet() {
     });
     if (!result.canceled) {
       const image = result.assets[0];
-      const relativePath = `avatars/${characterId}.png`;
+      const relativePath = `avatars/${characterId}-${Date.now()}.png`;
       const dir = FileSystem.documentDirectory + "avatars";
       await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
       try {
+        if (avatar) {
+          await FileSystem.deleteAsync(FileSystem.documentDirectory + avatar, {
+            idempotent: true,
+          });
+        }
         await FileSystem.copyAsync({
           from: image.uri,
           to: FileSystem.documentDirectory + relativePath,
@@ -306,6 +311,10 @@ export default function CharacterSheet() {
         }
       }
 
+      console.log(
+        ">>> Nb d'images totales récupérées :",
+        edges.length,
+      );
       edges = edges.slice(0, 100);
 
       if (!edges.length) {
@@ -352,9 +361,14 @@ export default function CharacterSheet() {
 
   const handleSelectOfficialAvatar = async (imageUrl: string) => {
     try {
-      const relativePath = `avatars/${characterId}.jpg`;
+      const relativePath = `avatars/${characterId}-${Date.now()}.jpg`;
       const dir = FileSystem.documentDirectory + "avatars";
       await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+      if (avatar) {
+        await FileSystem.deleteAsync(FileSystem.documentDirectory + avatar, {
+          idempotent: true,
+        });
+      }
       await FileSystem.downloadAsync(
         imageUrl,
         FileSystem.documentDirectory + relativePath,
