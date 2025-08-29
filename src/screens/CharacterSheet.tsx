@@ -25,10 +25,11 @@ import { useCharacterCapacites } from "@/api/capacitiesLocal";
 import { useCharacterSkills } from "@/api/skillsLocal";
 import CardFlip, { CardFlipRef } from "@/components/CardFlip";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Dices, AlertCircle, X } from "lucide-react-native";
+import { Dices, AlertCircle } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import * as Linking from "expo-linking";
+import CloseIcon from "../../assets/close.svg";
 
 const emptyAvatar = require("../../assets/illustrations/avatars/vide.jpg");
 
@@ -373,7 +374,12 @@ export default function CharacterSheet() {
           }
         />
       </TouchableOpacity>
-      <Modal visible={showAvatar} transparent animationType="fade">
+      <Modal
+        visible={showAvatar}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAvatar(false)}
+      >
         <View className="flex-1 bg-black/60 items-center justify-center">
           <Pressable
             style={{
@@ -393,7 +399,7 @@ export default function CharacterSheet() {
               className="absolute top-8 right-2"
               onPress={() => setShowAvatar(false)}
             >
-              <X size={24} color="#000" />
+              <CloseIcon width={24} height={24} />
             </Pressable>
             <ScrollView
               className="flex-1"
@@ -422,7 +428,12 @@ export default function CharacterSheet() {
           </View>
         </View>
       </Modal>
-      <Modal visible={showFullImage} transparent animationType="fade">
+      <Modal
+        visible={showFullImage}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFullImage(false)}
+      >
         <Pressable
           style={{
             flex: 1,
