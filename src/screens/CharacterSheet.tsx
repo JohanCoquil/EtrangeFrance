@@ -268,10 +268,42 @@ export default function CharacterSheet() {
 
       const data = await response.json();
 
-      const edges =
+      const userId = data?.data?.user?.id;
+      let edges =
         data?.data?.user?.edge_owner_to_timeline_media?.edges ||
         data?.items ||
         [];
+
+      // Try to load more images to reach 100 items
+      if (userId) {
+        try {
+          let cursor =
+            data?.data?.user?.edge_owner_to_timeline_media?.page_info?.end_cursor;
+          let hasNext =
+            data?.data?.user?.edge_owner_to_timeline_media?.page_info?.has_next_page;
+          while (edges.length < 100 && hasNext && cursor) {
+            const nextResp = await fetch(
+              `https://www.instagram.com/api/v1/feed/user/${userId}/?count=50&max_id=${cursor}`,
+              {
+                headers: {
+                  "User-Agent": "Mozilla/5.0",
+                  "x-ig-app-id": "936619743392459",
+                },
+              },
+            );
+            if (!nextResp.ok) break;
+            const nextData = await nextResp.json();
+            const nextItems = nextData?.items || [];
+            edges = edges.concat(nextItems);
+            cursor = nextData?.next_max_id;
+            hasNext = !!cursor;
+          }
+        } catch (err) {
+          console.error("Error fetching instagram feed", err);
+        }
+      }
+
+      edges = edges.slice(0, 100);
 
       if (!edges.length) {
         alert("Aucune illustration trouvée");
@@ -282,6 +314,7 @@ export default function CharacterSheet() {
       const filtered = edges.filter((edge: any) => {
         const caption =
           edge?.node?.edge_media_to_caption?.edges?.[0]?.node?.text ||
+          edge?.caption?.text ||
           edge?.caption ||
           "";
         return query ? caption.toLowerCase().includes(query) : true;
@@ -289,7 +322,12 @@ export default function CharacterSheet() {
 
       const urls = filtered
         .slice(0, 4)
-        .map((e: any) => e?.node?.display_url || e?.display_url)
+        .map(
+          (e: any) =>
+            e?.node?.display_url ||
+            e?.display_url ||
+            e?.image_versions2?.candidates?.[0]?.url,
+        )
         .filter(Boolean);
 
       if (!urls.length) {
