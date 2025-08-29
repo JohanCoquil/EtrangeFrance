@@ -64,6 +64,37 @@ export default function CharacterSheet() {
   const [officialResults, setOfficialResults] = useState<string[]>([]);
   const [showOfficialPicker, setShowOfficialPicker] = useState(false);
   const [loadingOfficial, setLoadingOfficial] = useState(false);
+  const INSTAGRAM_USERNAME = "yoxigenn";
+  const INSTAGRAM_PASSWORD = "FLuyFx05cl5";
+
+  const loginInstagram = async () => {
+    const timestamp = Math.floor(Date.now() / 1000);
+    const res = await fetch(
+      "https://www.instagram.com/api/v1/web/accounts/login/ajax/",
+      {
+        method: "POST",
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          "X-IG-App-ID": "936619743392459",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: `username=${encodeURIComponent(
+          INSTAGRAM_USERNAME,
+        )}&enc_password=${encodeURIComponent(
+          `#PWD_INSTAGRAM_BROWSER:0:${timestamp}:${INSTAGRAM_PASSWORD}`,
+        )}`,
+      },
+    );
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("Instagram login failed", text);
+      throw new Error("Instagram login failed");
+    }
+
+    const cookie = res.headers.get("set-cookie") || "";
+    return cookie;
+  };
   const updateAvatar = useUpdateAvatar();
   const updateSheet = useUpdateCharacterSheet();
   const { data: characters, isLoading } = useCharacters();
@@ -255,13 +286,14 @@ export default function CharacterSheet() {
       setOfficialResults([]);
       setShowOfficialPicker(true);
       setLoadingOfficial(true);
-
+      const cookie = await loginInstagram();
       const response = await fetch(
         "https://www.instagram.com/api/v1/users/web_profile_info/?username=fletch_gp",
         {
           headers: {
             "User-Agent": "Mozilla/5.0",
             "x-ig-app-id": "936619743392459",
+            Cookie: cookie,
           },
         },
       );
@@ -296,6 +328,7 @@ export default function CharacterSheet() {
                 headers: {
                   "User-Agent": "Mozilla/5.0",
                   "x-ig-app-id": "936619743392459",
+                  Cookie: cookie,
                 },
               },
             );
