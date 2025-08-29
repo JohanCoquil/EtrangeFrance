@@ -59,6 +59,9 @@ export default function CharacterSheet() {
   } | null>(null);
   const [showAvatar, setShowAvatar] = useState(false);
   const [avatar, setAvatar] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [officialResults, setOfficialResults] = useState<string[]>([]);
+  const [showOfficialPicker, setShowOfficialPicker] = useState(false);
   const updateAvatar = useUpdateAvatar();
   const updateSheet = useUpdateCharacterSheet();
   const { data: characters, isLoading } = useCharacters();
@@ -275,13 +278,35 @@ export default function CharacterSheet() {
         return;
       }
 
-      const randomEdge = edges[Math.floor(Math.random() * edges.length)];
-      const imageUrl = randomEdge?.node?.display_url || randomEdge?.display_url;
-      if (!imageUrl) {
-        alert("Illustration introuvable");
+      const query = searchQuery.trim().toLowerCase();
+      const filtered = edges.filter((edge: any) => {
+        const caption =
+          edge?.node?.edge_media_to_caption?.edges?.[0]?.node?.text ||
+          edge?.caption ||
+          "";
+        return query ? caption.toLowerCase().includes(query) : true;
+      });
+
+      const urls = filtered
+        .slice(0, 4)
+        .map((e: any) => e?.node?.display_url || e?.display_url)
+        .filter(Boolean);
+
+      if (!urls.length) {
+        alert("Aucune illustration trouvée");
         return;
       }
 
+      setOfficialResults(urls);
+      setShowOfficialPicker(true);
+    } catch (error) {
+      console.error("Error fetching official avatar", error);
+      alert("Erreur lors de la récupération de l'avatar officiel");
+    }
+  };
+
+  const handleSelectOfficialAvatar = async (imageUrl: string) => {
+    try {
       const relativePath = `avatars/${characterId}.jpg`;
       const dir = FileSystem.documentDirectory + "avatars";
       await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
@@ -291,8 +316,9 @@ export default function CharacterSheet() {
       );
       setAvatar(relativePath);
       await updateAvatar.mutateAsync({ id: characterId, avatar: relativePath });
+      setShowOfficialPicker(false);
     } catch (error) {
-      console.error("Error fetching official avatar", error);
+      console.error("Error selecting official avatar", error);
       alert("Erreur lors de la récupération de l'avatar officiel");
     }
   };
@@ -401,12 +427,49 @@ export default function CharacterSheet() {
               className="w-80 h-80"
               resizeMode="contain"
             />
+            <TextInput
+              placeholder="Mots clés"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              className="mt-4 w-64 h-10 bg-white rounded px-2"
+            />
             <Button className="mt-4" onPress={pickAvatar}>
               Modifier l'avatar
             </Button>
             <Button className="mt-2" onPress={pickOfficialAvatar}>
               Choisir parmi les illustrations officielles
             </Button>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={showOfficialPicker} transparent animationType="fade">
+        <View className="flex-1 bg-black/60 items-center justify-center">
+          <Pressable
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
+            }}
+            onPress={() => setShowOfficialPicker(false)}
+          />
+          <View className="bg-white p-4 rounded-xl">
+            <View className="flex-row flex-wrap justify-center">
+              {officialResults.map((url, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  className="m-2"
+                  onPress={() => handleSelectOfficialAvatar(url)}
+                >
+                  <Image
+                    source={{ uri: url }}
+                    className="w-32 h-32"
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
       </Modal>
