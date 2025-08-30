@@ -1,5 +1,6 @@
 import * as SQLite from "expo-sqlite";
 import * as SecureStore from "expo-secure-store";
+import * as FileSystem from "expo-file-system";
 import { getDb } from "./db";
 
 const API_URL = "https://api.scriptonautes.net/api/records";
@@ -44,7 +45,6 @@ export async function syncCharacters() {
       fetiches: char.fetiches ?? null,
       trigger_effects: char.trigger_effects ?? null,
       bonuses: char.bonuses ?? null,
-      avatar: char.avatar ?? null,
     };
 
     try {
@@ -68,6 +68,20 @@ export async function syncCharacters() {
         "UPDATE characters SET distant_id = ? WHERE id = ?",
         [remoteId, char.id]
       );
+
+      if (char.avatar) {
+        try {
+          const localUri = FileSystem.documentDirectory + char.avatar;
+          const remotePath = await uploadCharacterAvatar(localUri, remoteId);
+          await db.runAsync(
+            "UPDATE characters SET avatar_distant = ? WHERE id = ?",
+            [remotePath, char.id]
+          );
+        } catch (err) {
+          console.error("Failed to upload avatar", err);
+        }
+      }
+
       await syncDesk(db, char.id, remoteId);
       await syncCharacterSkills(db, char.id, remoteId);
       await syncCharacterCapacites(db, char.id, remoteId);
@@ -75,6 +89,43 @@ export async function syncCharacters() {
       console.error("Failed to push character", e);
     }
   }
+}
+
+function getMimeType(uri: string) {
+  const ext = uri.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "png":
+      return "image/png";
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    default:
+      return "image/jpeg";
+  }
+}
+
+async function uploadCharacterAvatar(localUri: string, characterId: number) {
+  const apiUrl = `https://api.scriptonautes.net/upload.php?type=avatar&entity=characters&id=${characterId}`;
+  const mimeType = getMimeType(localUri);
+
+  const formData = new FormData();
+  formData.append("file", {
+    uri: localUri,
+    name: "avatar.jpg",
+    type: mimeType,
+  } as any);
+
+  const res = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+    body: formData,
+  });
+
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || "Upload failed");
+  return json.path as string;
 }
 
 async function syncDesk(
