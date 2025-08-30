@@ -1,4 +1,5 @@
 import * as SQLite from "expo-sqlite";
+import * as SecureStore from "expo-secure-store";
 import { getDb } from "./db";
 
 const API_URL = "https://api.scriptonautes.net/api/records";
@@ -9,8 +10,13 @@ export async function syncCharacters() {
     "SELECT * FROM characters WHERE distant_id = 0"
   )) as any[];
 
+  const storedUser = await SecureStore.getItemAsync("user");
+  const userId = storedUser ? JSON.parse(storedUser).id : null;
+
   for (const char of characters) {
     const payload: Record<string, any> = {
+      id: char.id,
+      user_id: userId,
       name: char.name,
       profession_id: char.profession_id ?? null,
       profession_score: char.profession_score ?? 0,
