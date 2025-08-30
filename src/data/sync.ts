@@ -40,7 +40,7 @@ async function pushTable(
       });
       if (res.ok) {
         const json = await res.json();
-        const newId = json.id ?? json[0]?.id;
+        const newId = json.id ?? json[0]?.id ?? json.records?.[0]?.id;
         if (newId) {
           await db.runAsync(
             `UPDATE ${table} SET distant_id = ? WHERE id = ?`,
@@ -70,7 +70,7 @@ async function pushProfessionSkills(db: SQLite.SQLiteDatabase) {
       });
       if (res.ok) {
         const json = await res.json();
-        const newId = json.id ?? json[0]?.id;
+        const newId = json.id ?? json[0]?.id ?? json.records?.[0]?.id;
         if (newId) {
           await db.runAsync(
             "UPDATE profession_skills SET distant_id = ? WHERE profession_id = ? AND skill_id = ?",
