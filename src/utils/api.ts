@@ -22,3 +22,14 @@ export async function apiFetch(
   logApiCall(url, method, body);
   return fetch(url, options);
 }
+
+export function extractRecordId(json: any): number | undefined {
+  const id =
+    json?.id ??
+    json?.record?.id ??
+    json?.records?.id ??
+    json?.data?.id ??
+    json?.[0]?.id ??
+    json?.records?.[0]?.id;
+  return id !== undefined ? Number(id) : undefined;
+}

@@ -2,7 +2,7 @@ import * as SQLite from "expo-sqlite";
 import * as SecureStore from "expo-secure-store";
 import * as FileSystem from "expo-file-system";
 import { getDb } from "./db";
-import { apiFetch, logApiCall } from "../utils/api";
+import { apiFetch, logApiCall, extractRecordId } from "../utils/api";
 
 const API_URL = "https://api.scriptonautes.net/api/records";
 
@@ -66,7 +66,7 @@ export async function syncCharacters() {
         continue;
       }
       const json = await res.json();
-      const remoteId = json.id ?? json[0]?.id ?? json.records?.[0]?.id;
+      const remoteId = extractRecordId(json);
       console.log(`Remote ID for character ${char.id}:`, remoteId);
       if (!remoteId) continue;
       await db.runAsync("UPDATE characters SET distant_id = ? WHERE id = ?", [
@@ -228,7 +228,7 @@ async function syncCharacterSkills(
         continue;
       }
       const json = await res.json();
-      const newId = json.id ?? json[0]?.id ?? json.records?.[0]?.id;
+      const newId = extractRecordId(json);
       if (newId) {
         await db.runAsync(
           "UPDATE character_skills SET distant_id = ? WHERE character_id = ? AND skill_id = ?",
@@ -274,7 +274,7 @@ async function syncCharacterCapacites(
         continue;
       }
       const json = await res.json();
-      const newId = json.id ?? json[0]?.id ?? json.records?.[0]?.id;
+      const newId = extractRecordId(json);
       if (newId) {
         await db.runAsync(
           "UPDATE character_capacites SET distant_id = ? WHERE character_id = ? AND capacite_id = ?",
