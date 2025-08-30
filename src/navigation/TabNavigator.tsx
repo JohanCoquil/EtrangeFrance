@@ -98,6 +98,7 @@ export default function TabNavigator() {
         component={HomeScreen}
         options={{
           title: user?.login || 'Accueil',
+          tabBarLabel: 'Accueil',
           tabBarIcon: () => null, // Vous pouvez ajouter des icônes plus tard
           headerRight: () => (
             <HeaderButtons
