@@ -63,17 +63,43 @@ export default function CharactersScreen() {
                       </Text>
                     )}
                     <View className="flex-row gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onPress={() => {
-                          const id = String(char.id);
-                          const url = `https://api.scriptonautes.net/generate-character-pdf.php?id=${id}`;
-                          Linking.openURL(url);
-                        }}
-                      >
-                        <Download color="#fff" size={16} />
-                      </Button>
+                      {char.distant_id && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onPress={async () => {
+                            const id = String(char.distant_id);
+                            const url = `https://api.scriptonautes.net/generate-character-pdf.php?id=${id}`;
+                            console.log("API URL:", url);
+                            console.log("Request payload:", { id });
+                            try {
+                              const response = await fetch(url);
+                              console.log(
+                                "API response status:",
+                                response.status
+                              );
+                              const text = await response.text();
+                              console.log("API response body:", text);
+                              if (response.ok) {
+                                Linking.openURL(url);
+                              } else {
+                                Alert.alert(
+                                  "Erreur",
+                                  "Impossible de télécharger le PDF"
+                                );
+                              }
+                            } catch (error) {
+                              console.log("API error:", error);
+                              Alert.alert(
+                                "Erreur",
+                                "Impossible de générer le PDF"
+                              );
+                            }
+                          }}
+                        >
+                          <Download color="#fff" size={16} />
+                        </Button>
+                      )}
                       <Button
                         variant="danger"
                         size="sm"
