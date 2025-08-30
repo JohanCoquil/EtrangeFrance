@@ -73,6 +73,22 @@ export async function syncCharacters() {
         try {
           const localUri = FileSystem.documentDirectory + char.avatar;
           const remotePath = await uploadCharacterAvatar(localUri, remoteId);
+
+          // push avatar path to remote record
+          const patchRes = await fetch(`${API_URL}/characters/${remoteId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ avatar_distant: remotePath }),
+          });
+          const patchText = await patchRes.text();
+          console.log("PATCH /characters avatar", patchRes.status, patchText);
+
+          if (!patchRes.ok) {
+            console.error(
+              `Failed to update remote avatar for ${char.id}: ${patchRes.status} ${patchRes.statusText} - ${patchText}`,
+            );
+          }
+
           await db.runAsync(
             "UPDATE characters SET avatar_distant = ? WHERE id = ?",
             [remotePath, char.id]
@@ -80,6 +96,8 @@ export async function syncCharacters() {
         } catch (err) {
           console.error("Failed to upload avatar", err);
         }
+      } else {
+        console.log(`Character ${char.id} has no avatar to upload`);
       }
 
       await syncDesk(db, char.id, remoteId);
@@ -110,29 +128,24 @@ async function uploadCharacterAvatar(localUri: string, characterId: number) {
 
   console.log("Uploading avatar", { apiUrl, localUri, mimeType });
 
-  const formData = new FormData();
-  formData.append("file", {
-    uri: localUri,
-    name: "avatar.jpg",
-    type: mimeType,
-  } as any);
-
-  const res = await fetch(apiUrl, {
-    method: "POST",
-    body: formData,
+  const uploadRes = await FileSystem.uploadAsync(apiUrl, localUri, {
+    httpMethod: "POST",
+    uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+    fieldName: "file",
+    mimeType,
   });
 
-  const responseText = await res.text();
-  console.log("Upload avatar response", res.status, responseText);
+  console.log("Upload avatar response", uploadRes.status, uploadRes.body);
 
   let json: any = {};
   try {
-    json = JSON.parse(responseText);
+    json = JSON.parse(uploadRes.body);
   } catch (e) {
     console.warn("Avatar upload response is not JSON", e);
   }
 
-  if (!res.ok) throw new Error(json.error || "Upload failed");
+  if (uploadRes.status < 200 || uploadRes.status >= 300)
+    throw new Error(json.error || "Upload failed");
   if (!json.path) throw new Error("Upload response missing path");
   return json.path as string;
 }
