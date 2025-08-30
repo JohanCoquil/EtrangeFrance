@@ -8,8 +8,12 @@ const API_URL = "https://api.scriptonautes.net/api/records";
 
 export async function syncCharacters() {
   const db = getDb();
-  const characters = (await db.getAllAsync(
-    "SELECT * FROM characters WHERE distant_id = 0"
+  const newCharacters = (await db.getAllAsync(
+    "SELECT * FROM characters WHERE distant_id = 0",
+  )) as any[];
+
+  const avatarsToSync = (await db.getAllAsync(
+    "SELECT * FROM characters WHERE distant_id != 0 AND avatar IS NOT NULL AND avatar != '' AND (avatar_distant IS NULL OR avatar_distant = '')",
   )) as any[];
 
   const storedUser = await SecureStore.getItemAsync("user");
@@ -19,7 +23,42 @@ export async function syncCharacters() {
     return;
   }
 
-  for (const char of characters) {
+  for (const char of avatarsToSync) {
+    try {
+      const localUri = FileSystem.documentDirectory + char.avatar;
+      console.log(
+        `Uploading avatar for existing character ${char.id} (remote ${char.distant_id})`,
+      );
+      const remotePath = await uploadCharacterAvatar(localUri, char.distant_id);
+
+      logApiCall(`${API_URL}/characters/${char.distant_id}`, "PATCH");
+      const patchRes = await apiFetch(
+        `${API_URL}/characters/${char.distant_id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ avatar_distant: remotePath }),
+        },
+      );
+      const patchText = await patchRes.text();
+      console.log("PATCH /characters avatar", patchRes.status, patchText);
+
+      if (!patchRes.ok) {
+        console.error(
+          `Failed to update remote avatar for ${char.id}: ${patchRes.status} ${patchRes.statusText} - ${patchText}`,
+        );
+      }
+
+      await db.runAsync(
+        "UPDATE characters SET avatar_distant = ? WHERE id = ?",
+        [remotePath, char.id],
+      );
+    } catch (err) {
+      console.error("Failed to upload avatar for existing character", err);
+    }
+  }
+
+  for (const char of newCharacters) {
     const payload: Record<string, any> = {
       id: char.id,
       user_id: userId,
@@ -57,17 +96,17 @@ export async function syncCharacters() {
       if (!res.ok) {
         const errorText = await res.text();
         console.error(
-          `Failed to push character ${char.id}: ${res.status} ${res.statusText} - ${errorText}`
+          `Failed to push character ${char.id}: ${res.status} ${res.statusText} - ${errorText}`,
         );
         continue;
       }
       const json = await res.json();
       const remoteId = json.id ?? json[0]?.id ?? json.records?.[0]?.id;
       if (!remoteId) continue;
-      await db.runAsync(
-        "UPDATE characters SET distant_id = ? WHERE id = ?",
-        [remoteId, char.id]
-      );
+      await db.runAsync("UPDATE characters SET distant_id = ? WHERE id = ?", [
+        remoteId,
+        char.id,
+      ]);
 
       if (char.avatar) {
         try {
@@ -91,7 +130,7 @@ export async function syncCharacters() {
 
           await db.runAsync(
             "UPDATE characters SET avatar_distant = ? WHERE id = ?",
-            [remotePath, char.id]
+            [remotePath, char.id],
           );
         } catch (err) {
           console.error("Failed to upload avatar", err);
@@ -153,11 +192,11 @@ async function uploadCharacterAvatar(localUri: string, characterId: number) {
 async function syncDesk(
   db: SQLite.SQLiteDatabase,
   localId: string,
-  remoteId: number
+  remoteId: number,
 ) {
   const rows = (await db.getAllAsync(
     "SELECT figure, cards FROM desk WHERE user_id = ?",
-    [localId]
+    [localId],
   )) as any[];
   for (const row of rows) {
     try {
@@ -174,7 +213,7 @@ async function syncDesk(
       if (!res.ok) {
         const errorText = await res.text();
         console.error(
-          `Failed to push desk row for character ${localId}: ${res.status} ${res.statusText} - ${errorText}`
+          `Failed to push desk row for character ${localId}: ${res.status} ${res.statusText} - ${errorText}`,
         );
       }
     } catch (e) {
@@ -186,11 +225,11 @@ async function syncDesk(
 async function syncCharacterSkills(
   db: SQLite.SQLiteDatabase,
   localId: string,
-  remoteId: number
+  remoteId: number,
 ) {
   const rows = (await db.getAllAsync(
     `SELECT cs.*, s.distant_id as skill_distant_id FROM character_skills cs JOIN skills s ON cs.skill_id = s.id WHERE cs.character_id = ? AND cs.distant_id = 0`,
-    [localId]
+    [localId],
   )) as any[];
 
   for (const row of rows) {
@@ -208,7 +247,7 @@ async function syncCharacterSkills(
       if (!res.ok) {
         const errorText = await res.text();
         console.error(
-          `Failed to push character_skills row for character ${localId}: ${res.status} ${res.statusText} - ${errorText}`
+          `Failed to push character_skills row for character ${localId}: ${res.status} ${res.statusText} - ${errorText}`,
         );
         continue;
       }
@@ -217,7 +256,7 @@ async function syncCharacterSkills(
       if (newId) {
         await db.runAsync(
           "UPDATE character_skills SET distant_id = ? WHERE character_id = ? AND skill_id = ?",
-          [newId, localId, row.skill_id]
+          [newId, localId, row.skill_id],
         );
       }
     } catch (e) {
@@ -229,11 +268,11 @@ async function syncCharacterSkills(
 async function syncCharacterCapacites(
   db: SQLite.SQLiteDatabase,
   localId: string,
-  remoteId: number
+  remoteId: number,
 ) {
   const rows = (await db.getAllAsync(
     `SELECT cc.*, c.distant_id as capacite_distant_id FROM character_capacites cc JOIN capacites c ON cc.capacite_id = c.id WHERE cc.character_id = ? AND cc.distant_id = 0`,
-    [localId]
+    [localId],
   )) as any[];
 
   for (const row of rows) {
@@ -251,7 +290,7 @@ async function syncCharacterCapacites(
       if (!res.ok) {
         const errorText = await res.text();
         console.error(
-          `Failed to push character_capacites row for character ${localId}: ${res.status} ${res.statusText} - ${errorText}`
+          `Failed to push character_capacites row for character ${localId}: ${res.status} ${res.statusText} - ${errorText}`,
         );
         continue;
       }
@@ -260,7 +299,7 @@ async function syncCharacterCapacites(
       if (newId) {
         await db.runAsync(
           "UPDATE character_capacites SET distant_id = ? WHERE character_id = ? AND capacite_id = ?",
-          [newId, localId, row.capacite_id]
+          [newId, localId, row.capacite_id],
         );
       }
     } catch (e) {
@@ -268,4 +307,3 @@ async function syncCharacterCapacites(
     }
   }
 }
-
