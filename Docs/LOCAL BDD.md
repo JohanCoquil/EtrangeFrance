@@ -196,10 +196,10 @@ CREATE TABLE druide_divinites (
 ```sql
 CREATE TABLE desk (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id TEXT NOT NULL,
+  character_id TEXT NOT NULL,
   figure TEXT NOT NULL CHECK (figure IN ('Carreau','Coeur','Trèfle','Pique')),
   cards TEXT NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES characters(id) ON DELETE CASCADE
+  FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
 );
 ```
 
@@ -211,7 +211,7 @@ CREATE INDEX idx_voie_capacite_voie_id ON voie_capacite(voie_id);
 CREATE INDEX idx_character_capacites_character_id ON character_capacites(character_id);
 CREATE INDEX idx_profession_skills_skill_id ON profession_skills(skill_id);
 CREATE INDEX idx_character_skills_character_id ON character_skills(character_id);
-CREATE INDEX idx_desk_user_id ON desk(user_id);
+CREATE INDEX idx_desk_character_id ON desk(character_id);
 CREATE INDEX idx_characters_profession_id ON characters(profession_id);
 CREATE INDEX idx_characters_divinity_id ON characters(divinity_id);
 ```

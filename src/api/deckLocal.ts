@@ -7,7 +7,7 @@ export function useDeck(userId: string) {
     queryFn: async () => {
       const db = getDb();
       return await db.getAllAsync(
-        "SELECT figure, cards FROM desk WHERE user_id = ?",
+        "SELECT figure, cards FROM desk WHERE character_id = ?",
         [userId]
       );
     },

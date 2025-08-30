@@ -31,7 +31,7 @@ export function useAddCharacter() {
       const figures = ["Carreau", "Coeur", "Trèfle", "Pique"];
       const randomFigure = figures[Math.floor(Math.random() * figures.length)];
       await db.runAsync(
-        "INSERT INTO desk (user_id, figure, cards) VALUES (?, ?, ?)",
+        "INSERT INTO desk (character_id, figure, cards) VALUES (?, ?, ?)",
         [character.id, randomFigure, defaultCards],
       );
 
