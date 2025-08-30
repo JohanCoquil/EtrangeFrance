@@ -65,8 +65,8 @@ export async function syncCharacters() {
         );
         continue;
       }
-      const json = await res.json();
-      const remoteId = extractRecordId(json);
+      const text = await res.text();
+      const remoteId = extractRecordId(text);
       console.log(`Remote ID for character ${char.id}:`, remoteId);
       if (!remoteId) continue;
       await db.runAsync("UPDATE characters SET distant_id = ? WHERE id = ?", [
@@ -227,8 +227,8 @@ async function syncCharacterSkills(
         );
         continue;
       }
-      const json = await res.json();
-      const newId = extractRecordId(json);
+      const text = await res.text();
+      const newId = extractRecordId(text);
       if (newId) {
         await db.runAsync(
           "UPDATE character_skills SET distant_id = ? WHERE character_id = ? AND skill_id = ?",
@@ -273,8 +273,8 @@ async function syncCharacterCapacites(
         );
         continue;
       }
-      const json = await res.json();
-      const newId = extractRecordId(json);
+      const text = await res.text();
+      const newId = extractRecordId(text);
       if (newId) {
         await db.runAsync(
           "UPDATE character_capacites SET distant_id = ? WHERE character_id = ? AND capacite_id = ?",
