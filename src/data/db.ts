@@ -154,16 +154,26 @@ export const initDb = async () => {
 
     CREATE TABLE IF NOT EXISTS desk (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id TEXT NOT NULL,
+      character_id TEXT NOT NULL,
       figure TEXT NOT NULL CHECK (figure IN ('Carreau','Coeur','Trèfle','Pique')),
       cards TEXT NOT NULL,
-      FOREIGN KEY (user_id) REFERENCES characters(id) ON DELETE CASCADE
+      FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
     );
-    CREATE INDEX IF NOT EXISTS idx_desk_user_id ON desk(user_id);
 
   `);
-  
+
   // Ensure new columns exist for older databases
+  const deskCols = await database.getAllAsync("PRAGMA table_info(desk);");
+  const hasDeskCharacterId = deskCols.some((c: any) => c.name === "character_id");
+  const hasDeskUserId = deskCols.some((c: any) => c.name === "user_id");
+  if (!hasDeskCharacterId && hasDeskUserId) {
+    await database.execAsync(
+      "ALTER TABLE desk RENAME COLUMN user_id TO character_id;",
+    );
+  }
+  await database.execAsync(
+    "CREATE INDEX IF NOT EXISTS idx_desk_character_id ON desk(character_id);",
+  );
   const voieCapaciteCols = await database.getAllAsync("PRAGMA table_info(voie_capacite);");
   const hasVcDistantId = voieCapaciteCols.some((c: any) => c.name === "distant_id");
   if (!hasVcDistantId) {

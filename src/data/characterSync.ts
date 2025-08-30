@@ -83,21 +83,6 @@ export async function syncCharacters() {
             `Avatar uploaded for character ${char.id}: ${remotePath}`,
           );
 
-          // push avatar path to remote record
-          const patchRes = await apiFetch(`${API_URL}/characters/${remoteId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ avatar_distant: remotePath }),
-          });
-          const patchText = await patchRes.text();
-          console.log("PATCH /characters avatar", patchRes.status, patchText);
-
-          if (!patchRes.ok) {
-            console.error(
-              `Failed to update remote avatar for ${char.id}: ${patchRes.status} ${patchRes.statusText} - ${patchText}`,
-            );
-          }
-
           await db.runAsync(
             "UPDATE characters SET avatar_distant = ? WHERE id = ?",
             [remotePath, char.id],
@@ -168,14 +153,14 @@ async function syncDesk(
 ) {
   console.log(`syncDesk for character ${localId}`);
   const rows = (await db.getAllAsync(
-    "SELECT figure, cards FROM desk WHERE user_id = ?",
+    "SELECT figure, cards FROM desk WHERE character_id = ?",
     [localId],
   )) as any[];
   console.log(`Found ${rows.length} desk rows for character ${localId}`);
   for (const row of rows) {
     try {
       const payload = {
-        user_id: remoteId,
+        character_id: remoteId,
         figure: row.figure,
         cards: row.cards,
       };
