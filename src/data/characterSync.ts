@@ -250,7 +250,7 @@ async function syncCharacterCapacites(
       const res = await apiFetch(`${API_URL}/character_capacites`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload, ["character_id", "capacite_id", "level"]),
       });
       console.log(`POST /character_capacites status: ${res.status}`);
       if (!res.ok) {
