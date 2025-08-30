@@ -12,6 +12,10 @@ export async function syncCharacters() {
 
   const storedUser = await SecureStore.getItemAsync("user");
   const userId = storedUser ? JSON.parse(storedUser).id : null;
+  if (!userId) {
+    console.warn("No user ID found, skipping character sync");
+    return;
+  }
 
   for (const char of characters) {
     const payload: Record<string, any> = {

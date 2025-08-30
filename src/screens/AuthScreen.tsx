@@ -72,7 +72,15 @@ export default function AuthScreen({ navigation }: Props) {
 
         if (res.ok) {
           const json = await res.json();
-          const id = json.id ?? json[0]?.id ?? json.records?.[0]?.id;
+          const id =
+            json.id ?? json.record?.id ?? json[0]?.id ?? json.records?.[0]?.id;
+          if (!id || (json.status && json.status !== 'OK')) {
+            const err =
+              (typeof json === 'object' && json.error) ||
+              "Impossible de récupérer l'identifiant utilisateur.";
+            Alert.alert('Erreur', err);
+            return;
+          }
           await SecureStore.setItemAsync(
             'user',
             JSON.stringify({ id, login: username })
