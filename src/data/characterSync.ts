@@ -38,6 +38,7 @@ export async function syncCharacters() {
     };
 
     try {
+      console.log("POST /characters", payload);
       const res = await fetch(`${API_URL}/characters`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -77,14 +78,16 @@ async function syncDesk(
   )) as any[];
   for (const row of rows) {
     try {
+      const payload = {
+        user_id: remoteId,
+        figure: row.figure,
+        cards: row.cards,
+      };
+      console.log("POST /desk", payload);
       const res = await fetch(`${API_URL}/desk`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: remoteId,
-          figure: row.figure,
-          cards: row.cards,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const errorText = await res.text();
@@ -110,14 +113,16 @@ async function syncCharacterSkills(
 
   for (const row of rows) {
     try {
+      const payload = {
+        character_id: remoteId,
+        skill_id: row.skill_distant_id,
+        level: row.level,
+      };
+      console.log("POST /character_skills", payload);
       const res = await fetch(`${API_URL}/character_skills`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          character_id: remoteId,
-          skill_id: row.skill_distant_id,
-          level: row.level,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const errorText = await res.text();
@@ -152,14 +157,16 @@ async function syncCharacterCapacites(
 
   for (const row of rows) {
     try {
+      const payload = {
+        character_id: remoteId,
+        capacite_id: row.capacite_distant_id,
+        level: row.level,
+      };
+      console.log("POST /character_capacites", payload);
       const res = await fetch(`${API_URL}/character_capacites`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          character_id: remoteId,
-          capacite_id: row.capacite_distant_id,
-          level: row.level,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const errorText = await res.text();
