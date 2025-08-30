@@ -43,7 +43,13 @@ export async function syncCharacters() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) continue;
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(
+          `Failed to push character ${char.id}: ${res.status} ${res.statusText} - ${errorText}`
+        );
+        continue;
+      }
       const json = await res.json();
       const remoteId = json.id ?? json[0]?.id;
       if (!remoteId) continue;
@@ -71,7 +77,7 @@ async function syncDesk(
   )) as any[];
   for (const row of rows) {
     try {
-      await fetch(`${API_URL}/desk`, {
+      const res = await fetch(`${API_URL}/desk`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -80,6 +86,12 @@ async function syncDesk(
           cards: row.cards,
         }),
       });
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(
+          `Failed to push desk row for character ${localId}: ${res.status} ${res.statusText} - ${errorText}`
+        );
+      }
     } catch (e) {
       console.error("Failed to push desk row", e);
     }
@@ -107,15 +119,20 @@ async function syncCharacterSkills(
           level: row.level,
         }),
       });
-      if (res.ok) {
-        const json = await res.json();
-        const newId = json.id ?? json[0]?.id;
-        if (newId) {
-          await db.runAsync(
-            "UPDATE character_skills SET distant_id = ? WHERE character_id = ? AND skill_id = ?",
-            [newId, localId, row.skill_id]
-          );
-        }
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(
+          `Failed to push character_skills row for character ${localId}: ${res.status} ${res.statusText} - ${errorText}`
+        );
+        continue;
+      }
+      const json = await res.json();
+      const newId = json.id ?? json[0]?.id;
+      if (newId) {
+        await db.runAsync(
+          "UPDATE character_skills SET distant_id = ? WHERE character_id = ? AND skill_id = ?",
+          [newId, localId, row.skill_id]
+        );
       }
     } catch (e) {
       console.error("Failed to push character_skills row", e);
@@ -144,15 +161,20 @@ async function syncCharacterCapacites(
           level: row.level,
         }),
       });
-      if (res.ok) {
-        const json = await res.json();
-        const newId = json.id ?? json[0]?.id;
-        if (newId) {
-          await db.runAsync(
-            "UPDATE character_capacites SET distant_id = ? WHERE character_id = ? AND capacite_id = ?",
-            [newId, localId, row.capacite_id]
-          );
-        }
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(
+          `Failed to push character_capacites row for character ${localId}: ${res.status} ${res.statusText} - ${errorText}`
+        );
+        continue;
+      }
+      const json = await res.json();
+      const newId = json.id ?? json[0]?.id;
+      if (newId) {
+        await db.runAsync(
+          "UPDATE character_capacites SET distant_id = ? WHERE character_id = ? AND capacite_id = ?",
+          [newId, localId, row.capacite_id]
+        );
       }
     } catch (e) {
       console.error("Failed to push character_capacites row", e);
