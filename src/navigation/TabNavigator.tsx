@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { Alert, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
@@ -71,6 +71,13 @@ export default function TabNavigator() {
     navigation.getParent()?.replace('Auth');
   };
 
+  const confirmLogout = () => {
+    Alert.alert('Déconnexion', 'Voulez-vous vraiment vous déconnecter ?', [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Se déconnecter', onPress: handleLogout },
+    ]);
+  };
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -95,7 +102,7 @@ export default function TabNavigator() {
           headerRight: () => (
             <HeaderButtons
               showLogout={!!user}
-              onLogout={handleLogout}
+              onLogout={confirmLogout}
             />
           ),
         }}
