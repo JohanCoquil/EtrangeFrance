@@ -1,7 +1,9 @@
-import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useNavigation } from '@react-navigation/native';
+import * as SecureStore from 'expo-secure-store';
 import HomeScreen from '../screens/HomeScreen';
 import CharactersScreen from '../screens/CharactersScreen';
 import AgencyScreen from '../screens/AgencyScreen';
@@ -19,24 +21,56 @@ export type TabParamList = {
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
-function SoundToggleButton() {
+function HeaderButtons({
+  onLogout,
+  showLogout,
+}: {
+  onLogout?: () => void;
+  showLogout: boolean;
+}) {
   const { musicEnabled, setMusicEnabled } = usePlayMusic();
 
   return (
-    <TouchableOpacity
-      onPress={() => setMusicEnabled(!musicEnabled)}
-      style={{ marginRight: 16 }}
-    >
-      <Ionicons
-        name={musicEnabled ? 'volume-high' : 'volume-mute'}
-        size={24}
-        color="#ffffff"
-      />
-    </TouchableOpacity>
+    <View style={{ flexDirection: 'row', marginRight: 16 }}>
+      <TouchableOpacity
+        onPress={() => setMusicEnabled(!musicEnabled)}
+        style={{ marginRight: showLogout ? 16 : 0 }}
+      >
+        <Ionicons
+          name={musicEnabled ? 'volume-high' : 'volume-mute'}
+          size={24}
+          color="#ffffff"
+        />
+      </TouchableOpacity>
+      {showLogout && (
+        <TouchableOpacity onPress={onLogout}>
+          <Ionicons name="log-out-outline" size={24} color="#ffffff" />
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 
 export default function TabNavigator() {
+  const navigation = useNavigation<any>();
+  const [user, setUser] = useState<{ id: number; login: string } | null>(
+    null
+  );
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const stored = await SecureStore.getItemAsync('user');
+      if (stored) setUser(JSON.parse(stored));
+    };
+    loadUser();
+  }, []);
+
+  const handleLogout = async () => {
+    await SecureStore.deleteItemAsync('user');
+    setUser(null);
+    navigation.getParent()?.replace('Auth');
+  };
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -56,9 +90,14 @@ export default function TabNavigator() {
         name="Home"
         component={HomeScreen}
         options={{
-          title: 'Accueil',
+          title: user?.login || 'Accueil',
           tabBarIcon: () => null, // Vous pouvez ajouter des icônes plus tard
-          headerRight: () => <SoundToggleButton />,
+          headerRight: () => (
+            <HeaderButtons
+              showLogout={!!user}
+              onLogout={handleLogout}
+            />
+          ),
         }}
       />
       <Tab.Screen
@@ -66,7 +105,7 @@ export default function TabNavigator() {
         component={CharactersScreen}
         options={{
           title: 'Personnages',
-          tabBarIcon: () => null
+          tabBarIcon: () => null,
         }}
       />
       <Tab.Screen
@@ -74,7 +113,7 @@ export default function TabNavigator() {
         component={AgencyScreen}
         options={{
           title: 'Agence',
-          tabBarIcon: () => null
+          tabBarIcon: () => null,
         }}
       />
       <Tab.Screen
@@ -82,7 +121,7 @@ export default function TabNavigator() {
         component={SessionScreen}
         options={{
           title: 'Session',
-          tabBarIcon: () => null
+          tabBarIcon: () => null,
         }}
       />
       <Tab.Screen
@@ -90,7 +129,7 @@ export default function TabNavigator() {
         component={DeckScreen}
         options={{
           title: 'Deck',
-          tabBarIcon: () => null
+          tabBarIcon: () => null,
         }}
       />
     </Tab.Navigator>

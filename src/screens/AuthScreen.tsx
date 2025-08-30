@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, ScrollView, TextInput, Dimensions, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import * as Crypto from 'expo-crypto';
+import * as SecureStore from 'expo-secure-store';
 import { RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
 
@@ -25,16 +27,51 @@ export default function AuthScreen({ navigation }: Props) {
     setIsLoading(true);
 
     try {
-      // TODO: Implémenter la logique d'authentification
-      console.log('Authentification:', { email, password, username, isLogin });
+      if (isLogin) {
+        // TODO: Implémenter la logique de connexion
+        console.log('Authentification:', {
+          email,
+          password,
+          username,
+          isLogin,
+        });
 
-        // Simulation d'un délai d'authentification
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Pour l'instant, on navigue directement vers l'app
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         navigation.replace('MainTabs', {});
-    } catch (error) {
-      Alert.alert('Erreur', 'Erreur lors de l\'authentification.');
+      } else {
+        const passwordHash = await Crypto.digestStringAsync(
+          Crypto.CryptoDigestAlgorithm.SHA256,
+          password
+        );
+
+        const res = await fetch('https://api.scriptonautes.net/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            login: username,
+            password_hash: passwordHash,
+          }),
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          const id = json.id ?? json[0]?.id;
+          await SecureStore.setItemAsync(
+            'user',
+            JSON.stringify({ id, login: username })
+          );
+          Alert.alert('Succès', "Vous faites désormais partie de l'agence !");
+          navigation.replace('MainTabs', {});
+        } else {
+          const err = await res.text();
+          Alert.alert('Erreur', err || 'Erreur lors de l\'authentification.');
+        }
+      }
+    } catch (error: any) {
+      Alert.alert(
+        'Erreur',
+        error?.message || 'Erreur lors de l\'authentification.'
+      );
     } finally {
       setIsLoading(false);
     }
