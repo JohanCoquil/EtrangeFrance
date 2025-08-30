@@ -7,14 +7,12 @@ import { apiFetch, logApiCall } from "../utils/api";
 const API_URL = "https://api.scriptonautes.net/api/records";
 
 export async function syncCharacters() {
+  console.log("Starting syncCharacters");
   const db = getDb();
   const newCharacters = (await db.getAllAsync(
     "SELECT * FROM characters WHERE distant_id = 0",
   )) as any[];
-
-  const avatarsToSync = (await db.getAllAsync(
-    "SELECT * FROM characters WHERE distant_id != 0 AND avatar IS NOT NULL AND avatar != '' AND (avatar_distant IS NULL OR avatar_distant = '')",
-  )) as any[];
+  console.log("Characters needing sync:", newCharacters.length);
 
   const storedUser = await SecureStore.getItemAsync("user");
   const userId = storedUser ? JSON.parse(storedUser).id : null;
@@ -23,42 +21,8 @@ export async function syncCharacters() {
     return;
   }
 
-  for (const char of avatarsToSync) {
-    try {
-      const localUri = FileSystem.documentDirectory + char.avatar;
-      console.log(
-        `Uploading avatar for existing character ${char.id} (remote ${char.distant_id})`,
-      );
-      const remotePath = await uploadCharacterAvatar(localUri, char.distant_id);
-
-      logApiCall(`${API_URL}/characters/${char.distant_id}`, "PATCH");
-      const patchRes = await apiFetch(
-        `${API_URL}/characters/${char.distant_id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ avatar_distant: remotePath }),
-        },
-      );
-      const patchText = await patchRes.text();
-      console.log("PATCH /characters avatar", patchRes.status, patchText);
-
-      if (!patchRes.ok) {
-        console.error(
-          `Failed to update remote avatar for ${char.id}: ${patchRes.status} ${patchRes.statusText} - ${patchText}`,
-        );
-      }
-
-      await db.runAsync(
-        "UPDATE characters SET avatar_distant = ? WHERE id = ?",
-        [remotePath, char.id],
-      );
-    } catch (err) {
-      console.error("Failed to upload avatar for existing character", err);
-    }
-  }
-
   for (const char of newCharacters) {
+    console.log(`Syncing character ${char.id}`);
     const payload: Record<string, any> = {
       id: char.id,
       user_id: userId,
@@ -93,6 +57,7 @@ export async function syncCharacters() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      console.log(`POST /characters status: ${res.status}`);
       if (!res.ok) {
         const errorText = await res.text();
         console.error(
@@ -102,6 +67,7 @@ export async function syncCharacters() {
       }
       const json = await res.json();
       const remoteId = json.id ?? json[0]?.id ?? json.records?.[0]?.id;
+      console.log(`Remote ID for character ${char.id}:`, remoteId);
       if (!remoteId) continue;
       await db.runAsync("UPDATE characters SET distant_id = ? WHERE id = ?", [
         remoteId,
@@ -110,8 +76,10 @@ export async function syncCharacters() {
 
       if (char.avatar) {
         try {
+          console.log(`Uploading avatar for character ${char.id}`);
           const localUri = FileSystem.documentDirectory + char.avatar;
           const remotePath = await uploadCharacterAvatar(localUri, remoteId);
+          console.log(`Avatar uploaded for character ${char.id}: ${remotePath}`);
 
           // push avatar path to remote record
           const patchRes = await apiFetch(`${API_URL}/characters/${remoteId}`, {
@@ -142,6 +110,7 @@ export async function syncCharacters() {
       await syncDesk(db, char.id, remoteId);
       await syncCharacterSkills(db, char.id, remoteId);
       await syncCharacterCapacites(db, char.id, remoteId);
+      console.log(`Finished syncing character ${char.id}`);
     } catch (e) {
       console.error("Failed to push character", e);
     }
@@ -167,6 +136,7 @@ async function uploadCharacterAvatar(localUri: string, characterId: number) {
 
   logApiCall(apiUrl, "POST");
 
+  console.log("Uploading avatar", localUri, "to", apiUrl);
   const uploadRes = await FileSystem.uploadAsync(apiUrl, localUri, {
     httpMethod: "POST",
     uploadType: FileSystem.FileSystemUploadType.MULTIPART,
@@ -194,10 +164,12 @@ async function syncDesk(
   localId: string,
   remoteId: number,
 ) {
+  console.log(`syncDesk for character ${localId}`);
   const rows = (await db.getAllAsync(
     "SELECT figure, cards FROM desk WHERE user_id = ?",
     [localId],
   )) as any[];
+  console.log(`Found ${rows.length} desk rows for character ${localId}`);
   for (const row of rows) {
     try {
       const payload = {
@@ -210,6 +182,7 @@ async function syncDesk(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      console.log(`POST /desk status: ${res.status}`);
       if (!res.ok) {
         const errorText = await res.text();
         console.error(
@@ -227,10 +200,12 @@ async function syncCharacterSkills(
   localId: string,
   remoteId: number,
 ) {
+  console.log(`syncCharacterSkills for character ${localId}`);
   const rows = (await db.getAllAsync(
     `SELECT cs.*, s.distant_id as skill_distant_id FROM character_skills cs JOIN skills s ON cs.skill_id = s.id WHERE cs.character_id = ? AND cs.distant_id = 0`,
     [localId],
   )) as any[];
+  console.log(`Found ${rows.length} skill rows for character ${localId}`);
 
   for (const row of rows) {
     try {
@@ -244,6 +219,7 @@ async function syncCharacterSkills(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      console.log(`POST /character_skills status: ${res.status}`);
       if (!res.ok) {
         const errorText = await res.text();
         console.error(
@@ -270,10 +246,12 @@ async function syncCharacterCapacites(
   localId: string,
   remoteId: number,
 ) {
+  console.log(`syncCharacterCapacites for character ${localId}`);
   const rows = (await db.getAllAsync(
     `SELECT cc.*, c.distant_id as capacite_distant_id FROM character_capacites cc JOIN capacites c ON cc.capacite_id = c.id WHERE cc.character_id = ? AND cc.distant_id = 0`,
     [localId],
   )) as any[];
+  console.log(`Found ${rows.length} capacite rows for character ${localId}`);
 
   for (const row of rows) {
     try {
@@ -287,6 +265,7 @@ async function syncCharacterCapacites(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      console.log(`POST /character_capacites status: ${res.status}`);
       if (!res.ok) {
         const errorText = await res.text();
         console.error(
