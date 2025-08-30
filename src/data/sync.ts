@@ -1,5 +1,6 @@
 import * as SQLite from "expo-sqlite";
 import { getDb } from "./db";
+import { apiFetch } from "../utils/api";
 
 const API_URL = "https://api.scriptonautes.net/api/records";
 
@@ -33,7 +34,7 @@ async function pushTable(
     const payload: Record<string, any> = {};
     for (const f of fields) payload[f] = row[f];
     try {
-      const res = await fetch(`${API_URL}/${table}`, {
+      const res = await apiFetch(`${API_URL}/${table}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -60,7 +61,7 @@ async function pushProfessionSkills(db: SQLite.SQLiteDatabase) {
   )) as any[];
   for (const row of rows) {
     try {
-      const res = await fetch(`${API_URL}/profession_skills`, {
+      const res = await apiFetch(`${API_URL}/profession_skills`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -98,7 +99,7 @@ async function pullRemoteData(db: SQLite.SQLiteDatabase) {
 
 async function fetchRecords(table: string) {
   try {
-    const res = await fetch(`${API_URL}/${table}`);
+    const res = await apiFetch(`${API_URL}/${table}`);
     if (!res.ok) return [];
     const json = await res.json();
     return json.records ?? json;

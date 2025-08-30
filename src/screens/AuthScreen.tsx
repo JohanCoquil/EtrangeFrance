@@ -7,6 +7,7 @@ import * as SecureStore from 'expo-secure-store';
 import { RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
 import { syncCharacters } from '../data/characterSync';
+import { apiFetch } from '../utils/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Auth'>;
 
@@ -34,7 +35,7 @@ export default function AuthScreen({ navigation }: Props) {
       );
 
       if (isLogin) {
-        const res = await fetch(
+        const res = await apiFetch(
           `https://api.scriptonautes.net/api/records/users?filter=email,eq,${encodeURIComponent(
             email
           )}&filter=password_hash,eq,${passwordHash}`
@@ -57,7 +58,7 @@ export default function AuthScreen({ navigation }: Props) {
           Alert.alert('Erreur', err || "Impossible de se connecter.");
         }
       } else {
-        const res = await fetch(
+        const res = await apiFetch(
           'https://api.scriptonautes.net/api/records/users',
           {
             method: 'POST',
