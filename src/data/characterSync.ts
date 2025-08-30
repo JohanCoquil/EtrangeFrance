@@ -2,6 +2,7 @@ import * as SQLite from "expo-sqlite";
 import * as SecureStore from "expo-secure-store";
 import * as FileSystem from "expo-file-system";
 import { getDb } from "./db";
+import { apiFetch, logApiCall } from "../utils/api";
 
 const API_URL = "https://api.scriptonautes.net/api/records";
 
@@ -48,8 +49,7 @@ export async function syncCharacters() {
     };
 
     try {
-      console.log("POST /characters", payload);
-      const res = await fetch(`${API_URL}/characters`, {
+      const res = await apiFetch(`${API_URL}/characters`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -75,7 +75,7 @@ export async function syncCharacters() {
           const remotePath = await uploadCharacterAvatar(localUri, remoteId);
 
           // push avatar path to remote record
-          const patchRes = await fetch(`${API_URL}/characters/${remoteId}`, {
+          const patchRes = await apiFetch(`${API_URL}/characters/${remoteId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ avatar_distant: remotePath }),
@@ -126,7 +126,7 @@ async function uploadCharacterAvatar(localUri: string, characterId: number) {
   const apiUrl = `https://api.scriptonautes.net/upload.php?type=avatar&entity=characters&id=${characterId}`;
   const mimeType = getMimeType(localUri);
 
-  console.log("Uploading avatar", { apiUrl, localUri, mimeType });
+  logApiCall(apiUrl, "POST");
 
   const uploadRes = await FileSystem.uploadAsync(apiUrl, localUri, {
     httpMethod: "POST",
@@ -166,8 +166,7 @@ async function syncDesk(
         figure: row.figure,
         cards: row.cards,
       };
-      console.log("POST /desk", payload);
-      const res = await fetch(`${API_URL}/desk`, {
+      const res = await apiFetch(`${API_URL}/desk`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -201,8 +200,7 @@ async function syncCharacterSkills(
         skill_id: row.skill_distant_id,
         level: row.level,
       };
-      console.log("POST /character_skills", payload);
-      const res = await fetch(`${API_URL}/character_skills`, {
+      const res = await apiFetch(`${API_URL}/character_skills`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -245,8 +243,7 @@ async function syncCharacterCapacites(
         capacite_id: row.capacite_distant_id,
         level: row.level,
       };
-      console.log("POST /character_capacites", payload);
-      const res = await fetch(`${API_URL}/character_capacites`, {
+      const res = await apiFetch(`${API_URL}/character_capacites`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
