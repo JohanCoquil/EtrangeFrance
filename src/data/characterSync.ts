@@ -79,7 +79,9 @@ export async function syncCharacters() {
           console.log(`Uploading avatar for character ${char.id}`);
           const localUri = FileSystem.documentDirectory + char.avatar;
           const remotePath = await uploadCharacterAvatar(localUri, remoteId);
-          console.log(`Avatar uploaded for character ${char.id}: ${remotePath}`);
+          console.log(
+            `Avatar uploaded for character ${char.id}: ${remotePath}`,
+          );
 
           // push avatar path to remote record
           const patchRes = await apiFetch(`${API_URL}/characters/${remoteId}`, {
@@ -130,7 +132,7 @@ function getMimeType(uri: string) {
   }
 }
 
-async function uploadCharacterAvatar(localUri: string, characterId: number) {
+async function uploadCharacterAvatar(localUri: string, characterId: string) {
   const apiUrl = `https://api.scriptonautes.net/upload.php?type=avatar&entity=characters&id=${characterId}`;
   const mimeType = getMimeType(localUri);
 
@@ -162,7 +164,7 @@ async function uploadCharacterAvatar(localUri: string, characterId: number) {
 async function syncDesk(
   db: SQLite.SQLiteDatabase,
   localId: string,
-  remoteId: number,
+  remoteId: string,
 ) {
   console.log(`syncDesk for character ${localId}`);
   const rows = (await db.getAllAsync(
@@ -198,7 +200,7 @@ async function syncDesk(
 async function syncCharacterSkills(
   db: SQLite.SQLiteDatabase,
   localId: string,
-  remoteId: number,
+  remoteId: string,
 ) {
   console.log(`syncCharacterSkills for character ${localId}`);
   const rows = (await db.getAllAsync(
@@ -244,7 +246,7 @@ async function syncCharacterSkills(
 async function syncCharacterCapacites(
   db: SQLite.SQLiteDatabase,
   localId: string,
-  remoteId: number,
+  remoteId: string,
 ) {
   console.log(`syncCharacterCapacites for character ${localId}`);
   const rows = (await db.getAllAsync(

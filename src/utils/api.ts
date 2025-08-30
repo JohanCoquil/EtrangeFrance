@@ -8,7 +8,7 @@ export function logApiCall(url: string, method: string, body?: any) {
 
 export async function apiFetch(
   url: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<Response> {
   const method = options.method ?? "GET";
   let body: any = options.body;
@@ -23,11 +23,18 @@ export async function apiFetch(
   return fetch(url, options);
 }
 
-export function extractRecordId(data: any): number | undefined {
-  if (typeof data === "number" || typeof data === "string") {
-    const digits = String(data).replace(/\D+/g, "");
-    const num = Number(digits);
-    return Number.isNaN(num) ? undefined : num;
+export function extractRecordId(data: any): string | undefined {
+  if (typeof data === "string") {
+    try {
+      const parsed = JSON.parse(data);
+      return extractRecordId(parsed);
+    } catch {
+      const match = data.match(/[0-9a-fA-F-]{8,}/);
+      return match ? match[0] : undefined;
+    }
+  }
+  if (typeof data === "number") {
+    return String(data);
   }
   const id =
     data?.id ??
@@ -43,7 +50,5 @@ export function extractRecordId(data: any): number | undefined {
     data?.records?.[0]?.id ??
     data?.records?.[0]?.distant_id;
   if (id === undefined) return undefined;
-  const digits = String(id).replace(/\D+/g, "");
-  const num = Number(digits);
-  return Number.isNaN(num) ? undefined : num;
+  return String(id);
 }
