@@ -71,14 +71,13 @@ export default function AuthScreen({ navigation }: Props) {
         );
 
         if (res.ok) {
-          const json = await res.json();
-          const id =
-            json.id ?? json.record?.id ?? json[0]?.id ?? json.records?.[0]?.id;
-          if (!id || (json.status && json.status !== 'OK')) {
-            const err =
-              (typeof json === 'object' && json.error) ||
-              "Impossible de récupérer l'identifiant utilisateur.";
-            Alert.alert('Erreur', err);
+          const text = await res.text();
+          const id = Number(text.trim());
+          if (!Number.isInteger(id) || id <= 0) {
+            Alert.alert(
+              'Erreur',
+              "Impossible de récupérer l'identifiant utilisateur."
+            );
             return;
           }
           await SecureStore.setItemAsync(
@@ -90,7 +89,7 @@ export default function AuthScreen({ navigation }: Props) {
           navigation.replace('MainTabs', {});
         } else {
           const err = await res.text();
-          Alert.alert('Erreur', err || 'Erreur lors de l\'authentification.');
+          Alert.alert('Erreur', err || "Erreur lors de l'authentification.");
         }
       }
     } catch (error: any) {
