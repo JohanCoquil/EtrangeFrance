@@ -72,7 +72,7 @@ export default function AuthScreen({ navigation }: Props) {
 
         if (res.ok) {
           const json = await res.json();
-          const id = json.id ?? json[0]?.id;
+          const id = json.id ?? json[0]?.id ?? json.records?.[0]?.id;
           await SecureStore.setItemAsync(
             'user',
             JSON.stringify({ id, login: username })
