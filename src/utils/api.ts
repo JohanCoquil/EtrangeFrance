@@ -24,12 +24,22 @@ export async function apiFetch(
 }
 
 export function extractRecordId(json: any): number | undefined {
+  if (typeof json === "number" || typeof json === "string") {
+    const num = Number(json);
+    return Number.isNaN(num) ? undefined : num;
+  }
   const id =
     json?.id ??
+    json?.distant_id ??
     json?.record?.id ??
+    json?.record?.distant_id ??
     json?.records?.id ??
+    json?.records?.distant_id ??
     json?.data?.id ??
+    json?.data?.distant_id ??
     json?.[0]?.id ??
-    json?.records?.[0]?.id;
+    json?.[0]?.distant_id ??
+    json?.records?.[0]?.id ??
+    json?.records?.[0]?.distant_id;
   return id !== undefined ? Number(id) : undefined;
 }
