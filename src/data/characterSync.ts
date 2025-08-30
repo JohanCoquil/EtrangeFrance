@@ -108,6 +108,8 @@ async function uploadCharacterAvatar(localUri: string, characterId: number) {
   const apiUrl = `https://api.scriptonautes.net/upload.php?type=avatar&entity=characters&id=${characterId}`;
   const mimeType = getMimeType(localUri);
 
+  console.log("Uploading avatar", { apiUrl, localUri, mimeType });
+
   const formData = new FormData();
   formData.append("file", {
     uri: localUri,
@@ -117,14 +119,21 @@ async function uploadCharacterAvatar(localUri: string, characterId: number) {
 
   const res = await fetch(apiUrl, {
     method: "POST",
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
     body: formData,
   });
 
-  const json = await res.json();
+  const responseText = await res.text();
+  console.log("Upload avatar response", res.status, responseText);
+
+  let json: any = {};
+  try {
+    json = JSON.parse(responseText);
+  } catch (e) {
+    console.warn("Avatar upload response is not JSON", e);
+  }
+
   if (!res.ok) throw new Error(json.error || "Upload failed");
+  if (!json.path) throw new Error("Upload response missing path");
   return json.path as string;
 }
 
