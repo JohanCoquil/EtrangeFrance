@@ -27,31 +27,47 @@ export default function AuthScreen({ navigation }: Props) {
     setIsLoading(true);
 
     try {
-      if (isLogin) {
-        // TODO: Implémenter la logique de connexion
-        console.log('Authentification:', {
-          email,
-          password,
-          username,
-          isLogin,
-        });
+      const passwordHash = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        password
+      );
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        navigation.replace('MainTabs', {});
-      } else {
-        const passwordHash = await Crypto.digestStringAsync(
-          Crypto.CryptoDigestAlgorithm.SHA256,
-          password
+      if (isLogin) {
+        const res = await fetch(
+          `https://api.scriptonautes.net/api/records/users?filter=email,eq,${encodeURIComponent(
+            email
+          )}&filter=password_hash,eq,${passwordHash}`
         );
 
-        const res = await fetch('https://api.scriptonautes.net/api/users', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            login: username,
-            password_hash: passwordHash,
-          }),
-        });
+        if (res.ok) {
+          const json = await res.json();
+          const user = json.records?.[0];
+          if (user) {
+            await SecureStore.setItemAsync(
+              'user',
+              JSON.stringify({ id: user.id, login: user.login })
+            );
+            navigation.replace('MainTabs', {});
+          } else {
+            Alert.alert('Erreur', 'Identifiants invalides.');
+          }
+        } else {
+          const err = await res.text();
+          Alert.alert('Erreur', err || "Impossible de se connecter.");
+        }
+      } else {
+        const res = await fetch(
+          'https://api.scriptonautes.net/api/records/users',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              login: username,
+              password_hash: passwordHash,
+              email,
+            }),
+          }
+        );
 
         if (res.ok) {
           const json = await res.json();
