@@ -1,12 +1,14 @@
 import React from "react";
 import { View, Text, ScrollView, Alert, TouchableOpacity, Image } from "react-native";
 import * as FileSystem from "expo-file-system";
+import * as Linking from "expo-linking";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "@/navigation/types"; // ton fichier types.ts
 import { useCharacters, useDeleteCharacter } from "@/api/charactersLocal";
 import Layout from "@/components/ui/Layout";
 import Button from "@/components/ui/Button";
+import { Download } from "lucide-react-native";
 
 // On précise : je suis dans l'écran "Characters" du RootStack
 type CharactersScreenNavigationProp = NativeStackNavigationProp<
@@ -60,26 +62,39 @@ export default function CharactersScreen() {
                         Voie étrange : {char.voie_name}
                       </Text>
                     )}
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onPress={() =>
-                        Alert.alert(
-                          "Confirmation",
-                          "Voulez-vous supprimer ce personnage ?",
-                          [
-                            { text: "Non", style: "cancel" },
-                            {
-                              text: "Oui",
-                              onPress: () =>
-                                deleteCharacter.mutate(String(char.id)),
-                            },
-                          ]
-                        )
-                      }
-                    >
-                      Supprimer
-                    </Button>
+                    <View className="flex-row gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onPress={() => {
+                          const id = String(char.id);
+                          const url = `https://api.scriptonautes.net/generate-character-pdf.php?id=${id}`;
+                          Linking.openURL(url);
+                        }}
+                      >
+                        <Download color="#fff" size={16} />
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onPress={() =>
+                          Alert.alert(
+                            "Confirmation",
+                            "Voulez-vous supprimer ce personnage ?",
+                            [
+                              { text: "Non", style: "cancel" },
+                              {
+                                text: "Oui",
+                                onPress: () =>
+                                  deleteCharacter.mutate(String(char.id)),
+                              },
+                            ]
+                          )
+                        }
+                      >
+                        Supprimer
+                      </Button>
+                    </View>
                   </View>
                   {avatarUri && (
                     <Image
