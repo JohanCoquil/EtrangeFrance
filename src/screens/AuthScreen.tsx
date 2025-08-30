@@ -6,6 +6,7 @@ import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import { RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
+import { syncCharacters } from '../data/characterSync';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Auth'>;
 
@@ -76,6 +77,7 @@ export default function AuthScreen({ navigation }: Props) {
             'user',
             JSON.stringify({ id, login: username })
           );
+          await syncCharacters();
           Alert.alert('Succès', "Vous faites désormais partie de l'agence !");
           navigation.replace('MainTabs', {});
         } else {
