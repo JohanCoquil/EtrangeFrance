@@ -1,11 +1,13 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, Alert, TouchableOpacity, Image } from "react-native";
 import * as FileSystem from "expo-file-system";
 import * as Linking from "expo-linking";
+import * as SecureStore from "expo-secure-store";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "@/navigation/types"; // ton fichier types.ts
 import { useCharacters, useDeleteCharacter } from "@/api/charactersLocal";
+import { syncCharacters } from "@/data/characterSync";
 import Layout from "@/components/ui/Layout";
 import Button from "@/components/ui/Button";
 import { Download } from "lucide-react-native";
@@ -20,6 +22,23 @@ export default function CharactersScreen() {
   const navigation = useNavigation<CharactersScreenNavigationProp>();
   const { data: characters, isLoading } = useCharacters();
   const deleteCharacter = useDeleteCharacter();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const stored = await SecureStore.getItemAsync("user");
+      setIsLoggedIn(!!stored);
+    };
+    loadUser();
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const hasUnsynced = characters?.some((c: any) => c.distant_id === 0);
+    if (hasUnsynced) {
+      syncCharacters().catch((e) => console.error("Character sync failed", e));
+    }
+  }, [characters, isLoggedIn]);
 
   return (
     <Layout backgroundColor="gradient" variant="scroll">
