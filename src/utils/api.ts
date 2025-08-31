@@ -49,7 +49,9 @@ export function extractRecordId(data: any): string | undefined {
       const parsed = JSON.parse(data);
       return extractRecordId(parsed);
     } catch {
-      const match = data.match(/[0-9a-fA-F-]{8,}/);
+      const num = parseInt(data, 10);
+      if (!isNaN(num)) return String(num);
+      const match = data.match(/[0-9a-fA-F-]+/);
       return match ? match[0] : undefined;
     }
   }

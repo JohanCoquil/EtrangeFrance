@@ -8,6 +8,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "@/navigation/types"; // ton fichier types.ts
 import { useCharacters, useDeleteCharacter } from "@/api/charactersLocal";
 import { syncCharacters } from "@/data/characterSync";
+import { useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/ui/Layout";
 import Button from "@/components/ui/Button";
 import { Download } from "lucide-react-native";
@@ -23,6 +24,7 @@ export default function CharactersScreen() {
   const { data: characters, isLoading } = useCharacters();
   const deleteCharacter = useDeleteCharacter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -41,9 +43,13 @@ export default function CharactersScreen() {
       return needsInitialSync || needsAvatarSync;
     });
     if (hasUnsynced) {
-      syncCharacters().catch((e) => console.error("Character sync failed", e));
+      syncCharacters()
+        .then(() =>
+          queryClient.invalidateQueries({ queryKey: ["characters"] }),
+        )
+        .catch((e) => console.error("Character sync failed", e));
     }
-  }, [characters, isLoggedIn]);
+  }, [characters, isLoggedIn, queryClient]);
 
   return (
     <Layout backgroundColor="gradient" variant="scroll">
