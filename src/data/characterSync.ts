@@ -51,17 +51,20 @@ export async function syncCharacters() {
       bonuses: char.bonuses ?? null,
     };
 
+    const payloadString = JSON.stringify(payload);
+    console.log(`Payload for character ${char.id}:`, payloadString);
+
     try {
       const res = await apiFetch(`${API_URL}/characters`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: payloadString,
       });
       console.log(`POST /characters status: ${res.status}`);
       if (!res.ok) {
         const errorText = await res.text();
         console.error(
-          `Failed to push character ${char.id}: ${res.status} ${res.statusText} - ${errorText}`,
+          `Failed to push character ${char.id}: ${res.status} ${res.statusText} - ${errorText}\nPayload: ${payloadString}`,
         );
         continue;
       }
@@ -99,7 +102,7 @@ export async function syncCharacters() {
       await syncCharacterCapacites(db, char.id, remoteId);
       console.log(`Finished syncing character ${char.id}`);
     } catch (e) {
-      console.error("Failed to push character", e);
+      console.error("Failed to push character", e, `Payload: ${payloadString}`);
     }
   }
 }
