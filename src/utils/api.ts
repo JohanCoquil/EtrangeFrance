@@ -11,6 +11,7 @@ export async function apiFetch(
   options: RequestInit = {},
 ): Promise<Response> {
   const method = options.method ?? "GET";
+
   let body: any = options.body;
   if (typeof body === "string") {
     try {
@@ -19,8 +20,27 @@ export async function apiFetch(
       // body is not JSON
     }
   }
+
+  // Log request
   logApiCall(url, method, body);
-  return fetch(url, options);
+
+  const res = await fetch(url, options);
+
+  // Attempt to log response body
+  try {
+    const text = await res.clone().text();
+    let parsed: any = text;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      // response is not JSON
+    }
+    console.log(`[API] response ${method} ${url} -> ${res.status}`, parsed);
+  } catch (e) {
+    console.log(`[API] response ${method} ${url} -> ${res.status}`);
+  }
+
+  return res;
 }
 
 export function extractRecordId(data: any): string | undefined {
