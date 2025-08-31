@@ -9,10 +9,10 @@ const API_URL = "https://api.scriptonautes.net/api/records";
 export async function syncCharacters() {
   console.log("Starting syncCharacters");
   const db = getDb();
-  const newCharacters = (await db.getAllAsync(
-    "SELECT * FROM characters WHERE distant_id = 0",
+  const characters = (await db.getAllAsync(
+    "SELECT * FROM characters",
   )) as any[];
-  console.log("Characters needing sync:", newCharacters.length);
+  console.log("Characters found:", characters.length);
 
   const storedUser = await SecureStore.getItemAsync("user");
   const userId = storedUser ? JSON.parse(storedUser).id : null;
@@ -21,63 +21,74 @@ export async function syncCharacters() {
     return;
   }
 
-  for (const char of newCharacters) {
+  for (const char of characters) {
     console.log(`Syncing character ${char.id}`);
-    const payload: Record<string, any> = {
-      id: char.id,
-      user_id: userId,
-      name: char.name,
-      profession_id: char.profession_id ?? null,
-      profession_score: char.profession_score ?? 0,
-      hobby_id: char.hobby_id ?? null,
-      hobby_score: char.hobby_score ?? 0,
-      divinity_id: char.divinity_id ?? null,
-      voie_id: char.voie_id ?? null,
-      voie_score: char.voie_score ?? 0,
-      intelligence: char.intelligence,
-      force: char.force,
-      dexterite: char.dexterite,
-      charisme: char.charisme,
-      memoire: char.memoire,
-      volonte: char.volonte,
-      sante: char.sante,
-      degats: char.degats,
-      origines: char.origines ?? null,
-      rencontres: char.rencontres ?? null,
-      notes: char.notes ?? null,
-      equipement: char.equipement ?? null,
-      fetiches: char.fetiches ?? null,
-      trigger_effects: char.trigger_effects ?? null,
-      bonuses: char.bonuses ?? null,
-    };
+    let remoteId = char.distant_id ? String(char.distant_id) : "";
+    const isNew = !remoteId;
 
-    const payloadString = JSON.stringify(payload);
-    console.log(`Payload for character ${char.id}:`, payloadString);
+    if (isNew) {
+      const payload: Record<string, any> = {
+        id: char.id,
+        user_id: userId,
+        name: char.name,
+        profession_id: char.profession_id ?? null,
+        profession_score: char.profession_score ?? 0,
+        hobby_id: char.hobby_id ?? null,
+        hobby_score: char.hobby_score ?? 0,
+        divinity_id: char.divinity_id ?? null,
+        voie_id: char.voie_id ?? null,
+        voie_score: char.voie_score ?? 0,
+        intelligence: char.intelligence,
+        force: char.force,
+        dexterite: char.dexterite,
+        charisme: char.charisme,
+        memoire: char.memoire,
+        volonte: char.volonte,
+        sante: char.sante,
+        degats: char.degats,
+        origines: char.origines ?? null,
+        rencontres: char.rencontres ?? null,
+        notes: char.notes ?? null,
+        equipement: char.equipement ?? null,
+        fetiches: char.fetiches ?? null,
+        trigger_effects: char.trigger_effects ?? null,
+        bonuses: char.bonuses ?? null,
+      };
 
-    try {
-      const res = await apiFetch(`${API_URL}/characters`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payloadString,
-      });
-      console.log(`POST /characters status: ${res.status}`);
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error(
-          `Failed to push character ${char.id}: ${res.status} ${res.statusText} - ${errorText}\nPayload: ${payloadString}`,
-        );
+      const payloadString = JSON.stringify(payload);
+      console.log(`Payload for character ${char.id}:`, payloadString);
+
+      try {
+        const res = await apiFetch(`${API_URL}/characters`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payloadString,
+        });
+        console.log(`POST /characters status: ${res.status}`);
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error(
+            `Failed to push character ${char.id}: ${res.status} ${res.statusText} - ${errorText}\nPayload: ${payloadString}`,
+          );
+          continue;
+        }
+        const text = await res.text();
+        remoteId = extractRecordId(text);
+        console.log(`Remote ID for character ${char.id}:`, remoteId);
+        if (!remoteId) continue;
+        await db.runAsync("UPDATE characters SET distant_id = ? WHERE id = ?", [
+          remoteId,
+          char.id,
+        ]);
+        await syncDesk(db, char.id, remoteId);
+      } catch (e) {
+        console.error("Failed to push character", e, `Payload: ${payloadString}`);
         continue;
       }
-      const text = await res.text();
-      const remoteId = extractRecordId(text);
-      console.log(`Remote ID for character ${char.id}:`, remoteId);
-      if (!remoteId) continue;
-      await db.runAsync("UPDATE characters SET distant_id = ? WHERE id = ?", [
-        remoteId,
-        char.id,
-      ]);
+    }
 
-      if (char.avatar) {
+    if (remoteId) {
+      if (char.avatar && (!char.avatar_distant || char.avatar_distant === "")) {
         try {
           console.log(`Uploading avatar for character ${char.id}`);
           const localUri = FileSystem.documentDirectory + char.avatar;
@@ -93,16 +104,11 @@ export async function syncCharacters() {
         } catch (err) {
           console.error("Failed to upload avatar", err);
         }
-      } else {
-        console.log(`Character ${char.id} has no avatar to upload`);
       }
 
-      await syncDesk(db, char.id, remoteId);
       await syncCharacterSkills(db, char.id, remoteId);
       await syncCharacterCapacites(db, char.id, remoteId);
       console.log(`Finished syncing character ${char.id}`);
-    } catch (e) {
-      console.error("Failed to push character", e, `Payload: ${payloadString}`);
     }
   }
 }
