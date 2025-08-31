@@ -34,7 +34,12 @@ export default function CharactersScreen() {
 
   useEffect(() => {
     if (!isLoggedIn) return;
-    const hasUnsynced = characters?.some((c: any) => c.distant_id === 0);
+    const hasUnsynced = characters?.some((c: any) => {
+      const needsInitialSync = c.distant_id === 0 && c.bonuses;
+      const needsAvatarSync =
+        c.distant_id !== 0 && c.avatar && (!c.avatar_distant || c.avatar_distant === "");
+      return needsInitialSync || needsAvatarSync;
+    });
     if (hasUnsynced) {
       syncCharacters().catch((e) => console.error("Character sync failed", e));
     }

@@ -73,9 +73,10 @@ export async function syncCharacters() {
           continue;
         }
         const text = await res.text();
-        remoteId = extractRecordId(text);
-        console.log(`Remote ID for character ${char.id}:`, remoteId);
-        if (!remoteId) continue;
+        const extractedId = extractRecordId(text);
+        console.log(`Remote ID for character ${char.id}:`, extractedId);
+        if (!extractedId) continue;
+        remoteId = extractedId;
         await db.runAsync("UPDATE characters SET distant_id = ? WHERE id = ?", [
           remoteId,
           char.id,

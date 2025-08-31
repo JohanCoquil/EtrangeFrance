@@ -198,7 +198,7 @@ export function useUpdateAvatar() {
     }) => {
       const db = getDb();
       await db.runAsync(
-        "UPDATE characters SET avatar = ? WHERE id = ?",
+        "UPDATE characters SET avatar = ?, avatar_distant = '' WHERE id = ?",
         [avatar, id],
       );
     },
