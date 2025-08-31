@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio, Video, ResizeMode } from 'expo-av';
+import * as SecureStore from 'expo-secure-store';
 import { TabParamList, RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
 import { syncDatabase } from '@/data/sync';
@@ -42,6 +43,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [showAnimation, setShowAnimation] = useState(false);
   const [minitelLoaded, setMinitelLoaded] = useState(false);
   const [introSkipped, setIntroSkipped] = useState(false);
+  const [user, setUser] = useState<{ id: number; login: string } | null>(null);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const rootNavigation =
@@ -54,6 +56,14 @@ export default function HomeScreen({ navigation }: Props) {
   const handleEnterAgency = () => {
     rootNavigation.navigate('Auth');
   };
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const stored = await SecureStore.getItemAsync('user');
+      if (stored) setUser(JSON.parse(stored));
+    };
+    loadUser();
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -189,15 +199,17 @@ export default function HomeScreen({ navigation }: Props) {
         </Caption>
       </View>
 
-      <Button
-        onPress={handleEnterAgency}
-        variant="primary"
-        className="w-full mb-6 py-4 bg-blue-700 border-2 border-blue-500"
-      >
-        <Title className="text-white text-lg font-semibold">
-          🚪 Entrer dans l'Agence
-        </Title>
-      </Button>
+      {!user && (
+        <Button
+          onPress={handleEnterAgency}
+          variant="primary"
+          className="w-full mb-6 py-4 bg-blue-700 border-2 border-blue-500"
+        >
+          <Title className="text-white text-lg font-semibold">
+            🚪 Entrer dans l'Agence
+          </Title>
+        </Button>
+      )}
 
       <View className="mt-8">
         <Caption className="text-white text-center">
