@@ -68,7 +68,7 @@ export default function TabNavigator() {
   const handleLogout = async () => {
     await SecureStore.deleteItemAsync('user');
     setUser(null);
-    navigation.getParent()?.replace('Auth');
+    navigation.navigate('Home');
   };
 
   const confirmLogout = () => {
@@ -95,7 +95,6 @@ export default function TabNavigator() {
     >
       <Tab.Screen
         name="Home"
-        component={HomeScreen}
         options={{
           title: user?.login || 'Accueil',
           tabBarLabel: 'Accueil',
@@ -107,7 +106,9 @@ export default function TabNavigator() {
             />
           ),
         }}
-      />
+      >
+        {(props) => <HomeScreen {...props} user={user} />}
+      </Tab.Screen>
       <Tab.Screen
         name="Characters"
         component={CharactersScreen}
