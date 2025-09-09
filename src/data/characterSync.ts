@@ -328,11 +328,12 @@ export async function importRemoteCharacters() {
           : JSON.stringify(rc.bonuses);
 
       let avatarLocal: string | null = null;
-      if (rc.avatar_distant) {
+      const remoteAvatar = rc.avatar_distant || rc.avatar;
+      if (remoteAvatar) {
         try {
-          const remoteUrl = rc.avatar_distant.startsWith("http")
-            ? rc.avatar_distant
-            : `https://api.scriptonautes.net/${rc.avatar_distant.replace(/^\//, "")}`;
+          const remoteUrl = remoteAvatar.startsWith("http")
+            ? remoteAvatar
+            : `https://api.scriptonautes.net/${remoteAvatar.replace(/^\//, "")}`;
           const dir = FileSystem.documentDirectory + "avatars";
           await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
           const ext = remoteUrl.split(".").pop()?.split("?")[0] || "jpg";
@@ -381,7 +382,7 @@ export async function importRemoteCharacters() {
           triggerEffects,
           bonuses,
           avatarLocal,
-          rc.avatar_distant ?? null,
+          remoteAvatar ?? null,
         ],
       );
 
