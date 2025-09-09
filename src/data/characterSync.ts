@@ -296,9 +296,9 @@ export async function importRemoteCharacters() {
   }
 
   try {
-    const res = await apiFetch(
-      `${API_URL}/characters?filter=user_id,eq,${userId}`,
-    );
+    const charactersUrl = `${API_URL}/characters?filter=user_id,eq,${userId}`;
+    logApiCall(charactersUrl, "GET");
+    const res = await apiFetch(charactersUrl);
     if (!res.ok) {
       const err = await res.text();
       console.error("Failed to fetch remote characters", err);
@@ -338,9 +338,13 @@ export async function importRemoteCharacters() {
           const ext = remoteUrl.split(".").pop()?.split("?")[0] || "jpg";
           const fileName = `${localId}.${ext}`;
           avatarLocal = `avatars/${fileName}`;
-          await FileSystem.downloadAsync(
+          logApiCall(remoteUrl, "GET");
+          const downloadRes = await FileSystem.downloadAsync(
             remoteUrl,
             FileSystem.documentDirectory + avatarLocal,
+          );
+          console.log(
+            `[API] response GET ${remoteUrl} -> ${downloadRes.status}`,
           );
         } catch (e) {
           console.error("Failed to download avatar", e);
