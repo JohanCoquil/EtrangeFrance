@@ -1,6 +1,7 @@
 import * as SQLite from "expo-sqlite";
 import * as SecureStore from "expo-secure-store";
 import * as FileSystem from "expo-file-system";
+import * as Crypto from "expo-crypto";
 import { getDb } from "./db";
 import { apiFetch, logApiCall, extractRecordId } from "../utils/api";
 
@@ -281,5 +282,169 @@ async function syncCharacterCapacites(
     } catch (e) {
       console.error("Failed to push character_capacites row", e);
     }
+  }
+}
+
+export async function importRemoteCharacters() {
+  console.log("Importing remote characters");
+  const db = getDb();
+  const storedUser = await SecureStore.getItemAsync("user");
+  const userId = storedUser ? JSON.parse(storedUser).id : null;
+  if (!userId) {
+    console.warn("No user ID found, skipping remote import");
+    return;
+  }
+
+  try {
+    const res = await apiFetch(
+      `${API_URL}/characters?filter=user_id,eq,${userId}`,
+    );
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("Failed to fetch remote characters", err);
+      return;
+    }
+    const json = await res.json();
+    const remoteChars = json.records ?? json;
+    for (const rc of remoteChars) {
+      const existing = (await db.getAllAsync(
+        "SELECT id FROM characters WHERE distant_id = ?",
+        [rc.id],
+      )) as any[];
+      if (existing.length > 0) continue;
+
+      const localId = await Crypto.randomUUID();
+      const triggerEffects =
+        rc.trigger_effects === null || rc.trigger_effects === undefined
+          ? null
+          : typeof rc.trigger_effects === "string"
+          ? rc.trigger_effects
+          : JSON.stringify(rc.trigger_effects);
+      const bonuses =
+        rc.bonuses === null || rc.bonuses === undefined
+          ? null
+          : typeof rc.bonuses === "string"
+          ? rc.bonuses
+          : JSON.stringify(rc.bonuses);
+
+      await db.runAsync(
+        `INSERT INTO characters (id, distant_id, name, profession, profession_id, profession_score, hobby_id, hobby_score, divinity_id, voie_id, voie_score, intelligence, force, dexterite, charisme, memoire, volonte, sante, degats, origines, rencontres, notes, equipement, fetiches, trigger_effects, bonuses, avatar, avatar_distant) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          localId,
+          rc.id,
+          rc.name,
+          rc.profession ?? null,
+          rc.profession_id ?? null,
+          rc.profession_score ?? 0,
+          rc.hobby_id ?? null,
+          rc.hobby_score ?? 0,
+          rc.divinity_id ?? null,
+          rc.voie_id ?? null,
+          rc.voie_score ?? 0,
+          rc.intelligence ?? 1,
+          rc.force ?? 1,
+          rc.dexterite ?? 1,
+          rc.charisme ?? 1,
+          rc.memoire ?? 1,
+          rc.volonte ?? 1,
+          rc.sante ?? 0,
+          rc.degats ?? 0,
+          rc.origines ?? null,
+          rc.rencontres ?? null,
+          rc.notes ?? null,
+          rc.equipement ?? null,
+          rc.fetiches ?? null,
+          triggerEffects,
+          bonuses,
+          null,
+          rc.avatar_distant ?? null,
+        ],
+      );
+
+      await importDesk(db, localId, rc.id);
+      await importCharacterSkills(db, localId, rc.id);
+      await importCharacterCapacites(db, localId, rc.id);
+    }
+  } catch (e) {
+    console.error("Failed to import remote characters", e);
+  }
+}
+
+async function importDesk(
+  db: SQLite.SQLiteDatabase,
+  localId: string,
+  remoteId: string,
+) {
+  try {
+    const res = await apiFetch(
+      `${API_URL}/desk?filter=character_id,eq,${remoteId}`,
+    );
+    if (!res.ok) return;
+    const json = await res.json();
+    const rows = json.records ?? json;
+    for (const row of rows) {
+      await db.runAsync(
+        "INSERT INTO desk (character_id, figure, cards) VALUES (?, ?, ?)",
+        [localId, row.figure, row.cards],
+      );
+    }
+  } catch (e) {
+    console.error("Failed to import desk", e);
+  }
+}
+
+async function importCharacterSkills(
+  db: SQLite.SQLiteDatabase,
+  localId: string,
+  remoteId: string,
+) {
+  try {
+    const res = await apiFetch(
+      `${API_URL}/character_skills?filter=character_id,eq,${remoteId}`,
+    );
+    if (!res.ok) return;
+    const json = await res.json();
+    const rows = json.records ?? json;
+    for (const row of rows) {
+      const skill = (await db.getAllAsync(
+        "SELECT id FROM skills WHERE distant_id = ?",
+        [row.skill_id],
+      )) as any[];
+      if (skill.length === 0) continue;
+      await db.runAsync(
+        "INSERT INTO character_skills (character_id, skill_id, level, distant_id) VALUES (?, ?, ?, ?)",
+        [localId, skill[0].id, row.level, row.id],
+      );
+    }
+  } catch (e) {
+    console.error("Failed to import character_skills", e);
+  }
+}
+
+async function importCharacterCapacites(
+  db: SQLite.SQLiteDatabase,
+  localId: string,
+  remoteId: string,
+) {
+  try {
+    const res = await apiFetch(
+      `${API_URL}/character_capacites?filter=character_id,eq,${remoteId}`,
+    );
+    if (!res.ok) return;
+    const json = await res.json();
+    const rows = json.records ?? json;
+    for (const row of rows) {
+      const cap = (await db.getAllAsync(
+        "SELECT id FROM capacites WHERE distant_id = ?",
+        [row.capacite_id],
+      )) as any[];
+      if (cap.length === 0) continue;
+      await db.runAsync(
+        "INSERT INTO character_capacites (character_id, capacite_id, level, distant_id) VALUES (?, ?, ?, ?)",
+        [localId, cap[0].id, row.level, row.id],
+      );
+    }
+  } catch (e) {
+    console.error("Failed to import character_capacites", e);
   }
 }
