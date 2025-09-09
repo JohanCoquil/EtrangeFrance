@@ -327,6 +327,26 @@ export async function importRemoteCharacters() {
           ? rc.bonuses
           : JSON.stringify(rc.bonuses);
 
+      let avatarLocal: string | null = null;
+      if (rc.avatar_distant) {
+        try {
+          const remoteUrl = rc.avatar_distant.startsWith("http")
+            ? rc.avatar_distant
+            : `https://api.scriptonautes.net/${rc.avatar_distant.replace(/^\//, "")}`;
+          const dir = FileSystem.documentDirectory + "avatars";
+          await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+          const ext = remoteUrl.split(".").pop()?.split("?")[0] || "jpg";
+          const fileName = `${localId}.${ext}`;
+          avatarLocal = `avatars/${fileName}`;
+          await FileSystem.downloadAsync(
+            remoteUrl,
+            FileSystem.documentDirectory + avatarLocal,
+          );
+        } catch (e) {
+          console.error("Failed to download avatar", e);
+        }
+      }
+
       await db.runAsync(
         `INSERT INTO characters (id, distant_id, name, profession, profession_id, profession_score, hobby_id, hobby_score, divinity_id, voie_id, voie_score, intelligence, force, dexterite, charisme, memoire, volonte, sante, degats, origines, rencontres, notes, equipement, fetiches, trigger_effects, bonuses, avatar, avatar_distant) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
@@ -356,7 +376,7 @@ export async function importRemoteCharacters() {
           rc.fetiches ?? null,
           triggerEffects,
           bonuses,
-          null,
+          avatarLocal,
           rc.avatar_distant ?? null,
         ],
       );
