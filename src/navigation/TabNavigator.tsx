@@ -68,7 +68,7 @@ export default function TabNavigator() {
   const handleLogout = async () => {
     await SecureStore.deleteItemAsync('user');
     setUser(null);
-    navigation.navigate('Home');
+    navigation.replace('Auth');
   };
 
   const confirmLogout = () => {
