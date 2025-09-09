@@ -11,17 +11,18 @@ import {
   Linking
 } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio, Video, ResizeMode } from 'expo-av';
-import * as SecureStore from 'expo-secure-store';
 import { TabParamList, RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
 import { syncDatabase } from '@/data/sync';
 import { usePlayMusic } from '@/context/PlayMusicContext';
 
-type Props = BottomTabScreenProps<TabParamList, 'Home'>;
+type Props = BottomTabScreenProps<TabParamList, 'Home'> & {
+  user: { id: number; login: string } | null;
+};
 
 const backgrounds = [
   require('../../assets/illustrations/background.jpg'),
@@ -34,7 +35,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 let hasSyncedOnce = false;
 
-export default function HomeScreen({ navigation }: Props) {
+export default function HomeScreen({ navigation, user }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [nextIndex, setNextIndex] = useState(1);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -43,7 +44,6 @@ export default function HomeScreen({ navigation }: Props) {
   const [showAnimation, setShowAnimation] = useState(false);
   const [minitelLoaded, setMinitelLoaded] = useState(false);
   const [introSkipped, setIntroSkipped] = useState(false);
-  const [user, setUser] = useState<{ id: number; login: string } | null>(null);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const rootNavigation =
@@ -56,16 +56,6 @@ export default function HomeScreen({ navigation }: Props) {
   const handleEnterAgency = () => {
     rootNavigation.navigate('Auth');
   };
-
-  useFocusEffect(
-    React.useCallback(() => {
-      const loadUser = async () => {
-        const stored = await SecureStore.getItemAsync('user');
-        setUser(stored ? JSON.parse(stored) : null);
-      };
-      loadUser();
-    }, [])
-  );
 
   useEffect(() => {
     const interval = setInterval(() => {
