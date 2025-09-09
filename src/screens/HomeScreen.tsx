@@ -11,7 +11,7 @@ import {
   Linking
 } from 'react-native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio, Video, ResizeMode } from 'expo-av';
@@ -57,13 +57,15 @@ export default function HomeScreen({ navigation }: Props) {
     rootNavigation.navigate('Auth');
   };
 
-  useEffect(() => {
-    const loadUser = async () => {
-      const stored = await SecureStore.getItemAsync('user');
-      if (stored) setUser(JSON.parse(stored));
-    };
-    loadUser();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadUser = async () => {
+        const stored = await SecureStore.getItemAsync('user');
+        setUser(stored ? JSON.parse(stored) : null);
+      };
+      loadUser();
+    }, [])
+  );
 
   useEffect(() => {
     const interval = setInterval(() => {
