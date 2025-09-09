@@ -6,7 +6,7 @@ import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import { RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
-import { syncCharacters } from '../data/characterSync';
+import { syncCharacters, importRemoteCharacters } from '../data/characterSync';
 import { apiFetch } from '../utils/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Auth'>;
@@ -49,6 +49,7 @@ export default function AuthScreen({ navigation }: Props) {
               'user',
               JSON.stringify({ id: user.id, login: user.login })
             );
+            await importRemoteCharacters();
             navigation.replace('MainTabs', {});
           } else {
             Alert.alert('Erreur', 'Identifiants invalides.');
