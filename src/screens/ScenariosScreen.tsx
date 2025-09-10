@@ -3,14 +3,14 @@ import { View, Text, Image, Modal, TouchableOpacity } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "@/navigation/types";
+import { ScenariosStackParamList } from "@/navigation/ScenariosNavigator";
 import Layout from "@/components/ui/Layout";
 import Button from "@/components/ui/Button";
 import { LogIn, PlusCircle } from "lucide-react-native";
 
 type ScenariosScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  "Scenarios"
+  ScenariosStackParamList,
+  "ScenariosList"
 >;
 
 export default function ScenariosScreen() {
