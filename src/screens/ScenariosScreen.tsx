@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { View, Text, Image, Modal, TouchableOpacity } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "@/navigation/types";
 import Layout from "@/components/ui/Layout";
@@ -18,13 +18,15 @@ export default function ScenariosScreen() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showImage, setShowImage] = useState(false);
 
-  useEffect(() => {
-    const loadUser = async () => {
-      const stored = await SecureStore.getItemAsync("user");
-      setIsLoggedIn(!!stored);
-    };
-    loadUser();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      const loadUser = async () => {
+        const stored = await SecureStore.getItemAsync("user");
+        setIsLoggedIn(!!stored);
+      };
+      loadUser();
+    }, [])
+  );
 
   return (
     <Layout backgroundColor="gradient" variant="scroll">
