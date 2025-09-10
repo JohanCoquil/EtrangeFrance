@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, Image, Modal, TouchableOpacity } from "react-native";
+import { View, Text, Image, Modal, TouchableOpacity, Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -7,6 +7,7 @@ import { ScenariosStackParamList } from "@/navigation/ScenariosNavigator";
 import Layout from "@/components/ui/Layout";
 import Button from "@/components/ui/Button";
 import { LogIn, PlusCircle } from "lucide-react-native";
+import { getDb } from "@/data/db";
 
 type ScenariosScreenNavigationProp = NativeStackNavigationProp<
   ScenariosStackParamList,
@@ -67,7 +68,27 @@ export default function ScenariosScreen() {
               variant="primary"
               size="md"
               className="mb-4"
-              onPress={() => {}}
+              onPress={async () => {
+                const db = getDb();
+                const existing = await db.getAllAsync(
+                  "SELECT id FROM characters LIMIT 1"
+                );
+                if (!existing || existing.length === 0) {
+                  Alert.alert(
+                    "Information",
+                    "Créez votre premier personnage pour rejoindre une partie !",
+                    [
+                      {
+                        text: "OK",
+                        onPress: () =>
+                          navigation.getParent()?.navigate("Characters" as never),
+                      },
+                    ]
+                  );
+                } else {
+                  navigation.navigate("Join");
+                }
+              }}
             >
               <View className="flex-row items-center">
                 <LogIn color="#fff" size={16} />
