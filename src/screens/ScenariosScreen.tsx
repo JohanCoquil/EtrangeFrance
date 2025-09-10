@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Image } from "react-native";
+import { View, Text, Image, Modal, TouchableOpacity } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -16,6 +16,7 @@ type ScenariosScreenNavigationProp = NativeStackNavigationProp<
 export default function ScenariosScreen() {
   const navigation = useNavigation<ScenariosScreenNavigationProp>();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showImage, setShowImage] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -33,11 +34,30 @@ export default function ScenariosScreen() {
             <Text className="text-white text-center">
               Connectez-vous afin de rejoindre ou de créer une nouvelle partie.
             </Text>
-            <Image
-              source={require("../../assets/illustrations/joinus.jpg")}
-              className="mt-4 w-full h-64"
-              resizeMode="contain"
-            />
+            <TouchableOpacity onPress={() => setShowImage(true)}>
+              <Image
+                source={require("../../assets/illustrations/joinus.jpg")}
+                className="mt-4 w-full h-64"
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+            <Modal
+              visible={showImage}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setShowImage(false)}
+            >
+              <TouchableOpacity
+                className="flex-1 bg-black"
+                onPress={() => setShowImage(false)}
+              >
+                <Image
+                  source={require("../../assets/illustrations/joinus.jpg")}
+                  className="w-full h-full"
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            </Modal>
           </>
         ) : (
           <>
