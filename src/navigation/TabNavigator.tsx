@@ -6,7 +6,7 @@ import * as SecureStore from 'expo-secure-store';
 import HomeScreen from '../screens/HomeScreen';
 import CharactersScreen from '../screens/CharactersScreen';
 import AgencyScreen from '../screens/AgencyScreen';
-import SessionScreen from '../screens/SessionScreen';
+import ScenariosScreen from '../screens/ScenariosScreen';
 import DeckScreen from '../screens/DeckScreen';
 import { usePlayMusic } from '@/context/PlayMusicContext';
 
@@ -14,7 +14,7 @@ export type TabParamList = {
   Home: undefined;
   Characters: undefined;
   Agency: undefined;
-  Session: undefined;
+  Scenarios: undefined;
   Deck: undefined;
 };
 
@@ -123,10 +123,10 @@ export default function TabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Session"
-        component={SessionScreen}
+        name="Scenarios"
+        component={ScenariosScreen}
         options={{
-          title: 'Session',
+          title: 'Scénarios',
           tabBarIcon: () => null,
         }}
       />
