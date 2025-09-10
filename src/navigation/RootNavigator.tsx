@@ -12,7 +12,6 @@ import { RootStackParamList } from './types';
 import DeckScreen from '../screens/DeckScreen';
 import CardDrawScreen from '../screens/CardDrawScreen';
 import CharacterSheet from '../screens/CharacterSheet';
-import SelectScenarioScreen from '../screens/SelectScenarioScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -25,20 +24,13 @@ export default function RootNavigator() {
       <Stack.Screen name="ChooseProfession" component={ChooseProfessionScreen} />
       <Stack.Screen name="ChooseHobbie" component={ChooseHobbieScreen} />
       <Stack.Screen name="ChooseStrangePath" component={ChooseStrangePathScreen} />
-        <Stack.Screen name="ChooseVoieCapacities" component={ChooseVoieCapacitiesScreen} />
-        <Stack.Screen name="ChooseDivinity" component={ChooseDivinityScreen} />
-        <Stack.Screen name="ChooseBonus" component={ChooseBonusScreen} />
-        <Stack.Screen name="Deck" component={DeckScreen} />
       <Stack.Screen
-        name="SelectScenario"
-        component={SelectScenarioScreen}
-        options={{
-          headerShown: true,
-          title: 'Choisir un scénario',
-          headerStyle: { backgroundColor: '#1f2937' },
-          headerTintColor: '#ffffff',
-        }}
+        name="ChooseVoieCapacities"
+        component={ChooseVoieCapacitiesScreen}
       />
+      <Stack.Screen name="ChooseDivinity" component={ChooseDivinityScreen} />
+      <Stack.Screen name="ChooseBonus" component={ChooseBonusScreen} />
+      <Stack.Screen name="Deck" component={DeckScreen} />
       <Stack.Screen name="CardDraw" component={CardDrawScreen} />
       <Stack.Group screenOptions={{ animation: 'flip', presentation: 'modal' }}>
         <Stack.Screen name="CharacterSheet" component={CharacterSheet} />
