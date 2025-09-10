@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Alert, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { useNavigation } from '@react-navigation/native';
 import * as SecureStore from 'expo-secure-store';
 import HomeScreen from '../screens/HomeScreen';
 import CharactersScreen from '../screens/CharactersScreen';
@@ -52,7 +51,6 @@ function HeaderButtons({
 }
 
 export default function TabNavigator() {
-  const navigation = useNavigation<any>();
   const [user, setUser] = useState<{ id: number; login: string } | null>(
     null
   );
@@ -68,7 +66,6 @@ export default function TabNavigator() {
   const handleLogout = async () => {
     await SecureStore.deleteItemAsync('user');
     setUser(null);
-    navigation.replace('Auth');
   };
 
   const confirmLogout = () => {
