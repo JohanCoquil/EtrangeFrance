@@ -29,7 +29,16 @@ export default function RootNavigator() {
         <Stack.Screen name="ChooseDivinity" component={ChooseDivinityScreen} />
         <Stack.Screen name="ChooseBonus" component={ChooseBonusScreen} />
         <Stack.Screen name="Deck" component={DeckScreen} />
-      <Stack.Screen name="SelectScenario" component={SelectScenarioScreen} />
+      <Stack.Screen
+        name="SelectScenario"
+        component={SelectScenarioScreen}
+        options={{
+          headerShown: true,
+          title: 'Choisir un scénario',
+          headerStyle: { backgroundColor: '#1f2937' },
+          headerTintColor: '#ffffff',
+        }}
+      />
       <Stack.Screen name="CardDraw" component={CardDrawScreen} />
       <Stack.Group screenOptions={{ animation: 'flip', presentation: 'modal' }}>
         <Stack.Screen name="CharacterSheet" component={CharacterSheet} />
