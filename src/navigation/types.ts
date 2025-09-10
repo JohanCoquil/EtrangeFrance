@@ -12,6 +12,8 @@ export type RootStackParamList = {
     ChooseBonus: { characterId: string };
     Characters: undefined;
     Deck: undefined;
+    Scenarios: undefined;
+    SelectScenario: undefined;
   CardDraw: {
     difficulty: number;
     statName?: string;
