@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text } from "react-native";
+import { View, Text, Image } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -29,9 +29,16 @@ export default function ScenariosScreen() {
     <Layout backgroundColor="gradient" variant="scroll">
       <View className="flex-1 p-4">
         {!isLoggedIn ? (
-          <Text className="text-white text-center">
-            Connectez-vous afin de rejoindre ou de créer une nouvelle partie.
-          </Text>
+          <>
+            <Text className="text-white text-center">
+              Connectez-vous afin de rejoindre ou de créer une nouvelle partie.
+            </Text>
+            <Image
+              source={require("../../assets/illustrations/joinus.jpg")}
+              className="mt-4 w-full h-64"
+              resizeMode="contain"
+            />
+          </>
         ) : (
           <>
             <Button
