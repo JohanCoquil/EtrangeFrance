@@ -75,7 +75,7 @@ function NavigationWithMusic() {
       ref={navigationRef}
       onStateChange={() => {
         const name = navigationRef.getCurrentRoute()?.name;
-        setPlayMusic(name !== 'Session');
+        setPlayMusic(name !== 'Scenarios');
       }}
     >
       <RootNavigator />
