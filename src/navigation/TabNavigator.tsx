@@ -38,15 +38,15 @@ function HeaderButtons({
         onPress={() => setMusicEnabled(!musicEnabled)}
         style={{ marginRight: showLogout ? 16 : 0 }}
       >
-        <Ionicons
-          name={musicEnabled ? 'volume-high' : 'volume-mute'}
-          size={24}
-          color="#ffffff"
-        />
+          <Ionicons
+            name={musicEnabled ? 'volume-high' : 'volume-mute'}
+            size={12}
+            color="#ffffff"
+          />
       </TouchableOpacity>
       {showLogout && (
         <TouchableOpacity onPress={onLogout}>
-          <Ionicons name="log-out-outline" size={24} color="#ffffff" />
+          <Ionicons name="log-out-outline" size={12} color="#ffffff" />
         </TouchableOpacity>
       )}
     </View>
@@ -148,7 +148,7 @@ export default function TabNavigator() {
         options={{
           title: '',
           tabBarIcon: ({ color, size }) => (
-            <Settings color={color} size={size} />
+            <Settings color={color} size={size / 2} />
           ),
         }}
       />
