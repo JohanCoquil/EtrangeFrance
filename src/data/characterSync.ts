@@ -90,6 +90,9 @@ export async function syncCharacters() {
     }
 
     if (remoteId) {
+      await syncCharacterSkills(db, char.id, remoteId);
+      await syncCharacterCapacites(db, char.id, remoteId);
+
       if (char.avatar && (!char.avatar_distant || char.avatar_distant === "")) {
         try {
           console.log(`Uploading avatar for character ${char.id}`);
@@ -108,8 +111,6 @@ export async function syncCharacters() {
         }
       }
 
-      await syncCharacterSkills(db, char.id, remoteId);
-      await syncCharacterCapacites(db, char.id, remoteId);
       console.log(`Finished syncing character ${char.id}`);
     }
   }
