@@ -160,6 +160,16 @@ export const initDb = async () => {
       FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT DEFAULT CURRENT_TIMESTAMP,
+      url TEXT NOT NULL,
+      method TEXT NOT NULL,
+      request_json TEXT,
+      response_json TEXT,
+      success INTEGER DEFAULT 0
+    );
+
   `);
 
   // Ensure new columns exist for older databases

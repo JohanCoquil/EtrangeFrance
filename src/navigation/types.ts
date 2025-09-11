@@ -13,6 +13,7 @@ export type RootStackParamList = {
     Characters: undefined;
     Deck: undefined;
     Scenarios: undefined;
+  Logs: undefined;
   CardDraw: {
     difficulty: number;
     statName?: string;

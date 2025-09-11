@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, ScrollView, Alert, TouchableOpacity, Image } from "react-native";
 import * as FileSystem from "expo-file-system";
 import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
-import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "@/navigation/types"; // ton fichier types.ts
 import { useCharacters, useDeleteCharacter } from "@/api/charactersLocal";
@@ -24,6 +25,7 @@ export default function CharactersScreen() {
   const { data: characters, isLoading } = useCharacters();
   const deleteCharacter = useDeleteCharacter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -33,6 +35,20 @@ export default function CharactersScreen() {
     };
     loadUser();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadDebug = async () => {
+        try {
+          const stored = await AsyncStorage.getItem("debugMode");
+          setDebugMode(stored === "true");
+        } catch {
+          setDebugMode(false);
+        }
+      };
+      loadDebug();
+    }, []),
+  );
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -79,6 +95,11 @@ export default function CharactersScreen() {
                         {char.name}
                       </Text>
                     </TouchableOpacity>
+                    {debugMode && (
+                      <Text className="text-yellow-400 text-xs mb-1">
+                        id: {char.id} distant_id: {char.distant_id}
+                      </Text>
+                    )}
                     <Text className="text-white text-sm italic mb-2">
                       {char.profession_name || "Profession à définir"}
                     </Text>
