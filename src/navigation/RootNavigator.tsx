@@ -13,6 +13,7 @@ import DeckScreen from '../screens/DeckScreen';
 import CardDrawScreen from '../screens/CardDrawScreen';
 import CharacterSheet from '../screens/CharacterSheet';
 import LogScreen from '../screens/LogScreen';
+import BddScreen from '../screens/BddScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -34,6 +35,7 @@ export default function RootNavigator() {
       <Stack.Screen name="Deck" component={DeckScreen} />
       <Stack.Screen name="CardDraw" component={CardDrawScreen} />
       <Stack.Screen name="Logs" component={LogScreen} />
+      <Stack.Screen name="Bdd" component={BddScreen} />
       <Stack.Group screenOptions={{ animation: 'flip', presentation: 'modal' }}>
         <Stack.Screen name="CharacterSheet" component={CharacterSheet} />
       </Stack.Group>

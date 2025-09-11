@@ -48,6 +48,13 @@ export default function ParamScreen() {
       >
         Logs
       </Button>
+      <Button
+        className="mt-4"
+        onPress={() => navigation.navigate('Bdd')}
+        variant="secondary"
+      >
+        BDD Locale
+      </Button>
     </View>
   );
 }

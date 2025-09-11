@@ -14,6 +14,7 @@ export type RootStackParamList = {
     Deck: undefined;
     Scenarios: undefined;
   Logs: undefined;
+  Bdd: undefined;
   CardDraw: {
     difficulty: number;
     statName?: string;
