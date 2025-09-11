@@ -201,7 +201,7 @@ async function syncCharacterSkills(
 ) {
   console.log(`syncCharacterSkills for character ${localId}`);
   const rows = (await db.getAllAsync(
-    `SELECT * FROM character_skills WHERE character_id = ? AND distant_id = 0`,
+    `SELECT cs.*, s.distant_id as skill_distant_id FROM character_skills cs JOIN skills s ON cs.skill_id = s.id WHERE cs.character_id = ? AND cs.distant_id = 0`,
     [localId],
   )) as any[];
   console.log(`Found ${rows.length} skill rows for character ${localId}`);
@@ -210,7 +210,7 @@ async function syncCharacterSkills(
     try {
       const payload = {
         character_id: remoteId,
-        skill_id: row.skill_id,
+        skill_id: row.skill_distant_id,
         level: row.level,
       };
       const res = await apiFetch(`${API_URL}/character_skills`, {
@@ -247,7 +247,7 @@ async function syncCharacterCapacites(
 ) {
   console.log(`syncCharacterCapacites for character ${localId}`);
   const rows = (await db.getAllAsync(
-    `SELECT * FROM character_capacites WHERE character_id = ? AND distant_id = 0`,
+    `SELECT cc.*, c.distant_id as capacite_distant_id FROM character_capacites cc JOIN capacites c ON cc.capacite_id = c.id WHERE cc.character_id = ? AND cc.distant_id = 0`,
     [localId],
   )) as any[];
   console.log(`Found ${rows.length} capacite rows for character ${localId}`);
@@ -256,7 +256,7 @@ async function syncCharacterCapacites(
     try {
       const payload = {
         character_id: remoteId,
-        capacite_id: row.capacite_id,
+        capacite_id: row.capacite_distant_id,
         level: row.level,
       };
       const res = await apiFetch(`${API_URL}/character_capacites`, {
@@ -309,7 +309,7 @@ export async function importRemoteCharacters() {
     const remoteChars = json.records ?? json;
     for (const rc of remoteChars) {
       const existing = (await db.getAllAsync(
-        "SELECT id FROM characters WHERE id = ?",
+        "SELECT id FROM characters WHERE distant_id = ?",
         [rc.id],
       )) as any[];
       if (existing.length > 0) continue;
@@ -433,7 +433,7 @@ async function importCharacterSkills(
     const rows = json.records ?? json;
     for (const row of rows) {
       const skill = (await db.getAllAsync(
-        "SELECT id FROM skills WHERE id = ?",
+        "SELECT id FROM skills WHERE distant_id = ?",
         [row.skill_id],
       )) as any[];
       if (skill.length === 0) continue;
@@ -461,7 +461,7 @@ async function importCharacterCapacites(
     const rows = json.records ?? json;
     for (const row of rows) {
       const cap = (await db.getAllAsync(
-        "SELECT id FROM capacites WHERE id = ?",
+        "SELECT id FROM capacites WHERE distant_id = ?",
         [row.capacite_id],
       )) as any[];
       if (cap.length === 0) continue;
