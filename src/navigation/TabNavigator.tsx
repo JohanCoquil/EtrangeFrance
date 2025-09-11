@@ -8,6 +8,8 @@ import CharactersScreen from '../screens/CharactersScreen';
 import AgencyScreen from '../screens/AgencyScreen';
 import ScenariosNavigator from './ScenariosNavigator';
 import DeckScreen from '../screens/DeckScreen';
+import ParamScreen from '../screens/ParamScreen';
+import { Settings } from 'lucide-react-native';
 import { usePlayMusic } from '@/context/PlayMusicContext';
 
 export type TabParamList = {
@@ -16,6 +18,7 @@ export type TabParamList = {
   Agency: undefined;
   Scenarios: undefined;
   Deck: undefined;
+  Param: undefined;
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -137,6 +140,16 @@ export default function TabNavigator() {
         options={{
           title: 'Deck',
           tabBarIcon: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="Param"
+        component={ParamScreen}
+        options={{
+          title: 'Paramètres',
+          tabBarIcon: ({ color, size }) => (
+            <Settings color={color} size={size} />
+          ),
         }}
       />
     </Tab.Navigator>
