@@ -146,7 +146,7 @@ export default function TabNavigator() {
         name="Param"
         component={ParamScreen}
         options={{
-          title: 'Paramètres',
+          title: '',
           tabBarIcon: ({ color, size }) => (
             <Settings color={color} size={size} />
           ),
