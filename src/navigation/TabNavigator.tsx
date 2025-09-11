@@ -40,13 +40,13 @@ function HeaderButtons({
       >
           <Ionicons
             name={musicEnabled ? 'volume-high' : 'volume-mute'}
-            size={12}
+            size={24}
             color="#ffffff"
           />
       </TouchableOpacity>
       {showLogout && (
         <TouchableOpacity onPress={onLogout}>
-          <Ionicons name="log-out-outline" size={12} color="#ffffff" />
+          <Ionicons name="log-out-outline" size={24} color="#ffffff" />
         </TouchableOpacity>
       )}
     </View>
@@ -147,9 +147,8 @@ export default function TabNavigator() {
         component={ParamScreen}
         options={{
           title: '',
-          tabBarIcon: ({ color, size }) => (
-            <Settings color={color} size={size / 2} />
-          ),
+          tabBarIcon: () => null,
+          tabBarLabel: ({ color }) => <Settings color={color} size={24} />,
         }}
       />
     </Tab.Navigator>
