@@ -1,3 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { addLogEntry } from '@/api/logs';
+
 export function logApiCall(url: string, method: string, body?: any) {
   if (body !== undefined) {
     console.log(`[API] ${method} ${url}`, body);
@@ -36,6 +39,21 @@ export async function apiFetch(
       // response is not JSON
     }
     console.log(`[API] response ${method} ${url} -> ${res.status}`, parsed);
+
+    const debug = await AsyncStorage.getItem('debugMode');
+    if (debug === 'true') {
+      try {
+        await addLogEntry({
+          url,
+          method,
+          request: body,
+          response: parsed,
+          success: res.ok,
+        });
+      } catch {
+        // ignore
+      }
+    }
   } catch (e) {
     console.log(`[API] response ${method} ${url} -> ${res.status}`);
   }
