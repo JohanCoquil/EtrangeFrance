@@ -249,8 +249,11 @@ export function useCharacters() {
     queryFn: async () => {
       const db = getDb();
       const result = await db.getAllAsync(`
-        SELECT c.*, p.name AS profession_name, h.name AS hobby_name, v.name AS voie_name
-        , d.name AS divinity_name, d.domaine AS divinity_domaine
+        SELECT c.*, p.name AS profession_name, h.name AS hobby_name, v.name AS voie_name,
+          d.name AS divinity_name, d.domaine AS divinity_domaine,
+          (SELECT MAX(last_sync_at) FROM character_skills cs WHERE cs.character_id = c.id) AS skills_last_sync,
+          (SELECT MAX(last_sync_at) FROM character_capacites cc WHERE cc.character_id = c.id) AS capacities_last_sync,
+          (SELECT MAX(last_sync_at) FROM desk dk WHERE dk.character_id = c.id) AS desk_last_sync
         FROM characters c
         LEFT JOIN professions p ON c.profession_id = p.id
         LEFT JOIN hobbies h ON c.hobby_id = h.id

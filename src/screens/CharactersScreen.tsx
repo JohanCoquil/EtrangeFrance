@@ -28,6 +28,8 @@ export default function CharactersScreen() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const queryClient = useQueryClient();
+  const formatSync = (value?: string | null) =>
+    value ? new Date(value).toLocaleString() : "Jamais";
 
   useEffect(() => {
     const loadUser = async () => {
@@ -97,9 +99,23 @@ export default function CharactersScreen() {
                       </Text>
                     </TouchableOpacity>
                     {debugMode && (
-                      <Text className="text-yellow-400 text-xs mb-1">
-                        id: {char.id} distant_id: {char.distant_id}
-                      </Text>
+                      <>
+                        <Text className="text-yellow-400 text-xs mb-1">
+                          id: {char.id} distant_id: {char.distant_id}
+                        </Text>
+                        <Text className="text-yellow-400 text-xs">
+                          characters: {formatSync(char.last_sync_at)}
+                        </Text>
+                        <Text className="text-yellow-400 text-xs">
+                          character_skills: {formatSync(char.skills_last_sync)}
+                        </Text>
+                        <Text className="text-yellow-400 text-xs">
+                          character_capacites: {formatSync(char.capacities_last_sync)}
+                        </Text>
+                        <Text className="text-yellow-400 text-xs mb-1">
+                          desk: {formatSync(char.desk_last_sync)}
+                        </Text>
+                      </>
                     )}
                     <Text className="text-white text-sm italic mb-2">
                       {char.profession_name || "Profession à définir"}
