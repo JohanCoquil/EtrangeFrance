@@ -19,6 +19,7 @@ import { TabParamList, RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
 import { syncDatabase } from '@/data/sync';
 import { usePlayMusic } from '@/context/PlayMusicContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Props = BottomTabScreenProps<TabParamList, 'Home'> & {
   user: { id: number; login: string } | null;
@@ -56,6 +57,17 @@ export default function HomeScreen({ navigation, user }: Props) {
   const handleEnterAgency = () => {
     rootNavigation.navigate('Auth');
   };
+
+  useEffect(() => {
+    const loadIntroFlag = async () => {
+      const stored = await AsyncStorage.getItem('introSkipped');
+      if (stored === 'true') {
+        setIntroSkipped(true);
+        setInitModal(false);
+      }
+    };
+    loadIntroFlag();
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -133,6 +145,7 @@ export default function HomeScreen({ navigation, user }: Props) {
 
   const handleSkipIntro = async () => {
     setIntroSkipped(true);
+    await AsyncStorage.setItem('introSkipped', 'true');
     setPlayMusic(false);
     await minitelPlayer.current?.stopAsync();
     await videoRef.current?.stopAsync();
@@ -146,6 +159,13 @@ export default function HomeScreen({ navigation, user }: Props) {
     setSyncing(false);
     setInitModal(false);
     hasSyncedOnce = true;
+  };
+
+  const handleReplayIntro = async () => {
+    await AsyncStorage.setItem('introSkipped', 'false');
+    setIntroSkipped(false);
+    setInitModal(true);
+    setShowAnimation(false);
   };
 
   useEffect(() => {
@@ -217,6 +237,13 @@ export default function HomeScreen({ navigation, user }: Props) {
   </Text>.
 </Caption>
       </View>
+
+      <Body
+        className="text-blue-300 underline text-center mt-4"
+        onPress={introSkipped ? handleReplayIntro : handleSkipIntro}
+      >
+        {introSkipped ? "Rejouer l'intro" : "Passer l'intro"}
+      </Body>
 
     </ScrollView>
   );

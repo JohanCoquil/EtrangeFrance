@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
 import { AppState, AppStateStatus } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type PlayMusicContextType = {
   playMusic: boolean;
@@ -51,6 +52,20 @@ export const PlayMusicProvider: React.FC<{ children: React.ReactNode }> = ({
       playerRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const loadSetting = async () => {
+      const stored = await AsyncStorage.getItem("musicEnabled");
+      if (stored !== null) {
+        setMusicEnabled(stored === "true");
+      }
+    };
+    loadSetting();
+  }, []);
+
+  useEffect(() => {
+    AsyncStorage.setItem("musicEnabled", musicEnabled ? "true" : "false");
+  }, [musicEnabled]);
 
   useEffect(() => {
     const player = playerRef.current;
