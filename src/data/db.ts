@@ -61,6 +61,7 @@ export const initDb = async () => {
       character_id TEXT NOT NULL,
       capacite_id INTEGER NOT NULL,
       level INTEGER NOT NULL,
+      last_sync_at TEXT,
       PRIMARY KEY (character_id, capacite_id),
       FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
       FOREIGN KEY (capacite_id) REFERENCES capacites(id) ON DELETE CASCADE
@@ -135,6 +136,7 @@ export const initDb = async () => {
       bonuses TEXT,
       avatar TEXT,
       avatar_distant TEXT,
+      last_sync_at TEXT,
       FOREIGN KEY (profession_id) REFERENCES professions(id),
       FOREIGN KEY (hobby_id) REFERENCES hobbies(id),
       FOREIGN KEY (divinity_id) REFERENCES druide_divinites(id),
@@ -146,6 +148,7 @@ export const initDb = async () => {
       character_id TEXT NOT NULL,
       skill_id INTEGER NOT NULL,
       level INTEGER NOT NULL,
+      last_sync_at TEXT,
       PRIMARY KEY (character_id, skill_id),
       FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
       FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
@@ -157,6 +160,7 @@ export const initDb = async () => {
       character_id TEXT NOT NULL,
       figure TEXT NOT NULL CHECK (figure IN ('Carreau','Coeur','Trèfle','Pique')),
       cards TEXT NOT NULL,
+      last_sync_at TEXT,
       FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
     );
 
@@ -181,9 +185,29 @@ export const initDb = async () => {
       "ALTER TABLE desk RENAME COLUMN user_id TO character_id;",
     );
   }
+  const hasDeskLastSync = deskCols.some((c: any) => c.name === "last_sync_at");
+  if (!hasDeskLastSync) {
+    await database.execAsync(
+      "ALTER TABLE desk ADD COLUMN last_sync_at TEXT;",
+    );
+  }
   await database.execAsync(
     "CREATE INDEX IF NOT EXISTS idx_desk_character_id ON desk(character_id);",
   );
+  const charCapCols = await database.getAllAsync("PRAGMA table_info(character_capacites);");
+  const hasCharCapLastSync = charCapCols.some((c: any) => c.name === "last_sync_at");
+  if (!hasCharCapLastSync) {
+    await database.execAsync(
+      "ALTER TABLE character_capacites ADD COLUMN last_sync_at TEXT;",
+    );
+  }
+  const charSkillCols = await database.getAllAsync("PRAGMA table_info(character_skills);");
+  const hasCharSkillLastSync = charSkillCols.some((c: any) => c.name === "last_sync_at");
+  if (!hasCharSkillLastSync) {
+    await database.execAsync(
+      "ALTER TABLE character_skills ADD COLUMN last_sync_at TEXT;",
+    );
+  }
   const voieCapaciteCols = await database.getAllAsync("PRAGMA table_info(voie_capacite);");
   const hasVcDistantId = voieCapaciteCols.some((c: any) => c.name === "distant_id");
   if (!hasVcDistantId) {
@@ -193,6 +217,12 @@ export const initDb = async () => {
   }
 
   const columns = await database.getAllAsync("PRAGMA table_info(characters);");
+  const hasLastSync = columns.some((c: any) => c.name === "last_sync_at");
+  if (!hasLastSync) {
+    await database.execAsync(
+      "ALTER TABLE characters ADD COLUMN last_sync_at TEXT;",
+    );
+  }
   const hasProfessionId = columns.some((c: any) => c.name === "profession_id");
   if (!hasProfessionId) {
     await database.execAsync(

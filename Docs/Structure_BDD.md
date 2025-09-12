@@ -103,7 +103,8 @@ CREATE TABLE characters (
     voice_id INT REFERENCES voices(id),
     avatar VARCHAR(255),
     avatar_distant VARCHAR(255),
-    
+    last_sync_at TIMESTAMP,
+
     -- Caractéristiques principales
     force INTEGER DEFAULT 8 CHECK (force >= 1 AND force <= 20),
     agilite INTEGER DEFAULT 8 CHECK (agilite >= 1 AND agilite <= 20),

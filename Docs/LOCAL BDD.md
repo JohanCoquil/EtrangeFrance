@@ -44,6 +44,7 @@ CREATE TABLE characters (
   bonuses TEXT,
   avatar TEXT,               -- Chemin local de l'avatar
   avatar_distant TEXT,       -- URL distante de l'avatar
+  last_sync_at TEXT,         -- Dernière synchronisation
 
   -- Clés étrangères
   FOREIGN KEY (profession_id) REFERENCES professions(id),
@@ -115,6 +116,7 @@ CREATE TABLE character_capacites (
   character_id TEXT NOT NULL,
   capacite_id INTEGER NOT NULL,
   level INTEGER NOT NULL,
+  last_sync_at TEXT,
   PRIMARY KEY (character_id, capacite_id),
   FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
   FOREIGN KEY (capacite_id) REFERENCES capacites(id) ON DELETE CASCADE
@@ -162,6 +164,7 @@ CREATE TABLE character_skills (
   character_id TEXT NOT NULL,
   skill_id INTEGER NOT NULL,
   level INTEGER NOT NULL,
+  last_sync_at TEXT,
   PRIMARY KEY (character_id, skill_id),
   FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
   FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
@@ -199,6 +202,7 @@ CREATE TABLE desk (
   character_id TEXT NOT NULL,
   figure TEXT NOT NULL CHECK (figure IN ('Carreau','Coeur','Trèfle','Pique')),
   cards TEXT NOT NULL,
+  last_sync_at TEXT,
   FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
 );
 ```
@@ -244,6 +248,10 @@ if (!hasProfessionId) {
 - `avatar` dans `characters`
 - `avatar_distant` dans `characters`
 - `distant_id` dans `voie_capacite`
+- `last_sync_at` dans `characters`
+- `last_sync_at` dans `character_capacites`
+- `last_sync_at` dans `character_skills`
+- `last_sync_at` dans `desk`
 
 ## 📊 **Types TypeScript Correspondants**
 
@@ -286,6 +294,7 @@ export interface Character {
   updatedAt: Date;
   avatar?: string;
   avatar_distant?: string;
+  last_sync_at?: string;
 }
 ```
 

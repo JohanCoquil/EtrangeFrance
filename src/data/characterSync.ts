@@ -78,10 +78,10 @@ export async function syncCharacters() {
         console.log(`Remote ID for character ${char.id}:`, extractedId);
         if (!extractedId) continue;
         remoteId = extractedId;
-        await db.runAsync("UPDATE characters SET distant_id = ? WHERE id = ?", [
-          remoteId,
-          char.id,
-        ]);
+        await db.runAsync(
+          "UPDATE characters SET distant_id = ?, last_sync_at = CURRENT_TIMESTAMP WHERE id = ?",
+          [remoteId, char.id],
+        );
         await syncDesk(db, char.id, remoteId);
       } catch (e) {
         console.error("Failed to push character", e, `Payload: ${payloadString}`);
@@ -110,7 +110,10 @@ export async function syncCharacters() {
           console.error("Failed to upload avatar", err);
         }
       }
-
+      await db.runAsync(
+        "UPDATE characters SET last_sync_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [char.id],
+      );
       console.log(`Finished syncing character ${char.id}`);
     }
   }
@@ -187,6 +190,11 @@ async function syncDesk(
         console.error(
           `Failed to push desk row for character ${localId}: ${res.status} ${res.statusText} - ${errorText}`,
         );
+      } else {
+        await db.runAsync(
+          "UPDATE desk SET last_sync_at = CURRENT_TIMESTAMP WHERE character_id = ? AND figure = ?",
+          [localId, row.figure],
+        );
       }
     } catch (e) {
       console.error("Failed to push desk row", e);
@@ -230,7 +238,7 @@ async function syncCharacterSkills(
       const newId = extractRecordId(text);
       if (newId) {
         await db.runAsync(
-          "UPDATE character_skills SET distant_id = ? WHERE character_id = ? AND skill_id = ?",
+          "UPDATE character_skills SET distant_id = ?, last_sync_at = CURRENT_TIMESTAMP WHERE character_id = ? AND skill_id = ?",
           [newId, localId, row.skill_id],
         );
       }
@@ -276,7 +284,7 @@ async function syncCharacterCapacites(
       const newId = extractRecordId(text);
       if (newId) {
         await db.runAsync(
-          "UPDATE character_capacites SET distant_id = ? WHERE character_id = ? AND capacite_id = ?",
+          "UPDATE character_capacites SET distant_id = ?, last_sync_at = CURRENT_TIMESTAMP WHERE character_id = ? AND capacite_id = ?",
           [newId, localId, row.capacite_id],
         );
       }
@@ -386,6 +394,10 @@ export async function importRemoteCharacters() {
           remoteAvatar ?? null,
         ],
       );
+      await db.runAsync(
+        "UPDATE characters SET last_sync_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [localId],
+      );
 
       await importDesk(db, localId, rc.id);
       await importCharacterSkills(db, localId, rc.id);
@@ -410,7 +422,7 @@ async function importDesk(
     const rows = json.records ?? json;
     for (const row of rows) {
       await db.runAsync(
-        "INSERT INTO desk (character_id, figure, cards) VALUES (?, ?, ?)",
+        "INSERT INTO desk (character_id, figure, cards, last_sync_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
         [localId, row.figure, row.cards],
       );
     }
@@ -438,7 +450,7 @@ async function importCharacterSkills(
       )) as any[];
       if (skill.length === 0) continue;
       await db.runAsync(
-        "INSERT INTO character_skills (character_id, skill_id, level, distant_id) VALUES (?, ?, ?, ?)",
+        "INSERT INTO character_skills (character_id, skill_id, level, distant_id, last_sync_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
         [localId, skill[0].id, row.level, row.id],
       );
     }
@@ -466,7 +478,7 @@ async function importCharacterCapacites(
       )) as any[];
       if (cap.length === 0) continue;
       await db.runAsync(
-        "INSERT INTO character_capacites (character_id, capacite_id, level, distant_id) VALUES (?, ?, ?, ?)",
+        "INSERT INTO character_capacites (character_id, capacite_id, level, distant_id, last_sync_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
         [localId, cap[0].id, row.level, row.id],
       );
     }
