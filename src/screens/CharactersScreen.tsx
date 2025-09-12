@@ -9,6 +9,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "@/navigation/types"; // ton fichier types.ts
 import { useCharacters, useDeleteCharacter } from "@/api/charactersLocal";
 import { syncCharacters } from "@/data/characterSync";
+import { apiFetch } from "@/utils/api";
 import { useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/ui/Layout";
 import Button from "@/components/ui/Button";
@@ -162,8 +163,22 @@ export default function CharactersScreen() {
                               { text: "Non", style: "cancel" },
                               {
                                 text: "Oui",
-                                onPress: () =>
-                                  deleteCharacter.mutate(String(char.id)),
+                                onPress: async () => {
+                                  if (char.distant_id) {
+                                    try {
+                                      await apiFetch(
+                                        `https://api.scriptonautes.net/api/records/characters/${char.distant_id}`,
+                                        { method: "DELETE" },
+                                      );
+                                    } catch (e) {
+                                      console.error(
+                                        "Failed to delete remote character",
+                                        e,
+                                      );
+                                    }
+                                  }
+                                  deleteCharacter.mutate(String(char.id));
+                                },
                               },
                             ]
                           )
