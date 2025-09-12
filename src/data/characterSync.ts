@@ -8,10 +8,10 @@ import { apiFetch, logApiCall, extractRecordId } from "../utils/api";
 const API_URL = "https://api.scriptonautes.net/api/records";
 
 /**
- * Send a partial update for a character to the remote API.
+ * Send a full update for a character to the remote API.
  *
- * This prepares future support for syncing character modifications
- * (using PATCH/PUT) by providing a reusable helper.
+ * The API does not support PATCH, so we send a complete payload using PUT
+ * to satisfy NOT NULL constraints on the backend.
  */
 export async function pushCharacterUpdate(
   localId: string,
@@ -19,7 +19,7 @@ export async function pushCharacterUpdate(
 ) {
   const db = getDb();
   const row = (await db.getFirstAsync(
-    "SELECT distant_id FROM characters WHERE id = ?",
+    "SELECT * FROM characters WHERE id = ?",
     [localId],
   )) as any;
   const remoteId = row?.distant_id;
@@ -28,14 +28,49 @@ export async function pushCharacterUpdate(
     return;
   }
 
-  const payload = JSON.stringify(changes);
+  const storedUser = await SecureStore.getItemAsync("user");
+  const userId = storedUser ? JSON.parse(storedUser).id : null;
+  if (!userId) {
+    console.warn("No user ID found, skipping character update");
+    return;
+  }
+
+  const payload: Record<string, any> = {
+    user_id: userId,
+    name: row.name,
+    profession_id: row.profession_id ?? null,
+    profession_score: row.profession_score ?? 0,
+    hobby_id: row.hobby_id ?? null,
+    hobby_score: row.hobby_score ?? 0,
+    divinity_id: row.divinity_id ?? null,
+    voie_id: row.voie_id ?? null,
+    voie_score: row.voie_score ?? 0,
+    intelligence: row.intelligence,
+    force: row.force,
+    dexterite: row.dexterite,
+    charisme: row.charisme,
+    memoire: row.memoire,
+    volonte: row.volonte,
+    sante: row.sante,
+    degats: row.degats,
+    origines: row.origines ?? null,
+    rencontres: row.rencontres ?? null,
+    notes: row.notes ?? null,
+    equipement: row.equipement ?? null,
+    fetiches: row.fetiches ?? null,
+    trigger_effects: row.trigger_effects ?? null,
+    bonuses: row.bonuses ?? null,
+  };
+
+  Object.assign(payload, changes);
+  const payloadString = JSON.stringify(payload);
   try {
     const res = await apiFetch(`${API_URL}/characters/${remoteId}`, {
-      method: "PATCH",
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: payload,
+      body: payloadString,
     });
-    console.log(`PATCH /characters/${remoteId} status: ${res.status}`);
+    console.log(`PUT /characters/${remoteId} status: ${res.status}`);
     if (!res.ok) {
       const errorText = await res.text();
       console.error(
@@ -48,7 +83,7 @@ export async function pushCharacterUpdate(
       [localId],
     );
   } catch (e) {
-    console.error("Failed to push character update", e, `Payload: ${payload}`);
+    console.error("Failed to push character update", e, `Payload: ${payloadString}`);
   }
 }
 
