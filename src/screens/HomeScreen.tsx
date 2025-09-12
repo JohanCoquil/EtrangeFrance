@@ -251,13 +251,13 @@ export default function HomeScreen({ navigation, user }: Props) {
           .
         </Caption>
       </View>
-
-      <Body
-        className="text-blue-300 underline text-center mt-4"
+      <Button
+        variant="secondary"
+        className="w-full mt-4"
         onPress={introSkipped ? handleReplayIntro : handleSkipIntro}
       >
         {introSkipped ? "Rejouer l'intro" : "Passer l'intro"}
-      </Body>
+      </Button>
     </ScrollView>
   );
 
