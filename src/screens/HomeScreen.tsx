@@ -152,6 +152,22 @@ export default function HomeScreen({ navigation, user }: Props) {
     run();
   }, [initModal, setPlayMusic, minitelLoaded, introSkipped]);
 
+  const handleSkipIntro = async () => {
+    await minitelPlayer.current?.stopAsync();
+    setIntroSkipped(true);
+    setInitModal(false);
+    setPlayMusic(true);
+    setSyncing(true);
+    try {
+      await syncDatabase();
+    } catch (e) {
+      console.error("Database sync failed", e);
+    }
+    setSyncing(false);
+    await AsyncStorage.setItem("introSkipped", "true");
+    hasSyncedOnce = true;
+  };
+
   const handleResetIntro = async () => {
     await AsyncStorage.setItem("introSkipped", "false");
     setIntroSkipped(false);
@@ -322,6 +338,12 @@ export default function HomeScreen({ navigation, user }: Props) {
                 </Body>
               </>
             )}
+            <Text
+              className="text-white mt-4 underline"
+              onPress={handleSkipIntro}
+            >
+              Passer l'intro
+            </Text>
           </View>
         </ImageBackground>
       </Modal>
