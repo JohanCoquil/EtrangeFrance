@@ -180,7 +180,7 @@ export default function CharactersScreen() {
                               {
                                 text: "Oui",
                                 onPress: async () => {
-                                  if (char.distant_id) {
+                                  if (char.distant_id && isLoggedIn) {
                                     try {
                                       await apiFetch(
                                         `https://api.scriptonautes.net/api/records/characters/${char.distant_id}`,
