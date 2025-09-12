@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   ScrollView,
@@ -8,31 +8,31 @@ import {
   Modal,
   ActivityIndicator,
   Text,
-  Linking
-} from 'react-native';
-import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Audio, Video, ResizeMode } from 'expo-av';
-import { TabParamList, RootStackParamList } from '../navigation/types';
-import { Button, Title, Body, Caption } from '../components/ui';
-import { syncDatabase } from '@/data/sync';
-import { usePlayMusic } from '@/context/PlayMusicContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+  Linking,
+} from "react-native";
+import { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { LinearGradient } from "expo-linear-gradient";
+import { Audio, Video, ResizeMode } from "expo-av";
+import { TabParamList, RootStackParamList } from "../navigation/types";
+import { Button, Title, Body, Caption } from "../components/ui";
+import { syncDatabase } from "@/data/sync";
+import { usePlayMusic } from "@/context/PlayMusicContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-type Props = BottomTabScreenProps<TabParamList, 'Home'> & {
+type Props = BottomTabScreenProps<TabParamList, "Home"> & {
   user: { id: number; login: string } | null;
 };
 
 const backgrounds = [
-  require('../../assets/illustrations/background.jpg'),
-  require('../../assets/illustrations/background2.jpg'),
-  require('../../assets/illustrations/background3.jpg'),
-  require('../../assets/illustrations/background4.jpg'),
+  require("../../assets/illustrations/background.jpg"),
+  require("../../assets/illustrations/background2.jpg"),
+  require("../../assets/illustrations/background3.jpg"),
+  require("../../assets/illustrations/background4.jpg"),
 ];
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
 let hasSyncedOnce = false;
 
@@ -55,19 +55,28 @@ export default function HomeScreen({ navigation, user }: Props) {
   const { setPlayMusic } = usePlayMusic();
 
   const handleEnterAgency = () => {
-    rootNavigation.navigate('Auth');
+    rootNavigation.navigate("Auth");
   };
 
   useEffect(() => {
     const loadIntroFlag = async () => {
-      const stored = await AsyncStorage.getItem('introSkipped');
-      if (stored === 'true') {
+      const stored = await AsyncStorage.getItem("introSkipped");
+      if (stored === "true") {
         setIntroSkipped(true);
         setInitModal(false);
+        setPlayMusic(true);
+        setSyncing(true);
+        try {
+          await syncDatabase();
+        } catch (e) {
+          console.error("Database sync failed", e);
+        }
+        setSyncing(false);
+        hasSyncedOnce = true;
       }
     };
     loadIntroFlag();
-  }, []);
+  }, [setPlayMusic]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -91,7 +100,7 @@ export default function HomeScreen({ navigation, user }: Props) {
   useEffect(() => {
     const setup = async () => {
       const { sound } = await Audio.Sound.createAsync(
-        require('../../sounds/minitel.mp3')
+        require("../../sounds/minitel.mp3"),
       );
       minitelPlayer.current = sound;
       setMinitelLoaded(true);
@@ -106,10 +115,10 @@ export default function HomeScreen({ navigation, user }: Props) {
   useEffect(() => {
     const loadVideo = async () => {
       if (videoRef.current) {
-        await videoRef.current.loadAsync(
-          require('../../assets/minitel.mp4'),
-          { isLooping: true, shouldPlay: false }
-        );
+        await videoRef.current.loadAsync(require("../../assets/minitel.mp4"), {
+          isLooping: true,
+          shouldPlay: false,
+        });
       }
     };
     loadVideo();
@@ -133,7 +142,7 @@ export default function HomeScreen({ navigation, user }: Props) {
       try {
         await syncDatabase();
       } catch (e) {
-        console.error('Database sync failed', e);
+        console.error("Database sync failed", e);
       }
       await new Promise((res) => setTimeout(res, 5000));
       setSyncing(false);
@@ -145,7 +154,7 @@ export default function HomeScreen({ navigation, user }: Props) {
 
   const handleSkipIntro = async () => {
     setIntroSkipped(true);
-    await AsyncStorage.setItem('introSkipped', 'true');
+    await AsyncStorage.setItem("introSkipped", "true");
     setPlayMusic(false);
     await minitelPlayer.current?.stopAsync();
     await videoRef.current?.stopAsync();
@@ -154,15 +163,16 @@ export default function HomeScreen({ navigation, user }: Props) {
     try {
       await syncDatabase();
     } catch (e) {
-      console.error('Database sync failed', e);
+      console.error("Database sync failed", e);
     }
+    setPlayMusic(true);
     setSyncing(false);
     setInitModal(false);
     hasSyncedOnce = true;
   };
 
   const handleReplayIntro = async () => {
-    await AsyncStorage.setItem('introSkipped', 'false');
+    await AsyncStorage.setItem("introSkipped", "false");
     setIntroSkipped(false);
     setInitModal(true);
     setShowAnimation(false);
@@ -178,7 +188,7 @@ export default function HomeScreen({ navigation, user }: Props) {
     <ScrollView
       contentContainerStyle={{
         flexGrow: 1,
-        justifyContent: 'flex-start',
+        justifyContent: "flex-start",
         paddingHorizontal: 24,
         paddingTop: 10,
         paddingBottom: 40,
@@ -199,15 +209,18 @@ export default function HomeScreen({ navigation, user }: Props) {
 
       <View className="bg-black/40 rounded-lg p-6 mb-8 border border-blue-500/30">
         <Body className="text-white text-center leading-relaxed mb-4">
-          Etrange France se déroule dans un monde reflet du notre, où le surnaturel existe.
-          Les mages, les fées, les mythes, les dieux anciens le parcourent depuis toujours.
+          Etrange France se déroule dans un monde reflet du notre, où le
+          surnaturel existe. Les mages, les fées, les mythes, les dieux anciens
+          le parcourent depuis toujours.
         </Body>
         <Body className="text-white text-center leading-relaxed mb-4">
-          Nous sommes en 1989. La semaine passée, le mur de Berlin est tombé !
-          À l'abris des regards, des agences de détectives privés surveillent, enquêtent et règlent les conflits du monde de l'étrange.
+          Nous sommes en 1989. La semaine passée, le mur de Berlin est tombé ! À
+          l'abris des regards, des agences de détectives privés surveillent,
+          enquêtent et règlent les conflits du monde de l'étrange.
         </Body>
         <Caption className="text-white text-center italic">
-          "1989. Le monde change; La technologie évolue; L'occulte reste dans l'ombre..."
+          "1989. Le monde change; La technologie évolue; L'occulte reste dans
+          l'ombre..."
         </Caption>
       </View>
 
@@ -227,15 +240,16 @@ export default function HomeScreen({ navigation, user }: Props) {
         <Caption className="text-white text-center">
           Assistant JDR Étrange France • Version 1.0.0
         </Caption>
-       <Caption className="text-white text-center mt-1">
-  Le jeu de rôles Étrange France est une création originale de{" "}
-  <Text
-    style={{ color: "#3b82f6", textDecorationLine: "underline" }}
-    onPress={() => Linking.openURL("https://etrange-france.fr/")}
-  >
-    Fletch
-  </Text>.
-</Caption>
+        <Caption className="text-white text-center mt-1">
+          Le jeu de rôles Étrange France est une création originale de{" "}
+          <Text
+            style={{ color: "#3b82f6", textDecorationLine: "underline" }}
+            onPress={() => Linking.openURL("https://etrange-france.fr/")}
+          >
+            Fletch
+          </Text>
+          .
+        </Caption>
       </View>
 
       <Body
@@ -244,95 +258,98 @@ export default function HomeScreen({ navigation, user }: Props) {
       >
         {introSkipped ? "Rejouer l'intro" : "Passer l'intro"}
       </Body>
-
     </ScrollView>
   );
 
   return (
     <>
-    <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
-      {/* Image actuelle */}
-      <ImageBackground
-        source={backgrounds[currentIndex]}
-        resizeMode="cover"
-        style={{
-          position: 'absolute',
-          width: screenWidth,
-          height: screenHeight,
-        }}
-      >
-        <LinearGradient
-          colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.4)']}
-          style={{ flex: 1 }}
-        />
-      </ImageBackground>
-
-      {/* Image de transition */}
-      {isTransitioning && (
-        <Animated.View
+      <View style={{ flex: 1, backgroundColor: "#1a1a1a" }}>
+        {/* Image actuelle */}
+        <ImageBackground
+          source={backgrounds[currentIndex]}
+          resizeMode="cover"
           style={{
-            position: 'absolute',
+            position: "absolute",
             width: screenWidth,
             height: screenHeight,
-            opacity: fadeAnim,
           }}
         >
-          <ImageBackground
-            source={backgrounds[nextIndex]}
-            resizeMode="cover"
+          <LinearGradient
+            colors={["rgba(0,0,0,0.1)", "rgba(0,0,0,0.3)", "rgba(0,0,0,0.4)"]}
             style={{ flex: 1 }}
-          >
-            <LinearGradient
-              colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.4)']}
-              style={{ flex: 1 }}
-            />
-          </ImageBackground>
-        </Animated.View>
-      )}
-
-      {/* Contenu */}
-      <ScreenContent />
-    </View>
-    <Modal
-      visible={initModal}
-      transparent={false}
-      animationType="fade"
-      onRequestClose={() => {}}
-    >
-      <ImageBackground
-        source={require('../../assets/illustrations/intro.png')}
-        resizeMode="cover"
-        style={{ flex: 1 }}
-        blurRadius={0}
-      >
-        <View className="flex-1 items-center justify-center bg-black/60">
-          <Video
-            ref={videoRef}
-            style={{
-              width: screenWidth * 0.85,
-              aspectRatio: 1,
-              marginBottom: 16,
-              opacity: showAnimation ? 1 : 0,
-            }}
-            resizeMode={ResizeMode.CONTAIN}
           />
-          {syncing && (
-            <>
-              <ActivityIndicator size="large" color="#fff" />
-              <Body className="text-white mt-4 text-center text-lg">
-                Récupération des dossiers de l'agence Khole en cours...
-              </Body>
-            </>
-          )}
-          <Body
-            className="text-blue-300 underline mt-4"
-            onPress={handleSkipIntro}
+        </ImageBackground>
+
+        {/* Image de transition */}
+        {isTransitioning && (
+          <Animated.View
+            style={{
+              position: "absolute",
+              width: screenWidth,
+              height: screenHeight,
+              opacity: fadeAnim,
+            }}
           >
-            Passer l'intro
-          </Body>
-        </View>
-      </ImageBackground>
-    </Modal>
+            <ImageBackground
+              source={backgrounds[nextIndex]}
+              resizeMode="cover"
+              style={{ flex: 1 }}
+            >
+              <LinearGradient
+                colors={[
+                  "rgba(0,0,0,0.1)",
+                  "rgba(0,0,0,0.3)",
+                  "rgba(0,0,0,0.4)",
+                ]}
+                style={{ flex: 1 }}
+              />
+            </ImageBackground>
+          </Animated.View>
+        )}
+
+        {/* Contenu */}
+        <ScreenContent />
+      </View>
+      <Modal
+        visible={initModal}
+        transparent={false}
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <ImageBackground
+          source={require("../../assets/illustrations/intro.png")}
+          resizeMode="cover"
+          style={{ flex: 1 }}
+          blurRadius={0}
+        >
+          <View className="flex-1 items-center justify-center bg-black/60">
+            <Video
+              ref={videoRef}
+              style={{
+                width: screenWidth * 0.85,
+                aspectRatio: 1,
+                marginBottom: 16,
+                opacity: showAnimation ? 1 : 0,
+              }}
+              resizeMode={ResizeMode.CONTAIN}
+            />
+            {syncing && (
+              <>
+                <ActivityIndicator size="large" color="#fff" />
+                <Body className="text-white mt-4 text-center text-lg">
+                  Récupération des dossiers de l'agence Khole en cours...
+                </Body>
+              </>
+            )}
+            <Body
+              className="text-blue-300 underline mt-4"
+              onPress={handleSkipIntro}
+            >
+              Passer l'intro
+            </Body>
+          </View>
+        </ImageBackground>
+      </Modal>
     </>
   );
 }
