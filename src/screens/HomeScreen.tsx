@@ -152,30 +152,9 @@ export default function HomeScreen({ navigation, user }: Props) {
     run();
   }, [initModal, setPlayMusic, minitelLoaded, introSkipped]);
 
-  const handleSkipIntro = async () => {
-    setIntroSkipped(true);
-    await AsyncStorage.setItem("introSkipped", "true");
-    setPlayMusic(false);
-    await minitelPlayer.current?.stopAsync();
-    await videoRef.current?.stopAsync();
-    setShowAnimation(false);
-    setSyncing(true);
-    try {
-      await syncDatabase();
-    } catch (e) {
-      console.error("Database sync failed", e);
-    }
-    setPlayMusic(true);
-    setSyncing(false);
-    setInitModal(false);
-    hasSyncedOnce = true;
-  };
-
-  const handleReplayIntro = async () => {
+  const handleResetIntro = async () => {
     await AsyncStorage.setItem("introSkipped", "false");
     setIntroSkipped(false);
-    setInitModal(true);
-    setShowAnimation(false);
   };
 
   useEffect(() => {
@@ -251,13 +230,15 @@ export default function HomeScreen({ navigation, user }: Props) {
           .
         </Caption>
       </View>
-      <Button
-        variant="secondary"
-        className="w-full mt-4"
-        onPress={introSkipped ? handleReplayIntro : handleSkipIntro}
-      >
-        {introSkipped ? "Rejouer l'intro" : "Passer l'intro"}
-      </Button>
+      {introSkipped && (
+        <Button
+          variant="secondary"
+          className="w-full mt-4"
+          onPress={handleResetIntro}
+        >
+          Remettre l'intro
+        </Button>
+      )}
     </ScrollView>
   );
 
@@ -341,12 +322,6 @@ export default function HomeScreen({ navigation, user }: Props) {
                 </Body>
               </>
             )}
-            <Body
-              className="text-blue-300 underline mt-4"
-              onPress={handleSkipIntro}
-            >
-              Passer l'intro
-            </Body>
           </View>
         </ImageBackground>
       </Modal>
