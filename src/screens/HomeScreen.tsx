@@ -187,7 +187,7 @@ export default function HomeScreen({ navigation, user }: Props) {
           À l'abris des regards, des agences de détectives privés surveillent, enquêtent et règlent les conflits du monde de l'étrange.
         </Body>
         <Caption className="text-white text-center italic">
-          "1989. Le monde change. La technologie évolue. L'occulte reste dans l'ombre..."
+          "1989. Le monde change; La technologie évolue; L'occulte reste dans l'ombre..."
         </Caption>
       </View>
 
