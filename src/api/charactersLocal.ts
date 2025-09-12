@@ -1,6 +1,7 @@
 import * as Crypto from "expo-crypto";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { getDb } from "../data/db";
+import { pushCharacterUpdate } from "../data/characterSync";
 
 export function useAddCharacter() {
   const queryClient = useQueryClient();
@@ -179,6 +180,13 @@ export function useUpdateCharacterSheet() {
         "UPDATE characters SET origines = ?, rencontres = ?, notes = ?, equipement = ?, fetiches = ? WHERE id = ?",
         [origines, rencontres, notes, equipement, fetiches, id],
       );
+      await pushCharacterUpdate(id, {
+        origines,
+        rencontres,
+        notes,
+        equipement,
+        fetiches,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["characters"] });

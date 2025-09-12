@@ -7,6 +7,51 @@ import { apiFetch, logApiCall, extractRecordId } from "../utils/api";
 
 const API_URL = "https://api.scriptonautes.net/api/records";
 
+/**
+ * Send a partial update for a character to the remote API.
+ *
+ * This prepares future support for syncing character modifications
+ * (using PATCH/PUT) by providing a reusable helper.
+ */
+export async function pushCharacterUpdate(
+  localId: string,
+  changes: Record<string, any>,
+) {
+  const db = getDb();
+  const row = (await db.getFirstAsync(
+    "SELECT distant_id FROM characters WHERE id = ?",
+    [localId],
+  )) as any;
+  const remoteId = row?.distant_id;
+  if (!remoteId) {
+    console.warn(`No remote id for character ${localId}, skipping update`);
+    return;
+  }
+
+  const payload = JSON.stringify(changes);
+  try {
+    const res = await apiFetch(`${API_URL}/characters/${remoteId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: payload,
+    });
+    console.log(`PATCH /characters/${remoteId} status: ${res.status}`);
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(
+        `Failed to update character ${localId}: ${res.status} ${res.statusText} - ${errorText}`,
+      );
+      return;
+    }
+    await db.runAsync(
+      "UPDATE characters SET last_sync_at = CURRENT_TIMESTAMP WHERE id = ?",
+      [localId],
+    );
+  } catch (e) {
+    console.error("Failed to push character update", e, `Payload: ${payload}`);
+  }
+}
+
 export async function syncCharacters() {
   console.log("Starting syncCharacters");
   const db = getDb();
