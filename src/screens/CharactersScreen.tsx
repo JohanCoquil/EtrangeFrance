@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { View, Text, ScrollView, Alert, TouchableOpacity, Image } from "react-native";
 import * as FileSystem from "expo-file-system";
 import * as Linking from "expo-linking";
@@ -13,7 +13,7 @@ import { apiFetch } from "@/utils/api";
 import { useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/ui/Layout";
 import Button from "@/components/ui/Button";
-import { Download } from "lucide-react-native";
+import { Download, RefreshCcw } from "lucide-react-native";
 
 // On précise : je suis dans l'écran "Characters" du RootStack
 type CharactersScreenNavigationProp = NativeStackNavigationProp<
@@ -27,9 +27,30 @@ export default function CharactersScreen() {
   const deleteCharacter = useDeleteCharacter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const syncInProgress = useRef(false);
   const queryClient = useQueryClient();
   const formatSync = (value?: string | null) =>
     value ? new Date(value).toLocaleString() : "Jamais";
+
+  const handleSync = useCallback(() => {
+    if (!isLoggedIn || syncInProgress.current) {
+      return;
+    }
+
+    syncInProgress.current = true;
+    setIsSyncing(true);
+
+    syncCharacters()
+      .then(() =>
+        queryClient.invalidateQueries({ queryKey: ["characters"] }),
+      )
+      .catch((e) => console.error("Character sync failed", e))
+      .finally(() => {
+        syncInProgress.current = false;
+        setIsSyncing(false);
+      });
+  }, [isLoggedIn, queryClient]);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -53,8 +74,13 @@ export default function CharactersScreen() {
     }, []),
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      handleSync();
+    }, [handleSync]),
+  );
+
   useEffect(() => {
-    if (!isLoggedIn) return;
     const hasUnsynced = characters?.some((c: any) => {
       const needsInitialSync = c.distant_id === 0 && c.bonuses;
       const needsAvatarSync =
@@ -62,17 +88,25 @@ export default function CharactersScreen() {
       return needsInitialSync || needsAvatarSync;
     });
     if (hasUnsynced) {
-      syncCharacters()
-        .then(() =>
-          queryClient.invalidateQueries({ queryKey: ["characters"] }),
-        )
-        .catch((e) => console.error("Character sync failed", e));
+      handleSync();
     }
-  }, [characters, isLoggedIn, queryClient]);
+  }, [characters, handleSync]);
 
   return (
     <Layout backgroundColor="gradient" variant="scroll">
       <View className="flex-1 p-4">
+        {debugMode && (
+          <View className="flex-row justify-end mb-4">
+            <Button
+              variant="secondary"
+              size="sm"
+              onPress={handleSync}
+              disabled={!isLoggedIn || isSyncing}
+            >
+              <RefreshCcw color="#fff" size={16} />
+            </Button>
+          </View>
+        )}
         {isLoading ? (
           <Text className="text-white text-center">Chargement...</Text>
         ) : (
