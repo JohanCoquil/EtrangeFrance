@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getDb } from '@/data/db';
+import { queryClient } from '@/api/queryClient';
 
 export async function addLogEntry({
   url,
@@ -26,6 +27,8 @@ export async function addLogEntry({
       success ? 1 : 0,
     ],
   );
+
+  queryClient.invalidateQueries({ queryKey: ['logs'] });
 }
 
 export function useLogs() {
