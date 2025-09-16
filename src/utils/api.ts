@@ -9,6 +9,17 @@ export function logApiCall(url: string, method: string, body?: any) {
   }
 }
 
+function formatError(error: unknown) {
+  if (error instanceof Error) {
+    return { error: error.message };
+  }
+  try {
+    return { error: JSON.stringify(error) };
+  } catch {
+    return { error: String(error) };
+  }
+}
+
 export async function apiFetch(
   url: string,
   options: RequestInit = {},
@@ -27,35 +38,64 @@ export async function apiFetch(
   // Log request
   logApiCall(url, method, body);
 
-  const res = await fetch(url, options);
+  const debugEnabled = (await AsyncStorage.getItem("debugMode")) === "true";
 
-  // Attempt to log response body
+  let res: Response;
   try {
-    const text = await res.clone().text();
-    let parsed: any = text;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      // response is not JSON
-    }
-    console.log(`[API] response ${method} ${url} -> ${res.status}`, parsed);
-
-    const debug = await AsyncStorage.getItem('debugMode');
-    if (debug === 'true') {
+    res = await fetch(url, options);
+  } catch (error) {
+    console.log(`[API] response ${method} ${url} -> network error`, error);
+    if (debugEnabled) {
       try {
         await addLogEntry({
           url,
           method,
           request: body,
-          response: parsed,
-          success: res.ok,
+          response: formatError(error),
+          success: false,
         });
-      } catch {
-        // ignore
+      } catch (logError) {
+        console.warn("Failed to record API log entry", logError);
       }
     }
+    throw error;
+  }
+
+  let parsed: any = null;
+  let rawText: string | null = null;
+
+  // Attempt to log response body
+  try {
+    const text = await res.clone().text();
+    rawText = text;
+    parsed = text;
+    if (text.length > 0) {
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        // response is not JSON
+      }
+    } else {
+      parsed = null;
+    }
+    console.log(`[API] response ${method} ${url} -> ${res.status}`, parsed);
   } catch (e) {
     console.log(`[API] response ${method} ${url} -> ${res.status}`);
+  }
+
+  if (debugEnabled) {
+    const responseToLog = parsed ?? rawText ?? null;
+    try {
+      await addLogEntry({
+        url,
+        method,
+        request: body,
+        response: responseToLog,
+        success: res.ok,
+      });
+    } catch (logError) {
+      console.warn("Failed to record API log entry", logError);
+    }
   }
 
   return res;
