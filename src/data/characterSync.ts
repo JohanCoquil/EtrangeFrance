@@ -396,13 +396,19 @@ export async function importRemoteCharacters() {
     const json = await res.json();
     const remoteChars = json.records ?? json;
     for (const rc of remoteChars) {
-      const existing = (await db.getAllAsync(
-        "SELECT id FROM characters WHERE distant_id = ?",
-        [rc.id],
-      )) as any[];
-      if (existing.length > 0) continue;
+      const remoteId = rc.id;
+      if (!remoteId) {
+        console.warn("Skipping remote character without id", rc);
+        continue;
+      }
 
-      const localId = await Crypto.randomUUID();
+      const existing = (await db.getAllAsync(
+        "SELECT id, avatar, avatar_distant FROM characters WHERE distant_id = ?",
+        [remoteId],
+      )) as any[];
+      const hasExisting = existing.length > 0;
+      const localId = hasExisting ? existing[0].id : await Crypto.randomUUID();
+
       const triggerEffects =
         rc.trigger_effects === null || rc.trigger_effects === undefined
           ? null
@@ -416,72 +422,88 @@ export async function importRemoteCharacters() {
           ? rc.bonuses
           : JSON.stringify(rc.bonuses);
 
-      let avatarLocal: string | null = null;
-      const remoteAvatar = rc.avatar_distant || rc.avatar;
+      const remoteAvatar = rc.avatar_distant || rc.avatar || null;
+      let avatarLocal = hasExisting ? existing[0].avatar ?? null : null;
+      const existingRemoteAvatar = hasExisting
+        ? existing[0].avatar_distant ?? null
+        : null;
+
       if (remoteAvatar) {
-        try {
-          const remoteUrl = remoteAvatar.startsWith("http")
-            ? remoteAvatar
-            : `https://api.scriptonautes.net/${remoteAvatar.replace(/^\//, "")}`;
-          const dir = FileSystem.documentDirectory + "avatars";
-          await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-          const ext = remoteUrl.split(".").pop()?.split("?")[0] || "jpg";
-          const fileName = `${localId}.${ext}`;
-          avatarLocal = `avatars/${fileName}`;
-          logApiCall(remoteUrl, "GET");
-          const downloadRes = await FileSystem.downloadAsync(
-            remoteUrl,
-            FileSystem.documentDirectory + avatarLocal,
-          );
-          console.log(
-            `[API] response GET ${remoteUrl} -> ${downloadRes.status}`,
-          );
-        } catch (e) {
-          console.error("Failed to download avatar", e);
+        const shouldDownload =
+          !avatarLocal || !existingRemoteAvatar || existingRemoteAvatar !== remoteAvatar;
+        if (shouldDownload) {
+          try {
+            const remoteUrl = remoteAvatar.startsWith("http")
+              ? remoteAvatar
+              : `https://api.scriptonautes.net/${remoteAvatar.replace(/^\//, "")}`;
+            const dir = FileSystem.documentDirectory + "avatars";
+            await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+            const ext = remoteUrl.split(".").pop()?.split("?")[0] || "jpg";
+            const fileName = `${localId}.${ext}`;
+            avatarLocal = `avatars/${fileName}`;
+            logApiCall(remoteUrl, "GET");
+            const downloadRes = await FileSystem.downloadAsync(
+              remoteUrl,
+              FileSystem.documentDirectory + avatarLocal,
+            );
+            console.log(
+              `[API] response GET ${remoteUrl} -> ${downloadRes.status}`,
+            );
+          } catch (e) {
+            console.error("Failed to download avatar", e);
+          }
         }
+      } else {
+        avatarLocal = null;
       }
 
-      await db.runAsync(
-        `INSERT INTO characters (id, distant_id, name, profession, profession_id, profession_score, hobby_id, hobby_score, divinity_id, voie_id, voie_score, intelligence, force, dexterite, charisme, memoire, volonte, sante, degats, origines, rencontres, notes, equipement, fetiches, trigger_effects, bonuses, avatar, avatar_distant) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          localId,
-          rc.id,
-          rc.name,
-          rc.profession ?? null,
-          rc.profession_id ?? null,
-          rc.profession_score ?? 0,
-          rc.hobby_id ?? null,
-          rc.hobby_score ?? 0,
-          rc.divinity_id ?? null,
-          rc.voie_id ?? null,
-          rc.voie_score ?? 0,
-          rc.intelligence ?? 1,
-          rc.force ?? 1,
-          rc.dexterite ?? 1,
-          rc.charisme ?? 1,
-          rc.memoire ?? 1,
-          rc.volonte ?? 1,
-          rc.sante ?? 0,
-          rc.degats ?? 0,
-          rc.origines ?? null,
-          rc.rencontres ?? null,
-          rc.notes ?? null,
-          rc.equipement ?? null,
-          rc.fetiches ?? null,
-          triggerEffects,
-          bonuses,
-          avatarLocal,
-          remoteAvatar ?? null,
-        ],
-      );
-      await db.runAsync(
-        "UPDATE characters SET last_sync_at = CURRENT_TIMESTAMP WHERE id = ?",
-        [localId],
-      );
+      const baseValues: any[] = [
+        rc.name,
+        rc.profession ?? null,
+        rc.profession_id ?? null,
+        rc.profession_score ?? 0,
+        rc.hobby_id ?? null,
+        rc.hobby_score ?? 0,
+        rc.divinity_id ?? null,
+        rc.voie_id ?? null,
+        rc.voie_score ?? 0,
+        rc.intelligence ?? 1,
+        rc.force ?? 1,
+        rc.dexterite ?? 1,
+        rc.charisme ?? 1,
+        rc.memoire ?? 1,
+        rc.volonte ?? 1,
+        rc.sante ?? 0,
+        rc.degats ?? 0,
+        rc.origines ?? null,
+        rc.rencontres ?? null,
+        rc.notes ?? null,
+        rc.equipement ?? null,
+        rc.fetiches ?? null,
+        triggerEffects,
+        bonuses,
+        avatarLocal,
+        remoteAvatar,
+        rc.last_sync_at ?? new Date().toISOString(),
+      ];
 
-      await importDesk(db, localId, rc.id);
-      await importCharacterSkills(db, localId, rc.id);
-      await importCharacterCapacites(db, localId, rc.id);
+      if (hasExisting) {
+        console.log(`Updating local character ${localId} from remote ${remoteId}`);
+        await db.runAsync(
+          `UPDATE characters SET distant_id = ?, name = ?, profession = ?, profession_id = ?, profession_score = ?, hobby_id = ?, hobby_score = ?, divinity_id = ?, voie_id = ?, voie_score = ?, intelligence = ?, force = ?, dexterite = ?, charisme = ?, memoire = ?, volonte = ?, sante = ?, degats = ?, origines = ?, rencontres = ?, notes = ?, equipement = ?, fetiches = ?, trigger_effects = ?, bonuses = ?, avatar = ?, avatar_distant = ?, last_sync_at = ? WHERE id = ?`,
+          [remoteId, ...baseValues, localId],
+        );
+      } else {
+        console.log(`Creating local character ${localId} from remote ${remoteId}`);
+        await db.runAsync(
+          `INSERT INTO characters (id, distant_id, name, profession, profession_id, profession_score, hobby_id, hobby_score, divinity_id, voie_id, voie_score, intelligence, force, dexterite, charisme, memoire, volonte, sante, degats, origines, rencontres, notes, equipement, fetiches, trigger_effects, bonuses, avatar, avatar_distant, last_sync_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [localId, remoteId, ...baseValues],
+        );
+      }
+
+      await importDesk(db, localId, remoteId);
+      await importCharacterSkills(db, localId, remoteId);
+      await importCharacterCapacites(db, localId, remoteId);
     }
   } catch (e) {
     console.error("Failed to import remote characters", e);
@@ -494,6 +516,7 @@ async function importDesk(
   remoteId: string,
 ) {
   try {
+    await db.runAsync("DELETE FROM desk WHERE character_id = ?", [localId]);
     const res = await apiFetch(
       `${API_URL}/desk?filter=character_id,eq,${remoteId}`,
     );
@@ -502,8 +525,8 @@ async function importDesk(
     const rows = json.records ?? json;
     for (const row of rows) {
       await db.runAsync(
-        "INSERT INTO desk (character_id, figure, cards, last_sync_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
-        [localId, row.figure, row.cards],
+        "INSERT INTO desk (character_id, figure, cards, last_sync_at) VALUES (?, ?, ?, ?)",
+        [localId, row.figure, row.cards, row.last_sync_at ?? new Date().toISOString()],
       );
     }
   } catch (e) {
@@ -517,6 +540,10 @@ async function importCharacterSkills(
   remoteId: string,
 ) {
   try {
+    await db.runAsync(
+      "DELETE FROM character_skills WHERE character_id = ?",
+      [localId],
+    );
     const res = await apiFetch(
       `${API_URL}/character_skills?filter=character_id,eq,${remoteId}`,
     );
@@ -530,8 +557,14 @@ async function importCharacterSkills(
       )) as any[];
       if (skill.length === 0) continue;
       await db.runAsync(
-        "INSERT INTO character_skills (character_id, skill_id, level, distant_id, last_sync_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
-        [localId, skill[0].id, row.level, row.id],
+        "INSERT INTO character_skills (character_id, skill_id, level, distant_id, last_sync_at) VALUES (?, ?, ?, ?, ?)",
+        [
+          localId,
+          skill[0].id,
+          row.level,
+          row.id,
+          row.last_sync_at ?? new Date().toISOString(),
+        ],
       );
     }
   } catch (e) {
@@ -545,6 +578,10 @@ async function importCharacterCapacites(
   remoteId: string,
 ) {
   try {
+    await db.runAsync(
+      "DELETE FROM character_capacites WHERE character_id = ?",
+      [localId],
+    );
     const res = await apiFetch(
       `${API_URL}/character_capacites?filter=character_id,eq,${remoteId}`,
     );
@@ -558,8 +595,14 @@ async function importCharacterCapacites(
       )) as any[];
       if (cap.length === 0) continue;
       await db.runAsync(
-        "INSERT INTO character_capacites (character_id, capacite_id, level, distant_id, last_sync_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
-        [localId, cap[0].id, row.level, row.id],
+        "INSERT INTO character_capacites (character_id, capacite_id, level, distant_id, last_sync_at) VALUES (?, ?, ?, ?, ?)",
+        [
+          localId,
+          cap[0].id,
+          row.level,
+          row.id,
+          row.last_sync_at ?? new Date().toISOString(),
+        ],
       );
     }
   } catch (e) {
