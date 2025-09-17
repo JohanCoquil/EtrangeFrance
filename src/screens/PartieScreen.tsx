@@ -2,10 +2,14 @@ import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import * as MailComposer from "expo-mail-composer";
+import * as FileSystem from "expo-file-system";
 import Layout from "@/components/ui/Layout";
 import Button from "@/components/ui/Button";
 import { apiFetch } from "@/utils/api";
@@ -17,6 +21,121 @@ type PartyRecord = {
 };
 
 type ScreenView = "menu" | "player" | "mj";
+
+type NormalizedQrCode =
+  | {
+      type: "base64";
+      displayUri: string;
+      base64: string;
+      mimeType: string;
+      extension: string;
+    }
+  | {
+      type: "remote";
+      displayUri: string;
+      remoteUri: string;
+      extension: string;
+    };
+
+const QR_CODE_FIELD_KEYS = [
+  "qr_code",
+  "qrCode",
+  "qr_code_data",
+  "qrData",
+  "code_qr",
+];
+
+function guessExtensionFromMimeType(mimeType: string | null): string {
+  if (!mimeType) {
+    return "png";
+  }
+
+  const normalized = mimeType.toLowerCase();
+
+  if (normalized.includes("jpeg") || normalized.includes("jpg")) {
+    return "jpg";
+  }
+  if (normalized.includes("gif")) {
+    return "gif";
+  }
+  if (normalized.includes("webp")) {
+    return "webp";
+  }
+  if (normalized.includes("svg")) {
+    return "svg";
+  }
+  if (normalized.includes("bmp")) {
+    return "bmp";
+  }
+  if (normalized.includes("png")) {
+    return "png";
+  }
+
+  const subtype = normalized.split("/")[1];
+  if (subtype) {
+    return subtype.split("+")[0];
+  }
+
+  return "png";
+}
+
+function normalizeQrCodeValue(rawValue: string | null): NormalizedQrCode | null {
+  if (!rawValue) {
+    return null;
+  }
+
+  const trimmed = rawValue.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    const withoutParams = trimmed.split(/[?#]/)[0];
+    const parts = withoutParams.split(".");
+    const potentialExt = parts.length > 1 ? parts.pop() : null;
+    const extension =
+      potentialExt && /^[a-z0-9]+$/i.test(potentialExt)
+        ? potentialExt.toLowerCase()
+        : "png";
+
+    return {
+      type: "remote",
+      displayUri: trimmed,
+      remoteUri: trimmed,
+      extension,
+    };
+  }
+
+  if (trimmed.startsWith("data:")) {
+    const mimeMatch = trimmed.match(/^data:([^;]+);/i);
+    const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
+    const base64Index = trimmed.indexOf("base64,");
+    const base64Data =
+      base64Index >= 0
+        ? trimmed.slice(base64Index + "base64,".length)
+        : trimmed.split(",").pop() ?? "";
+
+    if (!base64Data) {
+      return null;
+    }
+
+    return {
+      type: "base64",
+      displayUri: trimmed,
+      base64: base64Data,
+      mimeType,
+      extension: guessExtensionFromMimeType(mimeType),
+    };
+  }
+
+  return {
+    type: "base64",
+    displayUri: `data:image/png;base64,${trimmed}`,
+    base64: trimmed,
+    mimeType: "image/png",
+    extension: "png",
+  };
+}
 
 function parsePartiesResponse(rawText: string): PartyRecord[] {
   if (!rawText) return [];
@@ -122,6 +241,8 @@ export default function PartieScreen() {
   const [error, setError] = useState<string | null>(null);
   const [mjParties, setMjParties] = useState<PartyRecord[]>([]);
   const [scenarioTitles, setScenarioTitles] = useState<Record<number, string>>({});
+  const [emailValues, setEmailValues] = useState<Record<number, string>>({});
+  const [emailSending, setEmailSending] = useState<Record<number, boolean>>({});
 
   const handleBackToMenu = useCallback(() => {
     setView("menu");
@@ -227,6 +348,146 @@ export default function PartieScreen() {
     }
   }, []);
 
+  const handleEmailChange = useCallback((partyId: number, value: string) => {
+    setEmailValues((prev) => ({
+      ...prev,
+      [partyId]: value,
+    }));
+  }, []);
+
+  const sendQrCodeByEmail = useCallback(
+    async (party: PartyRecord) => {
+      const partyId = party.id;
+      const emailInput = emailValues[partyId]?.trim() ?? "";
+
+      if (!emailInput) {
+        Alert.alert(
+          "Adresse email requise",
+          "Veuillez saisir au moins une adresse email pour envoyer le QR Code.",
+        );
+        return;
+      }
+
+      const recipients = emailInput
+        .split(/[;,\s]+/)
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0);
+
+      if (recipients.length === 0) {
+        Alert.alert(
+          "Adresse email invalide",
+          "Le champ ne contient aucune adresse email valide.",
+        );
+        return;
+      }
+
+      const qrCodeRaw = extractStringField(party, QR_CODE_FIELD_KEYS);
+      const normalizedQr = normalizeQrCodeValue(qrCodeRaw);
+
+      if (!normalizedQr) {
+        Alert.alert(
+          "QR Code indisponible",
+          "Aucun QR Code n'est associé à cette partie.",
+        );
+        return;
+      }
+
+      setEmailSending((prev) => ({ ...prev, [partyId]: true }));
+
+      let tempFileUri: string | null = null;
+
+      try {
+        const isAvailable = await MailComposer.isAvailableAsync();
+        if (!isAvailable) {
+          throw new Error("mail_composer_unavailable");
+        }
+
+        const directory = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+        if (!directory) {
+          throw new Error("file_system_unavailable");
+        }
+
+        if (normalizedQr.type === "remote") {
+          const targetUri = `${directory}party-${partyId}-qr.${normalizedQr.extension}`;
+          const downloadResult = await FileSystem.downloadAsync(
+            normalizedQr.remoteUri,
+            targetUri,
+          );
+          tempFileUri = downloadResult.uri;
+        } else {
+          const targetUri = `${directory}party-${partyId}-qr.${normalizedQr.extension}`;
+          await FileSystem.writeAsStringAsync(targetUri, normalizedQr.base64, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          tempFileUri = targetUri;
+        }
+
+        if (!tempFileUri) {
+          throw new Error("attachment_creation_failed");
+        }
+
+        const result = await MailComposer.composeAsync({
+          recipients,
+          subject: `QR Code - ${getPartyDisplayName(party)}`,
+          body: `Bonjour,\n\nVeuillez trouver ci-joint le QR Code de la partie ${getPartyDisplayName(
+            party,
+          )}.\n\nÀ bientôt !`,
+          attachments: [tempFileUri],
+        });
+
+        if (result.status === MailComposer.MailComposerStatus.SENT) {
+          Alert.alert("Email envoyé", "Votre message a été envoyé avec succès.");
+        } else if (result.status === MailComposer.MailComposerStatus.SAVED) {
+          Alert.alert(
+            "Email enregistré",
+            "Votre message a été enregistré dans les brouillons.",
+          );
+        }
+      } catch (err) {
+        if (err instanceof Error) {
+          if (err.message === "mail_composer_unavailable") {
+            Alert.alert(
+              "Fonctionnalité indisponible",
+              "L'envoi d'email n'est pas supporté sur cet appareil.",
+            );
+          } else if (err.message === "file_system_unavailable") {
+            Alert.alert(
+              "Stockage indisponible",
+              "Impossible d'accéder au stockage temporaire pour créer la pièce jointe.",
+            );
+          } else {
+            console.error("Failed to send QR code email", err);
+            Alert.alert(
+              "Erreur",
+              "Impossible de préparer l'envoi du QR Code pour le moment.",
+            );
+          }
+        } else {
+          console.error("Failed to send QR code email", err);
+          Alert.alert(
+            "Erreur",
+            "Impossible de préparer l'envoi du QR Code pour le moment.",
+          );
+        }
+      } finally {
+        setEmailSending((prev) => {
+          const updated = { ...prev };
+          delete updated[partyId];
+          return updated;
+        });
+
+        if (tempFileUri) {
+          try {
+            await FileSystem.deleteAsync(tempFileUri, { idempotent: true });
+          } catch (cleanupError) {
+            console.warn("Unable to clean temporary QR code file", cleanupError);
+          }
+        }
+      }
+    },
+    [emailValues],
+  );
+
   const renderMjContent = () => {
     if (loading) {
       return (
@@ -288,6 +549,10 @@ export default function PartieScreen() {
             "createdAt",
             "creation_date",
           ]);
+          const qrCodeValue = extractStringField(party, QR_CODE_FIELD_KEYS);
+          const normalizedQrCode = normalizeQrCodeValue(qrCodeValue);
+          const isSending = Boolean(emailSending[party.id]);
+          const emailValue = emailValues[party.id] ?? "";
 
           return (
             <View
@@ -315,6 +580,41 @@ export default function PartieScreen() {
                   Créée le : {createdAt}
                 </Text>
               )}
+              {normalizedQrCode && (
+                <View className="items-center mt-4 mb-2">
+                  <Image
+                    source={{ uri: normalizedQrCode.displayUri }}
+                    style={{ width: 200, height: 200 }}
+                    resizeMode="contain"
+                  />
+                </View>
+              )}
+              <View className="mt-2">
+                <Text className="text-white/80 text-sm mb-2">
+                  Envoyer par mail
+                </Text>
+                <TextInput
+                  className="bg-white text-black px-3 py-2 rounded-lg"
+                  placeholder="Saisissez les adresses email"
+                  placeholderTextColor="#666"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={emailValue}
+                  onChangeText={(text) => handleEmailChange(party.id, text)}
+                />
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="mt-3 self-start"
+                  onPress={() => {
+                    void sendQrCodeByEmail(party);
+                  }}
+                  disabled={isSending}
+                >
+                  {isSending ? "Envoi..." : "Envoyer par mail"}
+                </Button>
+              </View>
             </View>
           );
         })}
