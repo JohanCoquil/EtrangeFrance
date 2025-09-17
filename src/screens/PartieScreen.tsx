@@ -45,6 +45,94 @@ const QR_CODE_FIELD_KEYS = [
   "code_qr",
 ];
 
+const DIRECTUS_ASSET_BASE_URL = "https://api.scriptonautes.net";
+const DIRECTUS_ASSET_ID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function buildRemoteQrCode(url: string): NormalizedQrCode {
+  const withoutParams = url.split(/[?#]/)[0];
+  const parts = withoutParams.split(".");
+  const potentialExt = parts.length > 1 ? parts.pop() : null;
+  const extension =
+    potentialExt && /^[a-z0-9]+$/i.test(potentialExt)
+      ? potentialExt.toLowerCase()
+      : "png";
+
+  return {
+    type: "remote",
+    displayUri: url,
+    remoteUri: url,
+    extension,
+  };
+}
+
+function extractFromParsedQrValue(
+  value: unknown,
+  seen: Set<string>,
+): NormalizedQrCode | null {
+  if (typeof value === "string") {
+    return normalizeQrCodeValue(value, seen);
+  }
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const normalized = extractFromParsedQrValue(entry, seen);
+      if (normalized) {
+        return normalized;
+      }
+    }
+    return null;
+  }
+
+  if (value && typeof value === "object") {
+    const candidates: unknown[] = [];
+
+    const record = value as Record<string, unknown>;
+    const potentialKeys = [
+      "qr_code",
+      "qrCode",
+      "qr_code_data",
+      "qrData",
+      "data",
+      "base64",
+      "value",
+      "url",
+      "uri",
+      "remoteUri",
+      "asset",
+      "asset_id",
+      "file",
+      "fileId",
+      "directusId",
+      "id",
+      "path",
+    ];
+
+    for (const key of potentialKeys) {
+      if (!(key in record)) {
+        continue;
+      }
+      const candidateValue = record[key];
+      if (candidateValue == null) {
+        continue;
+      }
+      if (candidateValue === value) {
+        continue;
+      }
+      candidates.push(candidateValue);
+    }
+
+    for (const candidate of candidates) {
+      const normalized = extractFromParsedQrValue(candidate, seen);
+      if (normalized) {
+        return normalized;
+      }
+    }
+  }
+
+  return null;
+}
+
 function guessExtensionFromMimeType(mimeType: string | null): string {
   if (!mimeType) {
     return "png";
@@ -79,31 +167,54 @@ function guessExtensionFromMimeType(mimeType: string | null): string {
   return "png";
 }
 
-function normalizeQrCodeValue(rawValue: string | null): NormalizedQrCode | null {
+function normalizeQrCodeValue(
+  rawValue: string | null,
+  seen?: Set<string>,
+): NormalizedQrCode | null {
   if (!rawValue) {
     return null;
   }
+
+  const visited = seen ?? new Set<string>();
+  if (visited.has(rawValue)) {
+    return null;
+  }
+  visited.add(rawValue);
 
   const trimmed = rawValue.trim();
   if (!trimmed) {
     return null;
   }
 
-  if (/^https?:\/\//i.test(trimmed)) {
-    const withoutParams = trimmed.split(/[?#]/)[0];
-    const parts = withoutParams.split(".");
-    const potentialExt = parts.length > 1 ? parts.pop() : null;
-    const extension =
-      potentialExt && /^[a-z0-9]+$/i.test(potentialExt)
-        ? potentialExt.toLowerCase()
-        : "png";
+  if (
+    trimmed.startsWith("{") ||
+    trimmed.startsWith("[") ||
+    trimmed.startsWith("\"")
+  ) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      const normalizedFromParsed = extractFromParsedQrValue(parsed, visited);
+      if (normalizedFromParsed) {
+        return normalizedFromParsed;
+      }
+    } catch {
+      // Ignore JSON parsing errors and continue with the raw string value
+    }
+  }
 
-    return {
-      type: "remote",
-      displayUri: trimmed,
-      remoteUri: trimmed,
-      extension,
-    };
+  if (/^https?:\/\//i.test(trimmed)) {
+    return buildRemoteQrCode(trimmed);
+  }
+
+  if (DIRECTUS_ASSET_ID_REGEX.test(trimmed)) {
+    return buildRemoteQrCode(`${DIRECTUS_ASSET_BASE_URL}/assets/${trimmed}`);
+  }
+
+  const withoutLeadingSlashes = trimmed.replace(/^\/+/, "");
+  if (withoutLeadingSlashes.toLowerCase().startsWith("assets/")) {
+    return buildRemoteQrCode(
+      `${DIRECTUS_ASSET_BASE_URL}/${withoutLeadingSlashes}`,
+    );
   }
 
   if (trimmed.startsWith("data:")) {
