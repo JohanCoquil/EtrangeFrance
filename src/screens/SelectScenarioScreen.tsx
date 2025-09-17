@@ -2,19 +2,24 @@ import React, { useCallback, useState } from "react";
 import { View, Text } from "react-native";
 import Layout from "@/components/ui/Layout";
 import Button from "@/components/ui/Button";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { getDb } from "@/data/db";
 import { Lock } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import {
+  ScenarioDetails,
+  ScenariosStackParamList,
+} from "@/navigation/ScenariosNavigator";
 
-type ScenarioRecord = {
-  id: number;
-  titre: string;
-  level: number;
-};
+type SelectScenarioScreenNavigationProp = NativeStackNavigationProp<
+  ScenariosStackParamList,
+  "SelectScenario"
+>;
 
 export default function SelectScenarioScreen() {
-  const [scenarios, setScenarios] = useState<ScenarioRecord[]>([]);
+  const navigation = useNavigation<SelectScenarioScreenNavigationProp>();
+  const [scenarios, setScenarios] = useState<ScenarioDetails[]>([]);
   const [userLevel, setUserLevel] = useState(0);
 
   useFocusEffect(
@@ -38,8 +43,8 @@ export default function SelectScenarioScreen() {
         try {
           const db = getDb();
           const rows = (await db.getAllAsync(
-            "SELECT id, titre, level FROM scenarios ORDER BY titre ASC",
-          )) as ScenarioRecord[];
+            "SELECT id, titre, level, pitch, secrets FROM scenarios ORDER BY titre ASC",
+          )) as ScenarioDetails[];
           if (isMounted) {
             setScenarios(rows);
           }
@@ -68,7 +73,14 @@ export default function SelectScenarioScreen() {
               variant={isUnlocked ? "primary" : "secondary"}
               size="md"
               className="mb-4"
-              onPress={() => {}}
+              onPress={() => {
+                if (!isUnlocked) {
+                  return;
+                }
+                navigation.navigate("ScenarioDescription", {
+                  scenario,
+                });
+              }}
               disabled={!isUnlocked}
             >
               <View className="flex-row items-center">
