@@ -95,6 +95,7 @@ async function pullRemoteData(db: SQLite.SQLiteDatabase) {
   await pullVoieCapacite(db);
   await pullCapaciteRangs(db);
   await pullDruideDivinites(db);
+  await pullScenarios(db);
 }
 
 async function fetchRecords(table: string) {
@@ -204,6 +205,25 @@ async function pullDruideDivinites(db: SQLite.SQLiteDatabase) {
     await db.runAsync(
       "INSERT INTO druide_divinites (id, name, domaine, description) VALUES (?, ?, ?, ?)",
       [r.id, r.name, r.domaine ?? null, r.description ?? null]
+    );
+  }
+}
+
+async function pullScenarios(db: SQLite.SQLiteDatabase) {
+  const records = await fetchRecords("scenarios");
+  await db.runAsync("DELETE FROM scenarios");
+  for (const r of records) {
+    await db.runAsync(
+      "INSERT INTO scenarios (id, titre, level, pitch, secrets, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [
+        r.id,
+        r.titre,
+        r.level ?? 0,
+        r.pitch ?? null,
+        r.secrets ?? null,
+        r.created_at ?? null,
+        r.updated_at ?? null,
+      ]
     );
   }
 }

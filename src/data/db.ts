@@ -107,6 +107,16 @@ export const initDb = async () => {
       description TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS scenarios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      titre TEXT NOT NULL,
+      level INTEGER NOT NULL,
+      pitch TEXT,
+      secrets TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS characters (
       id TEXT PRIMARY KEY,
       distant_id INTEGER DEFAULT 0,
