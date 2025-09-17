@@ -8,12 +8,50 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "@/navigation/types"; // ton fichier types.ts
 import { useCharacters, useDeleteCharacter } from "@/api/charactersLocal";
-import { syncCharacters } from "@/data/characterSync";
+import { syncCharacters, importRemoteCharacters } from "@/data/characterSync";
 import { apiFetch } from "@/utils/api";
 import { useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/ui/Layout";
 import Button from "@/components/ui/Button";
 import { Download, RefreshCcw } from "lucide-react-native";
+
+const REMOTE_CHARACTERS_URL =
+  "https://api.scriptonautes.net/api/records/characters";
+
+function parseTimestamp(value: unknown): number {
+  if (value === null || value === undefined) {
+    return 0;
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return 0;
+    }
+
+    const numericValue = Number(trimmed);
+    if (!Number.isNaN(numericValue)) {
+      return numericValue;
+    }
+
+    const parsed = Date.parse(trimmed);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+
+    const normalised = trimmed.replace(" ", "T");
+    const parsedNormalised = Date.parse(normalised);
+    if (!Number.isNaN(parsedNormalised)) {
+      return parsedNormalised;
+    }
+  }
+
+  return 0;
+}
 
 // On précise : je suis dans l'écran "Characters" du RootStack
 type CharactersScreenNavigationProp = NativeStackNavigationProp<
@@ -29,11 +67,16 @@ export default function CharactersScreen() {
   const [debugMode, setDebugMode] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const syncInProgress = useRef(false);
+  const charactersRef = useRef<any[]>([]);
   const queryClient = useQueryClient();
   const formatSync = (value?: string | null) =>
     value ? new Date(value).toLocaleString() : "Jamais";
 
-  const handleSync = useCallback(() => {
+  useEffect(() => {
+    charactersRef.current = Array.isArray(characters) ? characters : [];
+  }, [characters]);
+
+  const handleSync = useCallback(async () => {
     if (!isLoggedIn || syncInProgress.current) {
       return;
     }
@@ -41,16 +84,99 @@ export default function CharactersScreen() {
     syncInProgress.current = true;
     setIsSyncing(true);
 
-    syncCharacters()
-      .then(() =>
-        queryClient.invalidateQueries({ queryKey: ["characters"] }),
-      )
-      .catch((e) => console.error("Character sync failed", e))
-      .finally(() => {
-        syncInProgress.current = false;
-        setIsSyncing(false);
-      });
+    try {
+      const storedUser = await SecureStore.getItemAsync("user");
+      if (!storedUser) {
+        console.warn("No stored user found, skipping character sync");
+        return;
+      }
+
+      let userId: string | number | undefined;
+      try {
+        const parsed = JSON.parse(storedUser);
+        userId = parsed?.id;
+      } catch (error) {
+        console.error("Failed to parse stored user", error);
+        return;
+      }
+
+      if (!userId) {
+        console.warn("No user ID available, skipping character sync");
+        return;
+      }
+
+      const localLatest = charactersRef.current.reduce(
+        (latest: number, character: any) => {
+          const timestamp = parseTimestamp(character?.last_sync_at);
+          return timestamp > latest ? timestamp : latest;
+        },
+        0,
+      );
+
+      let remoteLatest = 0;
+      let remoteFetchSucceeded = false;
+
+      try {
+        const remoteUrl = `${REMOTE_CHARACTERS_URL}?filter=user_id,eq,${encodeURIComponent(
+          String(userId),
+        )}`;
+        const response = await apiFetch(remoteUrl);
+
+        if (response.ok) {
+          const data = await response.json();
+          const remoteRecords: any[] = Array.isArray(data?.records)
+            ? data.records
+            : Array.isArray(data)
+            ? data
+            : [];
+          remoteLatest = remoteRecords.reduce((latest: number, record: any) => {
+            const timestamp = parseTimestamp(record?.last_sync_at);
+            return timestamp > latest ? timestamp : latest;
+          }, 0);
+          remoteFetchSucceeded = true;
+        } else {
+          const errorText = await response.text();
+          console.error(
+            `Failed to fetch remote last_sync_at (${response.status} ${response.statusText})`,
+            errorText,
+          );
+        }
+      } catch (error) {
+        console.error("Failed to retrieve remote last_sync_at", error);
+      }
+
+      const localLastSyncDisplay =
+        localLatest > 0 ? new Date(localLatest).toISOString() : "never";
+      const remoteLastSyncDisplay =
+        remoteLatest > 0 ? new Date(remoteLatest).toISOString() : "never";
+      console.log(
+        `Sync comparison - local: ${localLastSyncDisplay}, remote: ${remoteLastSyncDisplay}`,
+      );
+
+      const shouldImportRemote = remoteFetchSucceeded && remoteLatest > localLatest;
+
+      if (shouldImportRemote) {
+        console.log("Remote data is newer; starting remote to local sync");
+        await importRemoteCharacters();
+      } else {
+        console.log(
+          "Local data is up to date or remote data is not newer; starting local to remote sync",
+        );
+        await syncCharacters();
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["characters"] });
+    } catch (error) {
+      console.error("Character sync failed", error);
+    } finally {
+      syncInProgress.current = false;
+      setIsSyncing(false);
+    }
   }, [isLoggedIn, queryClient]);
+
+  const triggerSync = useCallback(() => {
+    void handleSync();
+  }, [handleSync]);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -76,8 +202,8 @@ export default function CharactersScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      handleSync();
-    }, [handleSync]),
+      triggerSync();
+    }, [triggerSync]),
   );
 
   useEffect(() => {
@@ -88,9 +214,9 @@ export default function CharactersScreen() {
       return needsInitialSync || needsAvatarSync;
     });
     if (hasUnsynced) {
-      handleSync();
+      triggerSync();
     }
-  }, [characters, handleSync]);
+  }, [characters, triggerSync]);
 
   return (
     <Layout backgroundColor="gradient" variant="scroll">
@@ -100,7 +226,7 @@ export default function CharactersScreen() {
             <Button
               variant="secondary"
               size="sm"
-              onPress={handleSync}
+              onPress={triggerSync}
               disabled={!isLoggedIn || isSyncing}
             >
               <RefreshCcw color="#fff" size={16} />
@@ -175,7 +301,7 @@ export default function CharactersScreen() {
                             console.log("API URL:", url);
                             console.log("Request payload:", { id });
                             try {
-                              const response = await fetch(url);
+                              const response = await apiFetch(url);
                               console.log(
                                 "API response status:",
                                 response.status
