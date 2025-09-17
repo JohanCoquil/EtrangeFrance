@@ -3,10 +3,20 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import ScenariosScreen from '../screens/ScenariosScreen';
 import SelectScenarioScreen from '../screens/SelectScenarioScreen';
 import JoinScreen from '../screens/JoinScreen';
+import ScenarioDescriptionScreen from '../screens/ScenarioDescription';
+
+export type ScenarioDetails = {
+  id: number;
+  titre: string;
+  level: number;
+  pitch: string | null;
+  secrets: string | null;
+};
 
 export type ScenariosStackParamList = {
   ScenariosList: undefined;
   SelectScenario: undefined;
+  ScenarioDescription: { scenario: ScenarioDetails };
   Join: undefined;
 };
 
@@ -29,6 +39,13 @@ export default function ScenariosNavigator() {
         name="SelectScenario"
         component={SelectScenarioScreen}
         options={{ title: 'Choisir un scénario' }}
+      />
+      <Stack.Screen
+        name="ScenarioDescription"
+        component={ScenarioDescriptionScreen}
+        options={({ route }) => ({
+          title: route.params?.scenario.titre ?? 'Scénario',
+        })}
       />
       <Stack.Screen
         name="Join"
