@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from '../navigation/types';
 import { Button, Title, Body, Caption } from '../components/ui';
 import { syncCharacters, importRemoteCharacters } from '../data/characterSync';
@@ -49,6 +50,9 @@ export default function AuthScreen({ navigation }: Props) {
               'user',
               JSON.stringify({ id: user.id, login: user.login })
             );
+            const parsedLevel = Number(user.level);
+            const userLevel = Number.isFinite(parsedLevel) ? parsedLevel : 0;
+            await AsyncStorage.setItem('userLevel', userLevel.toString());
             await importRemoteCharacters();
             navigation.replace('MainTabs', {});
           } else {
@@ -86,6 +90,28 @@ export default function AuthScreen({ navigation }: Props) {
             'user',
             JSON.stringify({ id, login: username })
           );
+          let levelToStore = 0;
+          try {
+            const userRes = await apiFetch(
+              `https://api.scriptonautes.net/api/records/users?filter=id,eq,${id}`
+            );
+            if (userRes.ok) {
+              const userJson = await userRes.json();
+              const fetchedUser = userJson.records?.[0];
+              const parsedLevel = Number(fetchedUser?.level);
+              if (Number.isFinite(parsedLevel)) {
+                levelToStore = parsedLevel;
+              }
+            } else {
+              console.warn(
+                'Failed to fetch user level after registration:',
+                await userRes.text()
+              );
+            }
+          } catch (error) {
+            console.error('Failed to retrieve user level after registration', error);
+          }
+          await AsyncStorage.setItem('userLevel', levelToStore.toString());
           await syncCharacters();
           Alert.alert('Succès', "Vous faites désormais partie de l'agence !");
           navigation.replace('MainTabs', {});

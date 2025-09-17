@@ -5,6 +5,7 @@ import Button from "@/components/ui/Button";
 import { useFocusEffect } from "@react-navigation/native";
 import { getDb } from "@/data/db";
 import { Lock } from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type ScenarioRecord = {
   id: number;
@@ -14,12 +15,26 @@ type ScenarioRecord = {
 
 export default function SelectScenarioScreen() {
   const [scenarios, setScenarios] = useState<ScenarioRecord[]>([]);
+  const [userLevel, setUserLevel] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
 
       const loadScenarios = async () => {
+        try {
+          const levelValue = await AsyncStorage.getItem("userLevel");
+          if (isMounted) {
+            const parsed = levelValue !== null ? Number(levelValue) : 0;
+            setUserLevel(Number.isFinite(parsed) ? parsed : 0);
+          }
+        } catch (error) {
+          console.error("Failed to load user level", error);
+          if (isMounted) {
+            setUserLevel(0);
+          }
+        }
+
         try {
           const db = getDb();
           const rows = (await db.getAllAsync(
@@ -45,7 +60,7 @@ export default function SelectScenarioScreen() {
     <Layout backgroundColor="gradient" variant="scroll">
       <View className="flex-1 p-4">
         {scenarios.map((scenario) => {
-          const isUnlocked = scenario.level === 0;
+          const isUnlocked = scenario.level <= userLevel;
 
           return (
             <Button
