@@ -9,6 +9,7 @@ import AgencyScreen from '../screens/AgencyScreen';
 import ScenariosNavigator from './ScenariosNavigator';
 import DeckScreen from '../screens/DeckScreen';
 import ParamScreen from '../screens/ParamScreen';
+import PartieScreen from '../screens/PartieScreen';
 import { Settings } from 'lucide-react-native';
 import { usePlayMusic } from '@/context/PlayMusicContext';
 
@@ -17,6 +18,7 @@ export type TabParamList = {
   Characters: undefined;
   Agency: undefined;
   Scenarios: undefined;
+  Parties: undefined;
   Deck: undefined;
   Param: undefined;
 };
@@ -132,6 +134,15 @@ export default function TabNavigator() {
           title: 'Scénarios',
           tabBarIcon: () => null,
           headerShown: false,
+        }}
+      />
+      <Tab.Screen
+        name="Parties"
+        component={PartieScreen}
+        options={{
+          title: 'Parties',
+          tabBarLabel: 'Parties',
+          tabBarIcon: () => null,
         }}
       />
       <Tab.Screen
