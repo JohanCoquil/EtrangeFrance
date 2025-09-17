@@ -1,15 +1,72 @@
-import React from "react";
-import { View } from "react-native";
+import React, { useCallback, useState } from "react";
+import { View, Text } from "react-native";
 import Layout from "@/components/ui/Layout";
 import Button from "@/components/ui/Button";
+import { useFocusEffect } from "@react-navigation/native";
+import { getDb } from "@/data/db";
+import { Lock } from "lucide-react-native";
+
+type ScenarioRecord = {
+  id: number;
+  titre: string;
+  level: number;
+};
 
 export default function SelectScenarioScreen() {
+  const [scenarios, setScenarios] = useState<ScenarioRecord[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+
+      const loadScenarios = async () => {
+        try {
+          const db = getDb();
+          const rows = (await db.getAllAsync(
+            "SELECT id, titre, level FROM scenarios ORDER BY titre ASC",
+          )) as ScenarioRecord[];
+          if (isMounted) {
+            setScenarios(rows);
+          }
+        } catch (error) {
+          console.error("Failed to load scenarios", error);
+        }
+      };
+
+      loadScenarios();
+
+      return () => {
+        isMounted = false;
+      };
+    }, [])
+  );
+
   return (
     <Layout backgroundColor="gradient" variant="scroll">
       <View className="flex-1 p-4">
-        <Button variant="primary" size="md" className="mb-4" onPress={() => {}}>
-          L'affaire De La Main Verte
-        </Button>
+        {scenarios.map((scenario) => {
+          const isUnlocked = scenario.level === 0;
+
+          return (
+            <Button
+              key={scenario.id}
+              variant={isUnlocked ? "primary" : "secondary"}
+              size="md"
+              className="mb-4"
+              onPress={() => {}}
+              disabled={!isUnlocked}
+            >
+              <View className="flex-row items-center">
+                {!isUnlocked && <Lock color="#fff" size={16} />}
+                <Text
+                  className={`text-white text-base font-semibold ${!isUnlocked ? "ml-2" : ""}`}
+                >
+                  {scenario.titre}
+                </Text>
+              </View>
+            </Button>
+          );
+        })}
         <Button variant="secondary" size="md" onPress={() => {}}>
           Créer mon scénario
         </Button>
