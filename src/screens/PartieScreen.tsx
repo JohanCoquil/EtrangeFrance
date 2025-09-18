@@ -13,6 +13,7 @@ import * as SecureStore from "expo-secure-store";
 import * as MailComposer from "expo-mail-composer";
 import * as FileSystem from "expo-file-system";
 import * as Brightness from "expo-brightness";
+import * as Sharing from "expo-sharing";
 import QRCode from 'react-native-qrcode-svg';
 import Layout from "@/components/ui/Layout";
 import Button from "@/components/ui/Button";
@@ -464,6 +465,7 @@ export default function PartieScreen() {
     }));
   }, []);
 
+
   const sendQrCodeByEmail = useCallback(
     async (party: PartyRecord) => {
       const partyId = party.id;
@@ -622,6 +624,124 @@ export default function PartieScreen() {
     [emailValues, scenarioTitles, tempFiles],
   );
 
+
+  const shareQrCodeImage = useCallback(
+    async (party: PartyRecord) => {
+      try {
+        const qrCodeRaw = extractQrCodeRawValue(party);
+        const normalizedQr = await generateQRCodeFromText(String(qrCodeRaw));
+
+        if (!normalizedQr) {
+          Alert.alert(
+            "QR Code indisponible",
+            "Aucun QR Code n'est associé à cette partie.",
+          );
+          return;
+        }
+
+        // Créer le fichier QR code temporaire
+        const directory = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+        if (!directory) {
+          throw new Error("file_system_unavailable");
+        }
+
+        const qrCodeFileUri = `${directory}qrcode_share_${party.id}.png`;
+        await FileSystem.writeAsStringAsync(qrCodeFileUri, normalizedQr.base64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        // Ajouter le fichier à la liste des fichiers temporaires
+        setTempFiles(prev => [...prev, qrCodeFileUri]);
+
+        // Vérifier si le partage est disponible
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (!isAvailable) {
+          Alert.alert(
+            "Fonctionnalité indisponible",
+            "Le partage n'est pas supporté sur cet appareil.",
+          );
+          return;
+        }
+
+        // Partager l'image QR code
+        await Sharing.shareAsync(qrCodeFileUri, {
+          mimeType: "image/png",
+          dialogTitle: "Partager le QR Code de la partie",
+        });
+
+      } catch (error) {
+        console.error("Erreur partage QR code:", error);
+        Alert.alert(
+          "Erreur",
+          "Impossible de partager le QR Code pour le moment.",
+        );
+      }
+    },
+    [tempFiles],
+  );
+
+  const deleteParty = useCallback(
+    async (party: PartyRecord) => {
+      // Demander confirmation avant suppression
+      Alert.alert(
+        "Confirmer la suppression",
+        `Êtes-vous sûr de vouloir supprimer la partie "${getPartyDisplayName(party)}" ?\n\nCette action est irréversible.`,
+        [
+          {
+            text: "Annuler",
+            style: "cancel",
+          },
+          {
+            text: "Supprimer",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                setLoading(true);
+
+                const res = await apiFetch(
+                  `https://api.scriptonautes.net/api/records/parties/${party.id}`,
+                  {
+                    method: "DELETE",
+                  }
+                );
+
+                if (!res.ok) {
+                  const errorText = await res.text();
+                  throw new Error(errorText || "Impossible de supprimer la partie.");
+                }
+
+                Alert.alert(
+                  "Partie supprimée",
+                  "La partie a été supprimée avec succès.",
+                  [
+                    {
+                      text: "OK",
+                      onPress: () => {
+                        // Recharger la liste des parties
+                        void handleShowMjParties();
+                      },
+                    },
+                  ]
+                );
+              } catch (error) {
+                console.error("Erreur suppression partie:", error);
+                Alert.alert(
+                  "Erreur",
+                  error instanceof Error
+                    ? error.message
+                    : "Impossible de supprimer la partie pour le moment."
+                );
+              } finally {
+                setLoading(false);
+              }
+            },
+          },
+        ]
+      );
+    },
+    [handleShowMjParties],
+  );
+
   const renderMjContent = () => {
     if (loading) {
       return (
@@ -683,7 +803,7 @@ export default function PartieScreen() {
             "createdAt",
             "creation_date",
           ]);
-          const isSending = Boolean(emailSending[party.id]);
+          const isEmailSending = Boolean(emailSending[party.id]);
           const emailValue = emailValues[party.id] ?? "";
 
           return (
@@ -734,9 +854,35 @@ export default function PartieScreen() {
                   onPress={() => {
                     void sendQrCodeByEmail(party);
                   }}
-                  disabled={isSending}
+                  disabled={isEmailSending}
                 >
-                  {isSending ? "Envoi..." : "Envoyer par mail"}
+                  {isEmailSending ? "Envoi..." : "Envoyer par mail"}
+                </Button>
+              </View>
+
+              <View className="mt-4">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="mt-2 self-start"
+                  onPress={() => {
+                    void shareQrCodeImage(party);
+                  }}
+                >
+                  Partager QR Code
+                </Button>
+              </View>
+
+              <View className="mt-4">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="mt-2 self-start"
+                  onPress={() => {
+                    void deleteParty(party);
+                  }}
+                >
+                  🗑️ Supprimer la partie
                 </Button>
               </View>
             </View>

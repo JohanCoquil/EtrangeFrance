@@ -18,6 +18,7 @@
     "@tanstack/react-query": "^5.83.0",
     "expo": "53.0.22",
     "expo-av": "^15.1.7",
+    "expo-brightness": "~13.1.4",
     "expo-crypto": "~14.1.5",
     "expo-file-system": "^18.1.11",
     "expo-image-picker": "~16.1.4",
@@ -25,6 +26,7 @@
     "expo-linking": "^7.1.7",
     "expo-mail-composer": "^15.0.7",
     "expo-secure-store": "^14.2.3",
+    "expo-sharing": "~13.1.5",
     "expo-sqlite": "^15.2.14",
     "expo-status-bar": "~2.2.3",
     "jotai": "^2.12.5",
@@ -43,8 +45,7 @@
     "react-native-svg": "^15.11.2",
     "tailwindcss": "^3.4.17",
     "uuid": "^11.1.0",
-    "zod": "^4.0.5",
-    "expo-brightness": "~13.1.4"
+    "zod": "^4.0.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
