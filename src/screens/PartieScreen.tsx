@@ -721,30 +721,20 @@ export default function PartieScreen() {
 
   const fetchParticipantsForParty = useCallback(
     async (partyId: number) => {
-      let shouldFetch = false;
-
-      setParticipantsState((prev) => {
-        const current = prev[partyId];
-        if (current?.loading || current?.loaded) {
-          return prev;
-        }
-
-        shouldFetch = true;
-
-        return {
-          ...prev,
-          [partyId]: {
-            pseudos: current?.pseudos ?? [],
-            loading: true,
-            error: null,
-            loaded: false,
-          },
-        };
-      });
-
-      if (!shouldFetch) {
+      const existingState = participantsState[partyId];
+      if (existingState?.loading || existingState?.loaded) {
         return;
       }
+
+      setParticipantsState((prev) => ({
+        ...prev,
+        [partyId]: {
+          pseudos: prev[partyId]?.pseudos ?? [],
+          loading: true,
+          error: null,
+          loaded: false,
+        },
+      }));
 
       try {
         const res = await apiFetch(
@@ -848,7 +838,7 @@ export default function PartieScreen() {
         setParticipantsState((prev) => ({
           ...prev,
           [partyId]: {
-            pseudos: [],
+            pseudos: prev[partyId]?.pseudos ?? [],
             loading: false,
             error:
               err instanceof Error
@@ -859,7 +849,7 @@ export default function PartieScreen() {
         }));
       }
     },
-    [],
+    [participantsState],
   );
 
   const AccordionSection = ({
@@ -888,27 +878,26 @@ export default function PartieScreen() {
 
   const toggleSection = useCallback(
     (partyId: number, section: keyof AccordionSectionsState[number]) => {
-      let shouldLoadParticipants = false;
+      const previousState = expandedSections[partyId] ?? { qr: false, participants: false };
+      const wasParticipantsOpen = previousState.participants ?? false;
 
       setExpandedSections((prev) => {
         const current = prev[partyId] ?? { qr: false, participants: false };
-        const nextState = { ...current, [section]: !current[section] };
-
-        if (section === "participants" && !current.participants) {
-          shouldLoadParticipants = true;
-        }
 
         return {
           ...prev,
-          [partyId]: nextState,
+          [partyId]: {
+            ...current,
+            [section]: !current[section],
+          },
         };
       });
 
-      if (section === "participants" && shouldLoadParticipants) {
+      if (section === "participants" && !wasParticipantsOpen) {
         void fetchParticipantsForParty(partyId);
       }
     },
-    [fetchParticipantsForParty],
+    [expandedSections, fetchParticipantsForParty],
   );
 
   const deleteParty = useCallback(
