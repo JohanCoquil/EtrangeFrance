@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useEffect } from "react";
+import type { ReactNode } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -33,6 +34,20 @@ type NormalizedQrCode = {
   mimeType: string;
   extension: string;
 };
+
+type AccordionSectionsState = Record<number, {
+  qr: boolean;
+  participants: boolean;
+}>;
+
+type PartyParticipantsState = {
+  pseudos: string[];
+  loading: boolean;
+  error: string | null;
+  loaded: boolean;
+};
+
+type ParticipantsByPartyState = Record<number, PartyParticipantsState>;
 
 const QR_CODE_FIELD_KEYS = [
   "qr_code",
@@ -203,6 +218,26 @@ function extractStringField(party: PartyRecord, keys: string[]): string | null {
   return null;
 }
 
+function formatDateToFrench(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const pad = (input: number) => String(input).padStart(2, "0");
+  const day = pad(date.getDate());
+  const month = pad(date.getMonth() + 1);
+  const year = date.getFullYear();
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+
+  return `${day}/${month}/${year} ${hours}h${minutes}`;
+}
+
 function extractQrCodeRawValue(party: PartyRecord): unknown {
   for (const key of QR_CODE_FIELD_KEYS) {
     if (!(key in party)) {
@@ -232,6 +267,8 @@ export default function PartieScreen() {
   const [fullScreenQR, setFullScreenQR] = useState<string | null>(null);
   const [originalBrightness, setOriginalBrightness] = useState<number>(0.5);
   const [tempFiles, setTempFiles] = useState<string[]>([]);
+  const [expandedSections, setExpandedSections] = useState<AccordionSectionsState>({});
+  const [participantsState, setParticipantsState] = useState<ParticipantsByPartyState>({});
 
   // Restaurer la luminosité et nettoyer les fichiers temporaires quand le composant se démonte
   useEffect(() => {
@@ -397,6 +434,8 @@ export default function PartieScreen() {
     setLoading(true);
     setMjParties([]);
     setScenarioTitles({});
+    setExpandedSections({});
+    setParticipantsState({});
 
     try {
       const res = await apiFetch(
@@ -680,6 +719,198 @@ export default function PartieScreen() {
     [tempFiles],
   );
 
+  const fetchParticipantsForParty = useCallback(
+    async (partyId: number) => {
+      let shouldFetch = false;
+
+      setParticipantsState((prev) => {
+        const current = prev[partyId];
+        if (current?.loading || current?.loaded) {
+          return prev;
+        }
+
+        shouldFetch = true;
+
+        return {
+          ...prev,
+          [partyId]: {
+            pseudos: current?.pseudos ?? [],
+            loading: true,
+            error: null,
+            loaded: false,
+          },
+        };
+      });
+
+      if (!shouldFetch) {
+        return;
+      }
+
+      try {
+        const res = await apiFetch(
+          `https://api.scriptonautes.net/api/records/participants?filter=partie_id,eq,${encodeURIComponent(
+            String(partyId),
+          )}`,
+        );
+
+        const rawText = await res.text();
+
+        if (!res.ok) {
+          throw new Error(
+            rawText || "Impossible de récupérer les participants pour le moment.",
+          );
+        }
+
+        let parsed: any = null;
+
+        if (rawText) {
+          try {
+            parsed = JSON.parse(rawText);
+          } catch (parseError) {
+            console.warn("Unable to parse participants response", parseError);
+          }
+        }
+
+        let records: any[] = [];
+        const candidateLists: any[] = [];
+
+        if (parsed && typeof parsed === "object") {
+          if (Array.isArray(parsed.records)) {
+            candidateLists.push(parsed.records);
+          }
+          if (Array.isArray(parsed.data)) {
+            candidateLists.push(parsed.data);
+          }
+        }
+
+        if (Array.isArray(parsed)) {
+          candidateLists.push(parsed);
+        }
+
+        for (const candidate of candidateLists) {
+          if (Array.isArray(candidate)) {
+            records = candidate;
+            break;
+          }
+        }
+
+        if (!Array.isArray(records)) {
+          records = [];
+        }
+
+        const pseudos = records.map((entry: any) => {
+          const pseudoCandidates = [
+            entry?.pseudo,
+            entry?.pseudo_participant,
+            entry?.pseudo_user,
+            entry?.user?.pseudo,
+            entry?.user?.login,
+            entry?.user?.username,
+            entry?.login,
+            entry?.username,
+            entry?.display_name,
+            entry?.name,
+          ];
+
+          for (const candidate of pseudoCandidates) {
+            if (typeof candidate === "string") {
+              const trimmed = candidate.trim();
+              if (trimmed.length > 0) {
+                return trimmed;
+              }
+            }
+          }
+
+          const userId = entry?.user_id ?? entry?.userId;
+          if (Number.isFinite(Number(userId))) {
+            return `Utilisateur #${Number(userId)}`;
+          }
+
+          const participantId = entry?.id ?? entry?.participant_id ?? entry?.participantId;
+          if (Number.isFinite(Number(participantId))) {
+            return `Participant #${Number(participantId)}`;
+          }
+
+          return "Participant";
+        });
+
+        setParticipantsState((prev) => ({
+          ...prev,
+          [partyId]: {
+            pseudos,
+            loading: false,
+            error: null,
+            loaded: true,
+          },
+        }));
+      } catch (err) {
+        console.error("Failed to load participants", err);
+        setParticipantsState((prev) => ({
+          ...prev,
+          [partyId]: {
+            pseudos: [],
+            loading: false,
+            error:
+              err instanceof Error
+                ? err.message
+                : "Impossible de récupérer les participants pour le moment.",
+            loaded: false,
+          },
+        }));
+      }
+    },
+    [],
+  );
+
+  const AccordionSection = ({
+    label,
+    isOpen,
+    onToggle,
+    children,
+  }: {
+    label: string;
+    isOpen: boolean;
+    onToggle: () => void;
+    children: ReactNode;
+  }) => (
+    <View className="mt-4 border-t border-white/10 pt-3">
+      <TouchableOpacity
+        className="flex-row items-center justify-between"
+        onPress={onToggle}
+        activeOpacity={0.8}
+      >
+        <Text className="text-white text-base font-semibold">{label}</Text>
+        <Text className="text-white text-lg">{isOpen ? "▲" : "▼"}</Text>
+      </TouchableOpacity>
+      {isOpen && <View className="mt-3">{children}</View>}
+    </View>
+  );
+
+  const toggleSection = useCallback(
+    (partyId: number, section: keyof AccordionSectionsState[number]) => {
+      let shouldLoadParticipants = false;
+
+      setExpandedSections((prev) => {
+        const current = prev[partyId] ?? { qr: false, participants: false };
+        const nextState = { ...current, [section]: !current[section] };
+
+        if (section === "participants" && !current.participants) {
+          shouldLoadParticipants = true;
+        }
+
+        return {
+          ...prev,
+          [partyId]: nextState,
+        };
+      });
+
+      if (section === "participants" && shouldLoadParticipants) {
+        void fetchParticipantsForParty(partyId);
+      }
+    },
+    [fetchParticipantsForParty],
+  );
+
   const deleteParty = useCallback(
     async (party: PartyRecord) => {
       // Demander confirmation avant suppression
@@ -798,13 +1029,20 @@ export default function PartieScreen() {
             "etat",
             "state",
           ]);
-          const createdAt = extractStringField(party, [
+          const createdAtRaw = extractStringField(party, [
             "created_at",
             "createdAt",
             "creation_date",
           ]);
+          const createdAt = formatDateToFrench(createdAtRaw) ?? createdAtRaw;
           const isEmailSending = Boolean(emailSending[party.id]);
           const emailValue = emailValues[party.id] ?? "";
+          const isQrExpanded = expandedSections[party.id]?.qr ?? false;
+          const isParticipantsExpanded = expandedSections[party.id]?.participants ?? false;
+          const participantsInfo = participantsState[party.id];
+          const participantsLoading = participantsInfo?.loading ?? !participantsInfo;
+          const participantsError = participantsInfo?.error ?? null;
+          const participantNames = participantsInfo?.pseudos ?? [];
 
           return (
             <View
@@ -812,19 +1050,11 @@ export default function PartieScreen() {
               className="bg-white/10 rounded-xl p-4 mb-4"
             >
               <Text className="text-white text-lg font-semibold mb-1">
-                {getPartyDisplayName(party)}
+                Partie #{party.id}
               </Text>
               {scenarioLabel && (
                 <Text className="text-white/80 text-sm mb-1">
                   Scénario : {scenarioLabel}
-                </Text>
-              )}
-              {code && (
-                <Text className="text-white/80 text-sm mb-1">Code : {code}</Text>
-              )}
-              {status && (
-                <Text className="text-white/80 text-sm mb-1">
-                  Statut : {status}
                 </Text>
               )}
               {createdAt && (
@@ -832,59 +1062,127 @@ export default function PartieScreen() {
                   Créée le : {createdAt}
                 </Text>
               )}
-              <QRCodeDisplay party={party} />
-              <View className="mt-2">
-                <Text className="text-white/80 text-sm mb-2">
-                  Envoyer par mail
-                </Text>
-                <TextInput
-                  className="bg-white text-black px-3 py-2 rounded-lg"
-                  placeholder="Saisissez les adresses email"
-                  placeholderTextColor="#666"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  value={emailValue}
-                  onChangeText={(text) => handleEmailChange(party.id, text)}
-                />
-                <Button
-                  variant="primary"
-                  size="sm"
-                  className="mt-3 self-start"
-                  onPress={() => {
-                    void sendQrCodeByEmail(party);
-                  }}
-                  disabled={isEmailSending}
-                >
-                  {isEmailSending ? "Envoi..." : "Envoyer par mail"}
-                </Button>
-              </View>
 
-              <View className="mt-4">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  className="mt-2 self-start"
-                  onPress={() => {
-                    void shareQrCodeImage(party);
-                  }}
-                >
-                  Partager QR Code
-                </Button>
-              </View>
+              <AccordionSection
+                label="QR Code"
+                isOpen={isQrExpanded}
+                onToggle={() => toggleSection(party.id, "qr")}
+              >
+                {code && (
+                  <Text className="text-white/80 text-sm mb-1">Code : {code}</Text>
+                )}
+                {status && (
+                  <Text className="text-white/80 text-sm mb-1">
+                    Statut : {status}
+                  </Text>
+                )}
+                <QRCodeDisplay party={party} />
+                <View className="mt-2">
+                  <Text className="text-white/80 text-sm mb-2">
+                    Envoyer par mail
+                  </Text>
+                  <TextInput
+                    className="bg-white text-black px-3 py-2 rounded-lg"
+                    placeholder="Saisissez les adresses email"
+                    placeholderTextColor="#666"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={emailValue}
+                    onChangeText={(text) => handleEmailChange(party.id, text)}
+                  />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="mt-3 self-start"
+                    onPress={() => {
+                      void sendQrCodeByEmail(party);
+                    }}
+                    disabled={isEmailSending}
+                  >
+                    {isEmailSending ? "Envoi..." : "Envoyer par mail"}
+                  </Button>
+                </View>
 
-              <View className="mt-4">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="mt-2 self-start"
-                  onPress={() => {
-                    void deleteParty(party);
-                  }}
-                >
-                  🗑️ Supprimer la partie
-                </Button>
-              </View>
+                <View className="mt-4">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="mt-2 self-start"
+                    onPress={() => {
+                      void shareQrCodeImage(party);
+                    }}
+                  >
+                    Partager QR Code
+                  </Button>
+                </View>
+
+                <View className="mt-4">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="mt-2 self-start"
+                    onPress={() => {
+                      void deleteParty(party);
+                    }}
+                  >
+                    🗑️ Supprimer la partie
+                  </Button>
+                </View>
+              </AccordionSection>
+
+              <AccordionSection
+                label="Participants"
+                isOpen={isParticipantsExpanded}
+                onToggle={() => toggleSection(party.id, "participants")}
+              >
+                {participantsLoading && (
+                  <View className="flex-row items-center">
+                    <ActivityIndicator size="small" color="#ffffff" />
+                    <Text className="text-white/80 text-sm ml-2">
+                      Chargement des participants...
+                    </Text>
+                  </View>
+                )}
+
+                {!participantsLoading && participantsError && (
+                  <View>
+                    <Text className="text-red-300 text-sm mb-2">
+                      {participantsError}
+                    </Text>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onPress={() => {
+                        void fetchParticipantsForParty(party.id);
+                      }}
+                    >
+                      Réessayer
+                    </Button>
+                  </View>
+                )}
+
+                {!participantsLoading && !participantsError &&
+                  participantNames.length === 0 && (
+                    <Text className="text-white/80 text-sm">
+                      Aucun participant pour le moment.
+                    </Text>
+                  )}
+
+                {!participantsLoading && !participantsError &&
+                  participantNames.length > 0 && (
+                    <View>
+                      {participantNames.map((pseudo, index) => (
+                        <Text
+                          key={`${party.id}-participant-${index}`}
+                          className="text-white/80 text-sm mb-1"
+                        >
+                          • {pseudo}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+              </AccordionSection>
             </View>
           );
         })}
@@ -980,9 +1278,6 @@ export default function PartieScreen() {
             />
             <Text className="text-white text-center mt-6 text-lg">
               Appuyez n'importe où pour fermer
-            </Text>
-            <Text className="text-white/60 text-center mt-2 text-sm">
-              Luminosité maximale activée pour faciliter le scan
             </Text>
           </View>
         </TouchableOpacity>
