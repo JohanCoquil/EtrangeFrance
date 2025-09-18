@@ -168,11 +168,16 @@ function guessExtensionFromMimeType(mimeType: string | null): string {
 }
 
 function normalizeQrCodeValue(
-  rawValue: string | null,
+  rawValue: unknown,
   seen?: Set<string>,
 ): NormalizedQrCode | null {
-  if (!rawValue) {
+  if (rawValue == null) {
     return null;
+  }
+
+  if (typeof rawValue !== "string") {
+    const visited = seen ?? new Set<string>();
+    return extractFromParsedQrValue(rawValue, visited);
   }
 
   const visited = seen ?? new Set<string>();
@@ -346,6 +351,23 @@ function extractStringField(party: PartyRecord, keys: string[]): string | null {
   return null;
 }
 
+function extractQrCodeRawValue(party: PartyRecord): unknown {
+  for (const key of QR_CODE_FIELD_KEYS) {
+    if (!(key in party)) {
+      continue;
+    }
+
+    const value = party[key];
+    if (value === null || value === undefined) {
+      continue;
+    }
+
+    return value;
+  }
+
+  return null;
+}
+
 export default function PartieScreen() {
   const [view, setView] = useState<ScreenView>("menu");
   const [loading, setLoading] = useState(false);
@@ -492,7 +514,7 @@ export default function PartieScreen() {
         return;
       }
 
-      const qrCodeRaw = extractStringField(party, QR_CODE_FIELD_KEYS);
+      const qrCodeRaw = extractQrCodeRawValue(party);
       const normalizedQr = normalizeQrCodeValue(qrCodeRaw);
 
       if (!normalizedQr) {
@@ -660,7 +682,7 @@ export default function PartieScreen() {
             "createdAt",
             "creation_date",
           ]);
-          const qrCodeValue = extractStringField(party, QR_CODE_FIELD_KEYS);
+          const qrCodeValue = extractQrCodeRawValue(party);
           const normalizedQrCode = normalizeQrCodeValue(qrCodeValue);
           const isSending = Boolean(emailSending[party.id]);
           const emailValue = emailValues[party.id] ?? "";
