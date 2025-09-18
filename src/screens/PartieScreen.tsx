@@ -3,14 +3,17 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import * as MailComposer from "expo-mail-composer";
 import * as FileSystem from "expo-file-system";
-import QRCode from 'qrcode';
+import * as Brightness from "expo-brightness";
+import QRCode from 'react-native-qrcode-svg';
 import Layout from "@/components/ui/Layout";
 import Button from "@/components/ui/Button";
 import { apiFetch } from "@/utils/api";
@@ -41,20 +44,40 @@ const QR_CODE_FIELD_KEYS = [
 // Fonction pour générer un QR code à partir de texte (UUID)
 async function generateQRCodeFromText(text: string): Promise<NormalizedQrCode | null> {
   try {
-    const qrCodeDataURL = await QRCode.toDataURL(text, {
-      width: 200,
-      margin: 2,
-      color: {
-        dark: '#000000',
-        light: '#FFFFFF'
-      }
+    // Utiliser directement QR Server (plus fiable que Google Charts)
+    const qrServerUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&format=png&ecc=M&margin=10&data=${encodeURIComponent(text)}`;
+
+    console.log('Génération QR code pour:', text);
+    console.log('URL QR Server:', qrServerUrl);
+
+    // Télécharger l'image et la sauvegarder temporairement
+    const tempUri = `${FileSystem.cacheDirectory}temp_qr_${Date.now()}.png`;
+    const downloadResult = await FileSystem.downloadAsync(qrServerUrl, tempUri);
+
+    if (!downloadResult.uri) {
+      throw new Error('Failed to download QR code from QR Server');
+    }
+
+    console.log('QR code téléchargé vers:', downloadResult.uri);
+
+    // Lire le fichier en base64
+    const base64Data = await FileSystem.readAsStringAsync(tempUri, {
+      encoding: FileSystem.EncodingType.Base64,
     });
 
-    // Extraire le base64 du data URL
-    const base64Data = qrCodeDataURL.split(',')[1];
+    // Nettoyer le fichier temporaire
+    await FileSystem.deleteAsync(tempUri, { idempotent: true });
+
+    // Vérifier que le base64 est valide
+    if (!base64Data || base64Data.length === 0) {
+      throw new Error('Invalid base64 data from QR Server');
+    }
+
+    console.log('QR Code base64 length:', base64Data.length);
+    console.log('QR Code base64 preview:', base64Data.substring(0, 50) + '...');
 
     return {
-      displayUri: qrCodeDataURL,
+      displayUri: `data:image/png;base64,${base64Data}`,
       base64: base64Data,
       mimeType: "image/png",
       extension: "png",
@@ -205,23 +228,73 @@ export default function PartieScreen() {
   const [emailValues, setEmailValues] = useState<Record<number, string>>({});
   const [emailSending, setEmailSending] = useState<Record<number, boolean>>({});
   const [qrCodeCache, setQrCodeCache] = useState<Record<string, NormalizedQrCode>>({});
+  const [fullScreenQR, setFullScreenQR] = useState<string | null>(null);
+  const [originalBrightness, setOriginalBrightness] = useState<number>(0.5);
+  const [tempFiles, setTempFiles] = useState<string[]>([]);
+
+  // Restaurer la luminosité et nettoyer les fichiers temporaires quand le composant se démonte
+  useEffect(() => {
+    return () => {
+      if (originalBrightness !== 0.5) {
+        Brightness.setBrightnessAsync(originalBrightness).catch(console.error);
+      }
+
+      // Nettoyer tous les fichiers temporaires
+      tempFiles.forEach(async (fileUri) => {
+        try {
+          await FileSystem.deleteAsync(fileUri, { idempotent: true });
+        } catch (error) {
+          console.warn("Unable to clean temporary file:", fileUri, error);
+        }
+      });
+    };
+  }, [originalBrightness, tempFiles]);
+
+  // Fonction pour afficher le QR code en plein écran avec luminosité maximale
+  const showQRCodeFullScreen = useCallback(async (qrCodeText: string) => {
+    try {
+      // Sauvegarder la luminosité actuelle
+      const currentBrightness = await Brightness.getBrightnessAsync();
+      setOriginalBrightness(currentBrightness);
+
+      // Mettre la luminosité au maximum
+      await Brightness.setBrightnessAsync(1.0);
+
+      // Afficher le QR code en plein écran
+      setFullScreenQR(qrCodeText);
+    } catch (error) {
+      console.error('Erreur lors de l\'affichage plein écran:', error);
+    }
+  }, []);
+
+  // Fonction pour fermer l'affichage plein écran et restaurer la luminosité
+  const hideQRCodeFullScreen = useCallback(async () => {
+    try {
+      // Restaurer la luminosité originale
+      await Brightness.setBrightnessAsync(originalBrightness);
+
+      // Fermer l'affichage plein écran
+      setFullScreenQR(null);
+    } catch (error) {
+      console.error('Erreur lors de la fermeture plein écran:', error);
+    }
+  }, [originalBrightness]);
 
   // Composant pour afficher un QR code avec génération asynchrone
   const QRCodeDisplay = ({ party }: { party: PartyRecord }) => {
-    const [qrCode, setQrCode] = useState<NormalizedQrCode | null>(null);
     const [loading, setLoading] = useState(true);
+    const [qrCodeText, setQrCodeText] = useState<string | null>(null);
 
     useEffect(() => {
       const loadQRCode = async () => {
         const qrCodeRaw = extractQrCodeRawValue(party);
         if (qrCodeRaw) {
-          const normalized = await getOrGenerateQRCode(qrCodeRaw);
-          setQrCode(normalized);
+          setQrCodeText(String(qrCodeRaw));
         }
         setLoading(false);
       };
       loadQRCode();
-    }, [party, getOrGenerateQRCode]);
+    }, [party]);
 
     if (loading) {
       return (
@@ -232,17 +305,24 @@ export default function PartieScreen() {
       );
     }
 
-    if (!qrCode) {
-      return null;
-    }
+    if (!qrCodeText) return null;
 
     return (
       <View className="items-center mt-4 mb-2">
-        <Image
-          source={{ uri: qrCode.displayUri }}
-          style={{ width: 200, height: 200 }}
-          resizeMode="contain"
-        />
+        <TouchableOpacity
+          onPress={() => showQRCodeFullScreen(qrCodeText)}
+          activeOpacity={0.8}
+        >
+          <QRCode
+            value={qrCodeText}
+            size={200}
+            color="#000000"
+            backgroundColor="#FFFFFF"
+          />
+        </TouchableOpacity>
+        <Text className="text-white/60 text-xs mt-2 text-center">
+          Appuyez sur le QR code pour l'afficher en plein écran
+        </Text>
       </View>
     );
   };
@@ -411,7 +491,7 @@ export default function PartieScreen() {
       }
 
       const qrCodeRaw = extractQrCodeRawValue(party);
-      const normalizedQr = await getOrGenerateQRCode(qrCodeRaw);
+      const normalizedQr = await generateQRCodeFromText(String(qrCodeRaw));
 
       if (!normalizedQr) {
         Alert.alert(
@@ -423,28 +503,12 @@ export default function PartieScreen() {
 
       setEmailSending((prev) => ({ ...prev, [partyId]: true }));
 
-      let tempFileUri: string | null = null;
+      let qrCodeFileUri: string | null = null;
 
       try {
         const isAvailable = await MailComposer.isAvailableAsync();
         if (!isAvailable) {
           throw new Error("mail_composer_unavailable");
-        }
-
-        const directory = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
-        if (!directory) {
-          throw new Error("file_system_unavailable");
-        }
-
-        // Créer le fichier QR code à partir du base64
-        const targetUri = `${directory}party-${partyId}-qr.${normalizedQr.extension}`;
-        await FileSystem.writeAsStringAsync(targetUri, normalizedQr.base64, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        tempFileUri = targetUri;
-
-        if (!tempFileUri) {
-          throw new Error("attachment_creation_failed");
         }
 
         // Récupérer le login de l'utilisateur connecté
@@ -463,11 +527,57 @@ export default function PartieScreen() {
         const scenarioId = extractScenarioId(party);
         const scenarioName = scenarioId ? scenarioTitles[scenarioId] : null;
 
+        // Créer le fichier QR code pour la pièce jointe
+        const directory = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+        if (!directory) {
+          throw new Error("file_system_unavailable");
+        }
+
+        qrCodeFileUri = `${directory}qrcode_${partyId}.png`;
+        await FileSystem.writeAsStringAsync(qrCodeFileUri, normalizedQr.base64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        // Ajouter le fichier à la liste des fichiers temporaires pour nettoyage ultérieur
+        setTempFiles(prev => [...prev, qrCodeFileUri!]);
+        console.log('Fichier QR code créé et ajouté à la liste temporaire:', qrCodeFileUri);
+
+        // Contenu HTML de l'email
+        const htmlBody = `
+          <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                            
+              <p>Bonjour,</p>
+              <br/><br/>
+              <p><strong><b>${userLogin}</b></strong> vous invite à rejoindre une partie de jeu de rôle <strong><b>"Étrange France"</b></strong> !</p>
+              <br/><br/>
+              ${scenarioName ? `<p><strong><b>Scénario :</b></strong> ${scenarioName}</p>` : ''}
+              <br/><br/>
+                           
+              <div style="background-color: #e8f4fd; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <h3 style="color: #2c3e50; margin-top: 0;"><b>Instructions :</b></h3><br/>
+                <ol style="margin: 0; padding-left: 20px;">
+                  <li> • Ouvrez l'application <strong><b>"Étrange France"</b></strong> sur votre mobile</li>
+                  <li> • Scannez le QR Code en pièce jointe</li>
+                  <li> • Vous serez automatiquement connecté(e) à la partie</li>
+                </ol>
+              </div>
+              <br/><br/>
+              <p style="text-align: center; font-style: italic; color: #7f8c8d; margin-top: 30px;">
+                Bonne aventure dans l'Étrange France !<br>
+              </p>
+              
+             
+            </body>
+          </html>
+        `;
+
         const result = await MailComposer.composeAsync({
           recipients,
-          subject: "Invitation - JdR Etrange France",
-          body: `Bonjour,\n\n${userLogin} vous invite à rejoindre une partie de jeu de rôle "Étrange France" !\n\n${scenarioName ? `Scénario : ${scenarioName}\n\n` : ''}Veuillez trouver ci-joint le QR Code qui vous permettra de rejoindre la partie.\n\nInstructions :\n1. Ouvrez l'application "Étrange France" sur votre mobile\n2. Scannez le QR Code ci-joint\n3. Vous serez automatiquement connecté(e) à la partie\n\nBonne aventure dans l'Étrange France !\n\nÀ bientôt !`,
-          attachments: [tempFileUri],
+          subject: "🎲 Invitation - JdR Etrange France",
+          body: htmlBody,
+          isHtml: true,
+          attachments: [qrCodeFileUri],
         });
 
         if (result.status === MailComposer.MailComposerStatus.SENT) {
@@ -484,11 +594,6 @@ export default function PartieScreen() {
             Alert.alert(
               "Fonctionnalité indisponible",
               "L'envoi d'email n'est pas supporté sur cet appareil.",
-            );
-          } else if (err.message === "file_system_unavailable") {
-            Alert.alert(
-              "Stockage indisponible",
-              "Impossible d'accéder au stockage temporaire pour créer la pièce jointe.",
             );
           } else {
             console.error("Failed to send QR code email", err);
@@ -511,16 +616,10 @@ export default function PartieScreen() {
           return updated;
         });
 
-        if (tempFileUri) {
-          try {
-            await FileSystem.deleteAsync(tempFileUri, { idempotent: true });
-          } catch (cleanupError) {
-            console.warn("Unable to clean temporary QR code file", cleanupError);
-          }
-        }
+        // Les fichiers temporaires seront nettoyés à la fermeture de l'écran
       }
     },
-    [emailValues, scenarioTitles],
+    [emailValues, scenarioTitles, tempFiles],
   );
 
   const renderMjContent = () => {
@@ -713,6 +812,35 @@ export default function PartieScreen() {
           </View>
         )}
       </View>
+
+      {/* Modal plein écran pour le QR code */}
+      <Modal
+        visible={!!fullScreenQR}
+        transparent
+        animationType="fade"
+        onRequestClose={hideQRCodeFullScreen}
+      >
+        <TouchableOpacity
+          className="flex-1 bg-black justify-center items-center"
+          onPress={hideQRCodeFullScreen}
+          activeOpacity={1}
+        >
+          <View className="items-center p-8">
+            <QRCode
+              value={fullScreenQR || ""}
+              size={300}
+              color="#000000"
+              backgroundColor="#FFFFFF"
+            />
+            <Text className="text-white text-center mt-6 text-lg">
+              Appuyez n'importe où pour fermer
+            </Text>
+            <Text className="text-white/60 text-center mt-2 text-sm">
+              Luminosité maximale activée pour faciliter le scan
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </Layout>
   );
 }
