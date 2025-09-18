@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -10,6 +10,7 @@ import {
 import * as SecureStore from "expo-secure-store";
 import * as MailComposer from "expo-mail-composer";
 import * as FileSystem from "expo-file-system";
+import QRCode from 'qrcode';
 import Layout from "@/components/ui/Layout";
 import Button from "@/components/ui/Button";
 import { apiFetch } from "@/utils/api";
@@ -22,20 +23,12 @@ type PartyRecord = {
 
 type ScreenView = "menu" | "player" | "mj";
 
-type NormalizedQrCode =
-  | {
-      type: "base64";
-      displayUri: string;
-      base64: string;
-      mimeType: string;
-      extension: string;
-    }
-  | {
-      type: "remote";
-      displayUri: string;
-      remoteUri: string;
-      extension: string;
-    };
+type NormalizedQrCode = {
+  displayUri: string;
+  base64: string;
+  mimeType: string;
+  extension: string;
+};
 
 const QR_CODE_FIELD_KEYS = [
   "qr_code",
@@ -45,212 +38,47 @@ const QR_CODE_FIELD_KEYS = [
   "code_qr",
 ];
 
-const DIRECTUS_ASSET_BASE_URL = "https://api.scriptonautes.net";
-const DIRECTUS_ASSET_ID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Fonction pour générer un QR code à partir de texte (UUID)
+async function generateQRCodeFromText(text: string): Promise<NormalizedQrCode | null> {
+  try {
+    const qrCodeDataURL = await QRCode.toDataURL(text, {
+      width: 200,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    });
 
-function buildRemoteQrCode(url: string): NormalizedQrCode {
-  const withoutParams = url.split(/[?#]/)[0];
-  const parts = withoutParams.split(".");
-  const potentialExt = parts.length > 1 ? parts.pop() : null;
-  const extension =
-    potentialExt && /^[a-z0-9]+$/i.test(potentialExt)
-      ? potentialExt.toLowerCase()
-      : "png";
+    // Extraire le base64 du data URL
+    const base64Data = qrCodeDataURL.split(',')[1];
 
-  return {
-    type: "remote",
-    displayUri: url,
-    remoteUri: url,
-    extension,
-  };
+    return {
+      displayUri: qrCodeDataURL,
+      base64: base64Data,
+      mimeType: "image/png",
+      extension: "png",
+    };
+  } catch (error) {
+    console.error('Erreur génération QR code:', error);
+    return null;
+  }
 }
 
-function extractFromParsedQrValue(
-  value: unknown,
-  seen: Set<string>,
-): NormalizedQrCode | null {
-  if (typeof value === "string") {
-    return normalizeQrCodeValue(value, seen);
-  }
 
-  if (Array.isArray(value)) {
-    for (const entry of value) {
-      const normalized = extractFromParsedQrValue(entry, seen);
-      if (normalized) {
-        return normalized;
-      }
-    }
+// Fonction simplifiée : génère toujours un QR code à partir du texte
+async function generateQRCodeFromUUID(uuid: string): Promise<NormalizedQrCode | null> {
+  if (!uuid || typeof uuid !== "string") {
     return null;
   }
 
-  if (value && typeof value === "object") {
-    const candidates: unknown[] = [];
-
-    const record = value as Record<string, unknown>;
-    const potentialKeys = [
-      "qr_code",
-      "qrCode",
-      "qr_code_data",
-      "qrData",
-      "data",
-      "base64",
-      "value",
-      "url",
-      "uri",
-      "remoteUri",
-      "asset",
-      "asset_id",
-      "file",
-      "fileId",
-      "directusId",
-      "id",
-      "path",
-    ];
-
-    for (const key of potentialKeys) {
-      if (!(key in record)) {
-        continue;
-      }
-      const candidateValue = record[key];
-      if (candidateValue == null) {
-        continue;
-      }
-      if (candidateValue === value) {
-        continue;
-      }
-      candidates.push(candidateValue);
-    }
-
-    for (const candidate of candidates) {
-      const normalized = extractFromParsedQrValue(candidate, seen);
-      if (normalized) {
-        return normalized;
-      }
-    }
-  }
-
-  return null;
-}
-
-function guessExtensionFromMimeType(mimeType: string | null): string {
-  if (!mimeType) {
-    return "png";
-  }
-
-  const normalized = mimeType.toLowerCase();
-
-  if (normalized.includes("jpeg") || normalized.includes("jpg")) {
-    return "jpg";
-  }
-  if (normalized.includes("gif")) {
-    return "gif";
-  }
-  if (normalized.includes("webp")) {
-    return "webp";
-  }
-  if (normalized.includes("svg")) {
-    return "svg";
-  }
-  if (normalized.includes("bmp")) {
-    return "bmp";
-  }
-  if (normalized.includes("png")) {
-    return "png";
-  }
-
-  const subtype = normalized.split("/")[1];
-  if (subtype) {
-    return subtype.split("+")[0];
-  }
-
-  return "png";
-}
-
-function normalizeQrCodeValue(
-  rawValue: unknown,
-  seen?: Set<string>,
-): NormalizedQrCode | null {
-  if (rawValue == null) {
-    return null;
-  }
-
-  if (typeof rawValue !== "string") {
-    const visited = seen ?? new Set<string>();
-    return extractFromParsedQrValue(rawValue, visited);
-  }
-
-  const visited = seen ?? new Set<string>();
-  if (visited.has(rawValue)) {
-    return null;
-  }
-  visited.add(rawValue);
-
-  const trimmed = rawValue.trim();
+  const trimmed = uuid.trim();
   if (!trimmed) {
     return null;
   }
 
-  if (
-    trimmed.startsWith("{") ||
-    trimmed.startsWith("[") ||
-    trimmed.startsWith("\"")
-  ) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      const normalizedFromParsed = extractFromParsedQrValue(parsed, visited);
-      if (normalizedFromParsed) {
-        return normalizedFromParsed;
-      }
-    } catch {
-      // Ignore JSON parsing errors and continue with the raw string value
-    }
-  }
-
-  if (/^https?:\/\//i.test(trimmed)) {
-    return buildRemoteQrCode(trimmed);
-  }
-
-  if (DIRECTUS_ASSET_ID_REGEX.test(trimmed)) {
-    return buildRemoteQrCode(`${DIRECTUS_ASSET_BASE_URL}/assets/${trimmed}`);
-  }
-
-  const withoutLeadingSlashes = trimmed.replace(/^\/+/, "");
-  if (withoutLeadingSlashes.toLowerCase().startsWith("assets/")) {
-    return buildRemoteQrCode(
-      `${DIRECTUS_ASSET_BASE_URL}/${withoutLeadingSlashes}`,
-    );
-  }
-
-  if (trimmed.startsWith("data:")) {
-    const mimeMatch = trimmed.match(/^data:([^;]+);/i);
-    const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
-    const base64Index = trimmed.indexOf("base64,");
-    const base64Data =
-      base64Index >= 0
-        ? trimmed.slice(base64Index + "base64,".length)
-        : trimmed.split(",").pop() ?? "";
-
-    if (!base64Data) {
-      return null;
-    }
-
-    return {
-      type: "base64",
-      displayUri: trimmed,
-      base64: base64Data,
-      mimeType,
-      extension: guessExtensionFromMimeType(mimeType),
-    };
-  }
-
-  return {
-    type: "base64",
-    displayUri: `data:image/png;base64,${trimmed}`,
-    base64: trimmed,
-    mimeType: "image/png",
-    extension: "png",
-  };
+  // Générer directement le QR code à partir du texte
+  return await generateQRCodeFromText(trimmed);
 }
 
 function parsePartiesResponse(rawText: string): PartyRecord[] {
@@ -376,6 +204,74 @@ export default function PartieScreen() {
   const [scenarioTitles, setScenarioTitles] = useState<Record<number, string>>({});
   const [emailValues, setEmailValues] = useState<Record<number, string>>({});
   const [emailSending, setEmailSending] = useState<Record<number, boolean>>({});
+  const [qrCodeCache, setQrCodeCache] = useState<Record<string, NormalizedQrCode>>({});
+
+  // Composant pour afficher un QR code avec génération asynchrone
+  const QRCodeDisplay = ({ party }: { party: PartyRecord }) => {
+    const [qrCode, setQrCode] = useState<NormalizedQrCode | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const loadQRCode = async () => {
+        const qrCodeRaw = extractQrCodeRawValue(party);
+        if (qrCodeRaw) {
+          const normalized = await getOrGenerateQRCode(qrCodeRaw);
+          setQrCode(normalized);
+        }
+        setLoading(false);
+      };
+      loadQRCode();
+    }, [party, getOrGenerateQRCode]);
+
+    if (loading) {
+      return (
+        <View className="items-center mt-4 mb-2">
+          <ActivityIndicator size="small" color="#ffffff" />
+          <Text className="text-white/60 text-sm mt-2">Génération du QR code...</Text>
+        </View>
+      );
+    }
+
+    if (!qrCode) {
+      return null;
+    }
+
+    return (
+      <View className="items-center mt-4 mb-2">
+        <Image
+          source={{ uri: qrCode.displayUri }}
+          style={{ width: 200, height: 200 }}
+          resizeMode="contain"
+        />
+      </View>
+    );
+  };
+
+  // Fonction simplifiée pour générer un QR code à partir d'un UUID
+  const getOrGenerateQRCode = useCallback(async (rawValue: unknown): Promise<NormalizedQrCode | null> => {
+    if (!rawValue) return null;
+
+    const textValue = String(rawValue);
+
+    // Vérifier le cache d'abord
+    if (qrCodeCache[textValue]) {
+      return qrCodeCache[textValue];
+    }
+
+    // Générer le QR code à partir du texte
+    try {
+      const generated = await generateQRCodeFromUUID(textValue);
+      if (generated) {
+        // Mettre en cache
+        setQrCodeCache(prev => ({ ...prev, [textValue]: generated }));
+        return generated;
+      }
+    } catch (error) {
+      console.error('Erreur génération QR code:', error);
+    }
+
+    return null;
+  }, [qrCodeCache]);
 
   const handleBackToMenu = useCallback(() => {
     setView("menu");
@@ -515,7 +411,7 @@ export default function PartieScreen() {
       }
 
       const qrCodeRaw = extractQrCodeRawValue(party);
-      const normalizedQr = normalizeQrCodeValue(qrCodeRaw);
+      const normalizedQr = await getOrGenerateQRCode(qrCodeRaw);
 
       if (!normalizedQr) {
         Alert.alert(
@@ -540,31 +436,37 @@ export default function PartieScreen() {
           throw new Error("file_system_unavailable");
         }
 
-        if (normalizedQr.type === "remote") {
-          const targetUri = `${directory}party-${partyId}-qr.${normalizedQr.extension}`;
-          const downloadResult = await FileSystem.downloadAsync(
-            normalizedQr.remoteUri,
-            targetUri,
-          );
-          tempFileUri = downloadResult.uri;
-        } else {
-          const targetUri = `${directory}party-${partyId}-qr.${normalizedQr.extension}`;
-          await FileSystem.writeAsStringAsync(targetUri, normalizedQr.base64, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-          tempFileUri = targetUri;
-        }
+        // Créer le fichier QR code à partir du base64
+        const targetUri = `${directory}party-${partyId}-qr.${normalizedQr.extension}`;
+        await FileSystem.writeAsStringAsync(targetUri, normalizedQr.base64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        tempFileUri = targetUri;
 
         if (!tempFileUri) {
           throw new Error("attachment_creation_failed");
         }
 
+        // Récupérer le login de l'utilisateur connecté
+        const storedUser = await SecureStore.getItemAsync("user");
+        let userLogin = "Un maître de jeu";
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            userLogin = parsedUser?.login || parsedUser?.username || "Un maître de jeu";
+          } catch (error) {
+            console.warn("Erreur parsing utilisateur:", error);
+          }
+        }
+
+        // Récupérer le nom du scénario
+        const scenarioId = extractScenarioId(party);
+        const scenarioName = scenarioId ? scenarioTitles[scenarioId] : null;
+
         const result = await MailComposer.composeAsync({
           recipients,
-          subject: `QR Code - ${getPartyDisplayName(party)}`,
-          body: `Bonjour,\n\nVeuillez trouver ci-joint le QR Code de la partie ${getPartyDisplayName(
-            party,
-          )}.\n\nÀ bientôt !`,
+          subject: "Invitation - JdR Etrange France",
+          body: `Bonjour,\n\n${userLogin} vous invite à rejoindre une partie de jeu de rôle "Étrange France" !\n\n${scenarioName ? `Scénario : ${scenarioName}\n\n` : ''}Veuillez trouver ci-joint le QR Code qui vous permettra de rejoindre la partie.\n\nInstructions :\n1. Ouvrez l'application "Étrange France" sur votre mobile\n2. Scannez le QR Code ci-joint\n3. Vous serez automatiquement connecté(e) à la partie\n\nBonne aventure dans l'Étrange France !\n\nÀ bientôt !`,
           attachments: [tempFileUri],
         });
 
@@ -618,7 +520,7 @@ export default function PartieScreen() {
         }
       }
     },
-    [emailValues],
+    [emailValues, scenarioTitles],
   );
 
   const renderMjContent = () => {
@@ -682,8 +584,6 @@ export default function PartieScreen() {
             "createdAt",
             "creation_date",
           ]);
-          const qrCodeValue = extractQrCodeRawValue(party);
-          const normalizedQrCode = normalizeQrCodeValue(qrCodeValue);
           const isSending = Boolean(emailSending[party.id]);
           const emailValue = emailValues[party.id] ?? "";
 
@@ -713,15 +613,7 @@ export default function PartieScreen() {
                   Créée le : {createdAt}
                 </Text>
               )}
-              {normalizedQrCode && (
-                <View className="items-center mt-4 mb-2">
-                  <Image
-                    source={{ uri: normalizedQrCode.displayUri }}
-                    style={{ width: 200, height: 200 }}
-                    resizeMode="contain"
-                  />
-                </View>
-              )}
+              <QRCodeDisplay party={party} />
               <View className="mt-2">
                 <Text className="text-white/80 text-sm mb-2">
                   Envoyer par mail
