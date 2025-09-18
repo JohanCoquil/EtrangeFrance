@@ -4,6 +4,10 @@ import {
   Alert,
   Image,
   Modal,
+  Dimensions,
+  Pressable,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -25,6 +29,11 @@ type PartyRecord = {
   [key: string]: any;
 };
 
+type ParticipantRecord = {
+  id?: number;
+  [key: string]: any;
+};
+
 type ScreenView = "menu" | "player" | "mj";
 
 type NormalizedQrCode = {
@@ -34,6 +43,13 @@ type NormalizedQrCode = {
   extension: string;
 };
 
+type ParticipantsState = {
+  data: ParticipantRecord[];
+  loading: boolean;
+  error: string | null;
+  loaded: boolean;
+};
+
 const QR_CODE_FIELD_KEYS = [
   "qr_code",
   "qrCode",
@@ -41,6 +57,64 @@ const QR_CODE_FIELD_KEYS = [
   "qrData",
   "code_qr",
 ];
+
+function formatDateToFrench(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  const candidates = [
+    trimmed,
+    trimmed.replace(" ", "T"),
+    `${trimmed}Z`,
+    `${trimmed.replace(" ", "T")}Z`,
+  ];
+
+  let parsedDate: Date | null = null;
+  for (const candidate of candidates) {
+    const date = new Date(candidate);
+    if (!Number.isNaN(date.getTime())) {
+      parsedDate = date;
+      break;
+    }
+  }
+
+  if (!parsedDate) {
+    return trimmed;
+  }
+
+  const months = [
+    "janvier",
+    "février",
+    "mars",
+    "avril",
+    "mai",
+    "juin",
+    "juillet",
+    "août",
+    "septembre",
+    "octobre",
+    "novembre",
+    "décembre",
+  ];
+
+  const day = parsedDate.getDate().toString().padStart(2, "0");
+  const month = months[parsedDate.getMonth()] ?? "";
+  const year = parsedDate.getFullYear();
+  const hours = parsedDate.getHours().toString().padStart(2, "0");
+  const minutes = parsedDate.getMinutes().toString().padStart(2, "0");
+
+  if (month.length === 0) {
+    return `${day}/${parsedDate.getMonth() + 1}/${year}`;
+  }
+
+  return `${day} ${month} ${year} à ${hours}h${minutes}`;
+}
 
 // Fonction pour générer un QR code à partir de texte (UUID)
 async function generateQRCodeFromText(text: string): Promise<NormalizedQrCode | null> {
@@ -150,6 +224,97 @@ function parsePartiesResponse(rawText: string): PartyRecord[] {
   return [];
 }
 
+function parseParticipantsResponse(rawText: string): ParticipantRecord[] {
+  if (!rawText) {
+    return [];
+  }
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch (error) {
+    console.warn("Failed to parse participants response as JSON", error);
+    return [];
+  }
+
+  const candidates: any[] = [];
+  if (parsed && typeof parsed === "object") {
+    if (Array.isArray(parsed.records)) {
+      candidates.push(parsed.records);
+    }
+    if (Array.isArray(parsed.data)) {
+      candidates.push(parsed.data);
+    }
+  }
+  if (Array.isArray(parsed)) {
+    candidates.push(parsed);
+  }
+
+  for (const candidate of candidates) {
+    if (!Array.isArray(candidate)) {
+      continue;
+    }
+
+    const normalized = candidate.filter(
+      (item: any): item is ParticipantRecord =>
+        item !== null && typeof item === "object",
+    );
+
+    if (normalized.length > 0 || candidate.length === 0) {
+      return normalized;
+    }
+  }
+
+  return [];
+}
+
+function getParticipantPseudo(participant: ParticipantRecord): string | null {
+  const candidateKeys = [
+    "pseudo",
+    "username",
+    "login",
+    "user_pseudo",
+    "userPseudo",
+    "user_name",
+    "userName",
+    "display_name",
+    "displayName",
+  ];
+
+  for (const key of candidateKeys) {
+    const value = participant[key];
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+  }
+
+  const nestedCandidates = [
+    participant.user,
+    participant.users,
+    participant.profile,
+    participant.player,
+  ];
+
+  for (const nested of nestedCandidates) {
+    if (nested && typeof nested === "object") {
+      for (const key of candidateKeys) {
+        const value = nested[key];
+        if (typeof value === "string") {
+          const trimmed = value.trim();
+          if (trimmed.length > 0) {
+            return trimmed;
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 function extractScenarioId(party: PartyRecord): number | null {
   const candidates = [
     party.scenario_id,
@@ -229,9 +394,20 @@ export default function PartieScreen() {
   const [emailValues, setEmailValues] = useState<Record<number, string>>({});
   const [emailSending, setEmailSending] = useState<Record<number, boolean>>({});
   const [qrCodeCache, setQrCodeCache] = useState<Record<string, NormalizedQrCode>>({});
-  const [fullScreenQR, setFullScreenQR] = useState<string | null>(null);
+  const [selectedParty, setSelectedParty] = useState<{
+    party: PartyRecord;
+    qrCodeText: string;
+  } | null>(null);
   const [originalBrightness, setOriginalBrightness] = useState<number>(0.5);
   const [tempFiles, setTempFiles] = useState<string[]>([]);
+  const [participantsByParty, setParticipantsByParty] = useState<
+    Record<number, ParticipantsState>
+  >({});
+  const [modalSections, setModalSections] = useState({
+    qr: false,
+    participants: false,
+  });
+  const modalMaxHeight = Math.round(Dimensions.get("window").height * 0.8);
 
   // Restaurer la luminosité et nettoyer les fichiers temporaires quand le composant se démonte
   useEffect(() => {
@@ -251,33 +427,36 @@ export default function PartieScreen() {
     };
   }, [originalBrightness, tempFiles]);
 
-  // Fonction pour afficher le QR code en plein écran avec luminosité maximale
-  const showQRCodeFullScreen = useCallback(async (qrCodeText: string) => {
-    try {
-      // Sauvegarder la luminosité actuelle
-      const currentBrightness = await Brightness.getBrightnessAsync();
-      setOriginalBrightness(currentBrightness);
-
-      // Mettre la luminosité au maximum
-      await Brightness.setBrightnessAsync(1.0);
-
-      // Afficher le QR code en plein écran
-      setFullScreenQR(qrCodeText);
-    } catch (error) {
-      console.error('Erreur lors de l\'affichage plein écran:', error);
+  useEffect(() => {
+    if (selectedParty) {
+      setModalSections({ qr: true, participants: false });
     }
-  }, []);
+  }, [selectedParty]);
+
+  // Fonction pour afficher le QR code en plein écran avec luminosité maximale
+  const showQRCodeFullScreen = useCallback(
+    async (party: PartyRecord, qrCodeText: string) => {
+      try {
+        const currentBrightness = await Brightness.getBrightnessAsync();
+        setOriginalBrightness(currentBrightness);
+        await Brightness.setBrightnessAsync(1.0);
+      } catch (error) {
+        console.error("Erreur lors de l'activation de la luminosité maximale:", error);
+      } finally {
+        setSelectedParty({ party, qrCodeText });
+      }
+    },
+    [],
+  );
 
   // Fonction pour fermer l'affichage plein écran et restaurer la luminosité
   const hideQRCodeFullScreen = useCallback(async () => {
     try {
-      // Restaurer la luminosité originale
       await Brightness.setBrightnessAsync(originalBrightness);
-
-      // Fermer l'affichage plein écran
-      setFullScreenQR(null);
     } catch (error) {
-      console.error('Erreur lors de la fermeture plein écran:', error);
+      console.error("Erreur lors de la restauration de la luminosité:", error);
+    } finally {
+      setSelectedParty(null);
     }
   }, [originalBrightness]);
 
@@ -311,7 +490,7 @@ export default function PartieScreen() {
     return (
       <View className="items-center mt-4 mb-2">
         <TouchableOpacity
-          onPress={() => showQRCodeFullScreen(qrCodeText)}
+          onPress={() => showQRCodeFullScreen(party, qrCodeText)}
           activeOpacity={0.8}
         >
           <QRCode
@@ -322,7 +501,7 @@ export default function PartieScreen() {
           />
         </TouchableOpacity>
         <Text className="text-white/60 text-xs mt-2 text-center">
-          Appuyez sur le QR code pour l'afficher en plein écran
+          Appuyez sur le QR code pour ouvrir les détails de la partie
         </Text>
       </View>
     );
@@ -397,6 +576,7 @@ export default function PartieScreen() {
     setLoading(true);
     setMjParties([]);
     setScenarioTitles({});
+    setParticipantsByParty({});
 
     try {
       const res = await apiFetch(
@@ -457,6 +637,82 @@ export default function PartieScreen() {
       setLoading(false);
     }
   }, []);
+
+  const loadParticipants = useCallback(async (partyId: number) => {
+    setParticipantsByParty((prev) => ({
+      ...prev,
+      [partyId]: {
+        data: prev[partyId]?.data ?? [],
+        loading: true,
+        error: null,
+        loaded: prev[partyId]?.loaded ?? false,
+      },
+    }));
+
+    try {
+      const res = await apiFetch(
+        `https://api.scriptonautes.net/api/records/participants?filter=partie_id,eq,${encodeURIComponent(
+          String(partyId),
+        )}`,
+      );
+
+      const rawText = await res.text();
+      if (!res.ok) {
+        throw new Error(rawText || "Impossible de récupérer les participants.");
+      }
+
+      const participants = parseParticipantsResponse(rawText);
+
+      setParticipantsByParty((prev) => ({
+        ...prev,
+        [partyId]: {
+          data: participants,
+          loading: false,
+          error: null,
+          loaded: true,
+        },
+      }));
+    } catch (error) {
+      console.error("Failed to load participants", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Impossible de récupérer les participants.";
+
+      setParticipantsByParty((prev) => ({
+        ...prev,
+        [partyId]: {
+          data: prev[partyId]?.data ?? [],
+          loading: false,
+          error: message,
+          loaded: false,
+        },
+      }));
+    }
+  }, []);
+
+  const toggleModalSection = useCallback(
+    (section: "qr" | "participants") => {
+      const shouldOpen = !modalSections[section];
+      setModalSections((prev) => ({
+        ...prev,
+        [section]: shouldOpen,
+      }));
+
+      if (
+        section === "participants" &&
+        shouldOpen &&
+        selectedParty
+      ) {
+        const partyId = selectedParty.party.id;
+        const currentState = participantsByParty[partyId];
+        if (!currentState || (!currentState.loaded && !currentState.loading) || currentState.error) {
+          void loadParticipants(partyId);
+        }
+      }
+    },
+    [modalSections, selectedParty, participantsByParty, loadParticipants],
+  );
 
   const handleEmailChange = useCallback((partyId: number, value: string) => {
     setEmailValues((prev) => ({
@@ -798,11 +1054,14 @@ export default function PartieScreen() {
             "etat",
             "state",
           ]);
-          const createdAt = extractStringField(party, [
+          const createdAtRaw = extractStringField(party, [
             "created_at",
             "createdAt",
             "creation_date",
           ]);
+          const formattedCreatedAt = createdAtRaw
+            ? formatDateToFrench(createdAtRaw)
+            : null;
           const isEmailSending = Boolean(emailSending[party.id]);
           const emailValue = emailValues[party.id] ?? "";
 
@@ -827,9 +1086,9 @@ export default function PartieScreen() {
                   Statut : {status}
                 </Text>
               )}
-              {createdAt && (
+              {formattedCreatedAt && (
                 <Text className="text-white/80 text-sm">
-                  Créée le : {createdAt}
+                  Créée le : {formattedCreatedAt}
                 </Text>
               )}
               <QRCodeDisplay party={party} />
@@ -959,33 +1218,195 @@ export default function PartieScreen() {
         )}
       </View>
 
-      {/* Modal plein écran pour le QR code */}
+      {/* Modal plein écran pour le QR code et les participants */}
       <Modal
-        visible={!!fullScreenQR}
+        visible={!!selectedParty}
         transparent
         animationType="fade"
         onRequestClose={hideQRCodeFullScreen}
       >
-        <TouchableOpacity
-          className="flex-1 bg-black justify-center items-center"
-          onPress={hideQRCodeFullScreen}
-          activeOpacity={1}
-        >
-          <View className="items-center p-8">
-            <QRCode
-              value={fullScreenQR || ""}
-              size={300}
-              color="#000000"
-              backgroundColor="#FFFFFF"
-            />
-            <Text className="text-white text-center mt-6 text-lg">
-              Appuyez n'importe où pour fermer
-            </Text>
-            <Text className="text-white/60 text-center mt-2 text-sm">
-              Luminosité maximale activée pour faciliter le scan
-            </Text>
-          </View>
-        </TouchableOpacity>
+        <View className="flex-1 bg-black/80 justify-center items-center px-4">
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={hideQRCodeFullScreen}
+          />
+
+          {selectedParty && (
+            <View
+              className="w-full"
+              style={{ maxHeight: modalMaxHeight }}
+            >
+              <View className="bg-white/10 border border-white/10 rounded-3xl p-5">
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <View className="flex-row justify-between items-start mb-4">
+                    <Text className="text-white text-xl font-bold">
+                      Partie #{selectedParty.party.id}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={hideQRCodeFullScreen}
+                      className="ml-4"
+                      accessibilityLabel="Fermer le détail de la partie"
+                    >
+                      <Text className="text-white text-2xl leading-none">×</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {(() => {
+                    const scenarioId = extractScenarioId(selectedParty.party);
+                    const scenarioLabel =
+                      scenarioId !== null
+                        ? scenarioTitles[scenarioId] ?? `Scénario #${scenarioId}`
+                        : null;
+                    const createdAtRaw = extractStringField(selectedParty.party, [
+                      "created_at",
+                      "createdAt",
+                      "creation_date",
+                    ]);
+                    const formattedCreatedAt = createdAtRaw
+                      ? formatDateToFrench(createdAtRaw)
+                      : null;
+
+                    return (
+                      <View className="mb-4">
+                        <Text className="text-white/80 text-sm mb-1">
+                          ID partie : {selectedParty.party.id}
+                        </Text>
+                        {scenarioLabel && (
+                          <Text className="text-white/80 text-sm mb-1">
+                            Scénario : {scenarioLabel}
+                          </Text>
+                        )}
+                        {formattedCreatedAt && (
+                          <Text className="text-white/80 text-sm">
+                            Créée le : {formattedCreatedAt}
+                          </Text>
+                        )}
+                      </View>
+                    );
+                  })()}
+
+                  <View className="bg-white/10 rounded-2xl overflow-hidden mb-4">
+                    <TouchableOpacity
+                      className="flex-row items-center justify-between px-4 py-3"
+                      onPress={() => toggleModalSection("qr")}
+                      activeOpacity={0.8}
+                    >
+                      <Text className="text-white text-base font-semibold">
+                        QR Code
+                      </Text>
+                      <Text className="text-white text-xl">
+                        {modalSections.qr ? "−" : "+"}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {modalSections.qr && (
+                      <View className="px-4 pb-5">
+                        <View className="items-center mt-2">
+                          <QRCode
+                            value={selectedParty.qrCodeText}
+                            size={240}
+                            color="#000000"
+                            backgroundColor="#FFFFFF"
+                          />
+                          <Text className="text-white/60 text-xs mt-3 text-center">
+                            Scannez ce code pour rejoindre la partie.
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+
+                  <View className="bg-white/10 rounded-2xl overflow-hidden">
+                    <TouchableOpacity
+                      className="flex-row items-center justify-between px-4 py-3"
+                      onPress={() => toggleModalSection("participants")}
+                      activeOpacity={0.8}
+                    >
+                      <Text className="text-white text-base font-semibold">
+                        Participants
+                      </Text>
+                      <Text className="text-white text-xl">
+                        {modalSections.participants ? "−" : "+"}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {modalSections.participants && (
+                      <View className="px-4 pb-5">
+                        {(() => {
+                          const participantsState =
+                            participantsByParty[selectedParty.party.id];
+                          if (!participantsState || participantsState.loading) {
+                            return (
+                              <View className="items-center py-4">
+                                <ActivityIndicator size="small" color="#ffffff" />
+                                <Text className="text-white/60 text-xs mt-2 text-center">
+                                  Chargement des participants...
+                                </Text>
+                              </View>
+                            );
+                          }
+
+                          if (participantsState.error) {
+                            return (
+                              <View className="py-3">
+                                <Text className="text-red-300 text-sm text-center mb-3">
+                                  {participantsState.error}
+                                </Text>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  className="self-center"
+                                  onPress={() => {
+                                    void loadParticipants(selectedParty.party.id);
+                                  }}
+                                >
+                                  Réessayer
+                                </Button>
+                              </View>
+                            );
+                          }
+
+                          if (participantsState.data.length === 0) {
+                            return (
+                              <Text className="text-white/70 text-sm text-center py-3">
+                                Aucun participant pour le moment.
+                              </Text>
+                            );
+                          }
+
+                          return (
+                            <View className="gap-2 py-2">
+                              {participantsState.data.map((participant, index) => {
+                                const pseudo = getParticipantPseudo(participant);
+                                const fallbackLabel =
+                                  participant.user_id !== undefined
+                                    ? `Utilisateur #${participant.user_id}`
+                                    : participant.id !== undefined
+                                      ? `Participant #${participant.id}`
+                                      : `Participant ${index + 1}`;
+
+                                return (
+                                  <View
+                                    key={participant.id ?? `participant-${index}`}
+                                    className="bg-white/5 rounded-xl px-3 py-2"
+                                  >
+                                    <Text className="text-white text-sm">
+                                      {pseudo ?? fallbackLabel}
+                                    </Text>
+                                  </View>
+                                );
+                              })}
+                            </View>
+                          );
+                        })()}
+                      </View>
+                    )}
+                  </View>
+                </ScrollView>
+              </View>
+            </View>
+          )}
+        </View>
       </Modal>
     </Layout>
   );
