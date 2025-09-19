@@ -33,7 +33,6 @@ import {
   Play,
   Pause,
   User,
-  Heart,
 } from 'lucide-react-native';
 
 type ActiveSessionScreenProps = {
@@ -441,62 +440,6 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
     }
   }, [sessionDetails, updateSession, session.id]);
 
-  const renderCharacterStats = () => {
-    if (!currentCharacter) return null;
-
-    return (
-      <View className="bg-white/10 rounded-xl p-4 mb-4">
-        <Text className="text-white text-lg font-semibold mb-3">
-          {currentCharacter.name}
-        </Text>
-
-        <View className="flex-row justify-between mb-3">
-          <View className="flex-row gap-4">
-            <View className="items-center">
-              <Text className="text-white/80 text-xs">INT</Text>
-              <Text className="text-white text-sm font-semibold">
-                {currentCharacter.intelligence}
-              </Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-white/80 text-xs">FOR</Text>
-              <Text className="text-white text-sm font-semibold">
-                {currentCharacter.force}
-              </Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-white/80 text-xs">DEX</Text>
-              <Text className="text-white text-sm font-semibold">
-                {currentCharacter.dexterite}
-              </Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-white/80 text-xs">CHA</Text>
-              <Text className="text-white text-sm font-semibold">
-                {currentCharacter.charisme}
-              </Text>
-            </View>
-          </View>
-
-          <View className="items-center">
-            <Heart color="#ef4444" size={16} />
-            <Text className="text-white text-sm font-semibold">
-              {currentCharacter.sante - currentCharacter.degats}/{currentCharacter.sante}
-            </Text>
-          </View>
-        </View>
-
-        {currentCharacter.profession_name && (
-          <Text className="text-white/80 text-sm">
-            {currentCharacter.profession_name}
-            {currentCharacter.hobby_name && ` • ${currentCharacter.hobby_name}`}
-            {currentCharacter.voie_name && ` • ${currentCharacter.voie_name}`}
-          </Text>
-        )}
-      </View>
-    );
-  };
-
   const handleParticipantPress = useCallback(
     (participant: SessionParticipant) => {
       const isCurrentUserParticipant =
@@ -746,9 +689,6 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
                   </TouchableOpacity>
                 </View>
               </View>
-
-              {/* Personnage actuel */}
-              {renderCharacterStats()}
 
               {/* Participants */}
               {renderParticipants()}
