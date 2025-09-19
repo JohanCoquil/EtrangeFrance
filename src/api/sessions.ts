@@ -233,31 +233,49 @@ export function useUpdateSession() {
 // Rejoindre une session
 export function useJoinSession() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ 
-      sessionId, 
-      userId, 
-      characterId 
-    }: { 
-      sessionId: number; 
-      userId: number; 
-      characterId?: string 
+    mutationFn: async ({
+      sessionId,
+      userId,
+      characterId,
+      role
+    }: {
+      sessionId: number | string;
+      userId: number;
+      characterId?: string | number | null;
+      role?: SessionParticipant['role'];
     }): Promise<SessionParticipant> => {
+      const normalizedSessionId =
+        typeof sessionId === 'number'
+          ? sessionId
+          : (() => {
+              const sessionIdString = String(sessionId);
+              const trimmed = sessionIdString.trim();
+              return trimmed.length > 0 ? trimmed : sessionIdString;
+            })();
+
+      const normalizedCharacterId =
+        characterId !== undefined && characterId !== null && String(characterId).trim().length > 0
+          ? String(characterId)
+          : null;
+
+      const payload = {
+        session_id: normalizedSessionId,
+        user_id: userId,
+        character_id: normalizedCharacterId,
+        role: role ?? (normalizedCharacterId ? 'player' : 'master'),
+        is_online: true,
+        last_seen: formatDateForMySQL(new Date()),
+        joined_at: formatDateForMySQL(new Date()),
+      };
+
       const response = await apiFetch(
         'https://api.scriptonautes.net/api/records/session_participants',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            session_id: sessionId,
-            user_id: userId,
-            character_id: characterId,
-            role: characterId ? 'player' : 'master',
-            is_online: true,
-            last_seen: formatDateForMySQL(new Date()),
-            joined_at: formatDateForMySQL(new Date()),
-          }),
+          body: JSON.stringify(payload),
         }
       );
 
@@ -266,7 +284,7 @@ export function useJoinSession() {
         await addLogEntry({
           url: 'session_participants',
           method: 'POST',
-          request: { sessionId, userId, characterId },
+          request: payload,
           response: errorText,
           success: false,
         });
@@ -275,12 +293,12 @@ export function useJoinSession() {
 
       const participant = await response.json();
       console.log('Participant created:', participant);
-      console.log('Join session data:', { sessionId, userId, characterId });
-      
+      console.log('Join session data:', payload);
+
       await addLogEntry({
         url: 'session_participants',
         method: 'POST',
-        request: { sessionId, userId, characterId },
+        request: payload,
         response: participant,
         success: true,
       });
