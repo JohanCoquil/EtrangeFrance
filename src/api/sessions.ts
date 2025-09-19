@@ -113,6 +113,9 @@ export function useCreateSession() {
       };
 
       // Formater les dates au format MySQL
+      if (sessionData.scheduled_date) {
+        sessionData.scheduled_date = formatDateForMySQL(sessionData.scheduled_date);
+      }
       if (sessionData.started_at) {
         sessionData.started_at = formatDateForMySQL(sessionData.started_at);
       }
@@ -175,6 +178,9 @@ export function useUpdateSession() {
     }): Promise<SessionRecord> => {
       // Formater les dates au format MySQL
       const formattedUpdates = { ...updates };
+      if (formattedUpdates.scheduled_date) {
+        formattedUpdates.scheduled_date = formatDateForMySQL(formattedUpdates.scheduled_date);
+      }
       if (formattedUpdates.started_at) {
         formattedUpdates.started_at = formatDateForMySQL(formattedUpdates.started_at);
       }
