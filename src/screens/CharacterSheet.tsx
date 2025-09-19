@@ -105,36 +105,6 @@ export default function CharacterSheet() {
 
   const isLoading = isRemote ? isLoadingRemote : isLoadingLocal;
 
-  if (isLoading) {
-    return (
-      <Layout backgroundColor="gradient" className="px-4 py-6">
-        <Body className="text-white">
-          {isRemote ? "Chargement du personnage distant..." : "Chargement..."}
-        </Body>
-      </Layout>
-    );
-  }
-
-  if (isRemote && remoteError) {
-    return (
-      <Layout backgroundColor="gradient" className="px-4 py-6">
-        <Body className="text-white">
-          {remoteError instanceof Error
-            ? remoteError.message
-            : "Impossible de charger le personnage distant."}
-        </Body>
-      </Layout>
-    );
-  }
-
-  if (!character) {
-    return (
-      <Layout backgroundColor="gradient" className="px-4 py-6">
-        <Body className="text-white">Personnage introuvable.</Body>
-      </Layout>
-    );
-  }
-
   useEffect(() => {
     if (character) {
       setOrigines(character.origines ?? "");
@@ -202,6 +172,55 @@ export default function CharacterSheet() {
     );
     return () => subscription.remove();
   }, [showAvatar, showFullImage]);
+
+  useEffect(() => {
+    const setup = async () => {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+        shouldDuckAndroid: true,
+      });
+      const { sound } = await Audio.Sound.createAsync(
+        require("../../sounds/page.aac"),
+      );
+      flipSound.current = sound;
+    };
+    setup();
+    return () => {
+      flipSound.current?.unloadAsync();
+    };
+  }, []);
+
+  if (isLoading) {
+    return (
+      <Layout backgroundColor="gradient" className="px-4 py-6">
+        <Body className="text-white">
+          {isRemote ? "Chargement du personnage distant..." : "Chargement..."}
+        </Body>
+      </Layout>
+    );
+  }
+
+  if (isRemote && remoteError) {
+    return (
+      <Layout backgroundColor="gradient" className="px-4 py-6">
+        <Body className="text-white">
+          {remoteError instanceof Error
+            ? remoteError.message
+            : "Impossible de charger le personnage distant."}
+        </Body>
+      </Layout>
+    );
+  }
+
+  if (!character) {
+    return (
+      <Layout backgroundColor="gradient" className="px-4 py-6">
+        <Body className="text-white">Personnage introuvable.</Body>
+      </Layout>
+    );
+  }
 
   const forceCapacite = (capacites as any[])?.find((c: any) => c.id === 22);
   const dexCapacite = (capacites as any[])?.find((c: any) => c.id === 1);
@@ -360,25 +379,6 @@ export default function CharacterSheet() {
   const handleAvatarPress = () => {
     setShowAvatar(true);
   };
-
-  useEffect(() => {
-    const setup = async () => {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
-        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
-        shouldDuckAndroid: true,
-      });
-      const { sound } = await Audio.Sound.createAsync(
-        require("../../sounds/page.aac"),
-      );
-      flipSound.current = sound;
-    };
-    setup();
-    return () => {
-      flipSound.current?.unloadAsync();
-    };
-  }, []);
 
   const SWIPE_FLIP_THRESHOLD = 50;
   const canOpenDifficulty =
