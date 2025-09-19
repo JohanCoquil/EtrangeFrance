@@ -1060,6 +1060,130 @@ export default function PartieScreen() {
           records = [];
         }
 
+        const getNumericId = (value: any): number | null => {
+          if (value === undefined || value === null) {
+            return null;
+          }
+          if (typeof value === "string" && value.trim().length === 0) {
+            return null;
+          }
+          const numeric = Number(value);
+          if (!Number.isFinite(numeric)) {
+            return null;
+          }
+          return numeric;
+        };
+
+        const extractUserIdFromEntry = (entry: any): number | null => {
+          const candidates = [
+            entry?.user_id,
+            entry?.userId,
+            entry?.users_id,
+            entry?.user?.id,
+            entry?.user?.user_id,
+          ];
+
+          for (const candidate of candidates) {
+            const numeric = getNumericId(candidate);
+            if (numeric !== null) {
+              return numeric;
+            }
+          }
+
+          return null;
+        };
+
+        const userIdSet = new Set<number>();
+        for (const entry of records) {
+          const extractedUserId = extractUserIdFromEntry(entry);
+          if (extractedUserId !== null) {
+            userIdSet.add(extractedUserId);
+          }
+        }
+
+        const userPseudoMap: Record<number, string> = {};
+
+        if (userIdSet.size > 0) {
+          const userFilter = Array.from(userIdSet)
+            .map((id) => `id,eq,${id}`)
+            .join(";or,");
+
+          try {
+            const usersResponse = await apiFetch(
+              `https://api.scriptonautes.net/api/records/users?filter=${userFilter}&fields=id,pseudo,login,username,display_name,name,email`,
+            );
+
+            const usersText = await usersResponse.text();
+
+            if (usersResponse.ok) {
+              let usersRecords: any[] = [];
+
+              if (usersText) {
+                try {
+                  const usersParsed = JSON.parse(usersText);
+                  const candidateLists: any[] = [];
+
+                  if (Array.isArray(usersParsed?.records)) {
+                    candidateLists.push(usersParsed.records);
+                  }
+                  if (Array.isArray(usersParsed?.data)) {
+                    candidateLists.push(usersParsed.data);
+                  }
+                  if (Array.isArray(usersParsed)) {
+                    candidateLists.push(usersParsed);
+                  }
+
+                  for (const candidate of candidateLists) {
+                    if (Array.isArray(candidate)) {
+                      usersRecords = candidate;
+                      break;
+                    }
+                  }
+                } catch (parseUsersError) {
+                  console.warn("Unable to parse users response", parseUsersError);
+                }
+              }
+
+              for (const userEntry of usersRecords) {
+                const numericUserId = getNumericId(userEntry?.id);
+                if (numericUserId === null) {
+                  continue;
+                }
+
+                const pseudoCandidates = [
+                  userEntry?.pseudo,
+                  userEntry?.login,
+                  userEntry?.username,
+                  userEntry?.display_name,
+                  userEntry?.name,
+                  userEntry?.email,
+                ];
+
+                for (const candidate of pseudoCandidates) {
+                  if (typeof candidate === "string") {
+                    const trimmed = candidate.trim();
+                    if (trimmed.length > 0) {
+                      userPseudoMap[numericUserId] = trimmed;
+                      break;
+                    }
+                  }
+                }
+
+                if (!(numericUserId in userPseudoMap)) {
+                  userPseudoMap[numericUserId] = `Utilisateur #${numericUserId}`;
+                }
+              }
+            } else {
+              console.warn(
+                "Failed to fetch participant user details",
+                usersText || usersResponse.statusText,
+              );
+            }
+          } catch (userDetailsError) {
+            console.warn("Failed to load participant user details", userDetailsError);
+          }
+        }
+
         const pseudos = records.map((entry: any) => {
           const pseudoCandidates = [
             entry?.pseudo,
@@ -1083,14 +1207,20 @@ export default function PartieScreen() {
             }
           }
 
-          const userId = entry?.user_id ?? entry?.userId;
-          if (Number.isFinite(Number(userId))) {
-            return `Utilisateur #${Number(userId)}`;
+          const userId = extractUserIdFromEntry(entry);
+          if (userId !== null) {
+            const mapped = userPseudoMap[userId];
+            if (typeof mapped === "string" && mapped.trim().length > 0) {
+              return mapped;
+            }
+            return `Utilisateur #${userId}`;
           }
 
-          const participantId = entry?.id ?? entry?.participant_id ?? entry?.participantId;
-          if (Number.isFinite(Number(participantId))) {
-            return `Participant #${Number(participantId)}`;
+          const participantId = getNumericId(
+            entry?.id ?? entry?.participant_id ?? entry?.participantId,
+          );
+          if (participantId !== null) {
+            return `Participant #${participantId}`;
           }
 
           return "Participant";

@@ -263,6 +263,7 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
         const result = await joinSession.mutateAsync({
           sessionId: session.id,
           userId,
+          role: 'master',
           // Pas de characterId pour le MJ
         });
 
@@ -285,6 +286,49 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
   const handleCharacterSelected = useCallback(async (character: any) => {
     if (!selectedSessionForJoin) return;
 
+    const remoteIdCandidates = [
+      character?.distant_id,
+      character?.distantId,
+      character?.remote_id,
+      character?.remoteId,
+    ];
+
+    let remoteCharacterId: string | null = null;
+    const hasRemoteIdentifier = remoteIdCandidates.some(
+      (candidate) => candidate !== undefined && candidate !== null,
+    );
+
+    for (const candidate of remoteIdCandidates) {
+      if (candidate === undefined || candidate === null) {
+        continue;
+      }
+
+      const candidateString = String(candidate).trim();
+      if (candidateString.length === 0 || candidateString === '0') {
+        continue;
+      }
+
+      remoteCharacterId = candidateString;
+      break;
+    }
+
+    if (!remoteCharacterId && !hasRemoteIdentifier) {
+      if (character?.id !== undefined && character?.id !== null) {
+        const fallback = String(character.id).trim();
+        if (fallback.length > 0 && fallback !== '0') {
+          remoteCharacterId = fallback;
+        }
+      }
+    }
+
+    if (!remoteCharacterId || remoteCharacterId === '0') {
+      Alert.alert(
+        'Synchronisation requise',
+        "Ce personnage n'est pas encore synchronisé avec le serveur. Veuillez ouvrir la fiche du personnage et réessayer après la synchronisation.",
+      );
+      return;
+    }
+
     try {
       const storedUser = await SecureStore.getItemAsync('user');
       if (!storedUser) {
@@ -303,7 +347,8 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
       await joinSession.mutateAsync({
         sessionId: selectedSessionForJoin.id,
         userId,
-        characterId: character.id,
+        characterId: remoteCharacterId,
+        role: 'player',
       });
 
       Alert.alert(
