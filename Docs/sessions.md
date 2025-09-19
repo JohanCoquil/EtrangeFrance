@@ -76,9 +76,11 @@ CREATE TABLE sessions (
 
 ### **Table `session_presence` (présence en temps réel)**
 
+> **Note** : L'ID est en `INT(11) AUTO_INCREMENT` (et non UUID) pour permettre à PHP-CRUD-API de retourner l'ID généré lors de la création.
+
 ```sql
 CREATE TABLE session_presence (
-    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    id INT(11) PRIMARY KEY AUTO_INCREMENT,
     session_id VARCHAR(36) REFERENCES sessions(id) ON DELETE CASCADE,
     user_id INT(11) REFERENCES users(id) ON DELETE CASCADE,
     character_id CHAR(36) REFERENCES characters(id) ON DELETE SET NULL,
@@ -97,9 +99,11 @@ CREATE TABLE session_presence (
 
 ### **Table `session_participants` (participants historiques)**
 
+> **Note** : L'ID est en `INT(11) AUTO_INCREMENT` (et non UUID) pour permettre à PHP-CRUD-API de retourner l'ID généré lors de la création.
+
 ```sql
 CREATE TABLE session_participants (
-    id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    id INT(11) PRIMARY KEY AUTO_INCREMENT,
     session_id VARCHAR(36) REFERENCES sessions(id) ON DELETE CASCADE,
     user_id INT(11) REFERENCES users(id) ON DELETE CASCADE,
     character_id CHAR(36) REFERENCES characters(id) ON DELETE SET NULL,

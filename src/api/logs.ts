@@ -55,9 +55,9 @@ export async function addLogEntry({
   queryClient.invalidateQueries({ queryKey: ['logs'] });
 }
 
-export function useLogs(endpointFilter?: string, failuresOnly?: boolean) {
+export function useLogs(endpointFilter?: string, failuresOnly?: boolean, methodFilter?: string) {
   return useQuery({
-    queryKey: ['logs', endpointFilter, failuresOnly],
+    queryKey: ['logs', endpointFilter, failuresOnly, methodFilter],
     queryFn: async () => {
       const db = getDb();
       let query = 'SELECT * FROM log';
@@ -67,6 +67,15 @@ export function useLogs(endpointFilter?: string, failuresOnly?: boolean) {
       if (endpointFilter && endpointFilter.trim()) {
         conditions.push('url LIKE ?');
         params.push(`%${endpointFilter.trim()}%`);
+      }
+      
+      if (methodFilter && methodFilter.trim()) {
+        const methods = methodFilter.split(',').map(m => m.trim().toUpperCase()).filter(m => m);
+        if (methods.length > 0) {
+          const placeholders = methods.map(() => '?').join(',');
+          conditions.push(`method IN (${placeholders})`);
+          params.push(...methods);
+        }
       }
       
       if (failuresOnly) {

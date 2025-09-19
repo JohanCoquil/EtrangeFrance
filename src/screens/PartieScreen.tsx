@@ -20,13 +20,14 @@ import Layout from "@/components/ui/Layout";
 import Button from "@/components/ui/Button";
 import { apiFetch } from "@/utils/api";
 import { getDb } from "@/data/db";
+import SessionScreen from "./SessionScreen";
 
 type PartyRecord = {
   id: number;
   [key: string]: any;
 };
 
-type ScreenView = "menu" | "player" | "mj";
+type ScreenView = "menu" | "player" | "mj" | "sessions";
 
 type NormalizedQrCode = {
   displayUri: string;
@@ -38,6 +39,7 @@ type NormalizedQrCode = {
 type AccordionSectionsState = Record<number, {
   qr: boolean;
   participants: boolean;
+  sessions: boolean;
 }>;
 
 type PartyParticipantsState = {
@@ -287,6 +289,7 @@ export default function PartieScreen() {
   const [playerParties, setPlayerParties] = useState<PlayerPartyRecord[]>([]);
   const [playerPartiesLoading, setPlayerPartiesLoading] = useState(false);
   const [playerPartiesError, setPlayerPartiesError] = useState<string | null>(null);
+  const [selectedPartyForSessions, setSelectedPartyForSessions] = useState<PartyRecord | null>(null);
 
   // Restaurer la luminosité et nettoyer les fichiers temporaires quand le composant se démonte
   useEffect(() => {
@@ -412,6 +415,12 @@ export default function PartieScreen() {
   const handleBackToMenu = useCallback(() => {
     setView("menu");
     setError(null);
+    setSelectedPartyForSessions(null);
+  }, []);
+
+  const handleShowSessions = useCallback((party: PartyRecord) => {
+    setSelectedPartyForSessions(party);
+    setView("sessions");
   }, []);
 
   const handleShowPlayerParties = useCallback(async () => {
@@ -1088,11 +1097,11 @@ export default function PartieScreen() {
 
   const toggleSection = useCallback(
     (partyId: number, section: keyof AccordionSectionsState[number]) => {
-      const previousState = expandedSections[partyId] ?? { qr: false, participants: false };
+      const previousState = expandedSections[partyId] ?? { qr: false, participants: false, sessions: false };
       const wasParticipantsOpen = previousState.participants ?? false;
 
       setExpandedSections((prev) => {
-        const current = prev[partyId] ?? { qr: false, participants: false };
+        const current = prev[partyId] ?? { qr: false, participants: false, sessions: false };
 
         return {
           ...prev,
@@ -1511,6 +1520,25 @@ export default function PartieScreen() {
                     </View>
                   )}
               </AccordionSection>
+
+              <AccordionSection
+                label="Sessions"
+                isOpen={expandedSections[party.id]?.sessions ?? false}
+                onToggle={() => toggleSection(party.id, "sessions")}
+              >
+                <View className="mb-4">
+                  <Text className="text-white/80 text-sm mb-3">
+                    Gérez les sessions de jeu pour cette partie.
+                  </Text>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onPress={() => handleShowSessions(party)}
+                  >
+                    🎮 Gérer les sessions
+                  </Button>
+                </View>
+              </AccordionSection>
             </View>
           );
         })}
@@ -1578,6 +1606,15 @@ export default function PartieScreen() {
             </Button>
             {renderMjContent()}
           </View>
+        )}
+
+        {view === "sessions" && selectedPartyForSessions && (
+          <SessionScreen
+            partieId={selectedPartyForSessions.id}
+            partieName={getPartyDisplayName(selectedPartyForSessions)}
+            isMJ={true}
+            onBack={handleBackToMenu}
+          />
         )}
       </View>
 

@@ -1,0 +1,614 @@
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  Modal,
+  TextInput,
+  TouchableOpacity,
+} from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+import Layout from '@/components/ui/Layout';
+import Button from '@/components/ui/Button';
+import CharacterSelectionModal from '@/components/CharacterSelectionModal';
+import ActiveSessionScreen from './ActiveSessionScreen';
+import {
+  useSessionsByParty,
+  useCreateSession,
+  useUpdateSession,
+  useJoinSession,
+  useLeaveSession
+} from '@/api/sessions';
+import type { SessionRecord, SessionStatus } from '@/types/session';
+import { Calendar, Clock, Users, Play, Pause, Square, Plus, Edit3 } from 'lucide-react-native';
+
+type SessionScreenProps = {
+  partieId: number;
+  partieName?: string;
+  isMJ: boolean;
+  onBack: () => void;
+};
+
+export default function SessionScreen({ partieId, partieName, isMJ, onBack }: SessionScreenProps) {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingSession, setEditingSession] = useState<SessionRecord | null>(null);
+  const [newSessionTitle, setNewSessionTitle] = useState('');
+  const [newSessionDescription, setNewSessionDescription] = useState('');
+  const [newSessionDate, setNewSessionDate] = useState('');
+  const [showCharacterSelection, setShowCharacterSelection] = useState(false);
+  const [selectedSessionForJoin, setSelectedSessionForJoin] = useState<SessionRecord | null>(null);
+  const [activeSession, setActiveSession] = useState<SessionRecord | null>(null);
+  const [hideCompletedSessions, setHideCompletedSessions] = useState(false);
+
+  const { data: sessions, isLoading, error, refetch } = useSessionsByParty(partieId);
+
+  // Filtrer les sessions selon les préférences
+  const filteredSessions = sessions?.filter(session => {
+    if (hideCompletedSessions && (session.status === 'completed' || session.status === 'cancelled')) {
+      return false;
+    }
+    return true;
+  }) || [];
+  const createSession = useCreateSession();
+  const updateSession = useUpdateSession();
+  const joinSession = useJoinSession();
+  const leaveSession = useLeaveSession();
+
+  const getStatusColor = (status: SessionStatus): string => {
+    switch (status) {
+      case 'scheduled': return 'text-blue-400';
+      case 'active': return 'text-green-400';
+      case 'paused': return 'text-yellow-400';
+      case 'completed': return 'text-gray-400';
+      case 'cancelled': return 'text-red-400';
+      default: return 'text-white';
+    }
+  };
+
+  const getStatusIcon = (status: SessionStatus) => {
+    switch (status) {
+      case 'scheduled': return <Calendar color="#60a5fa" size={16} />;
+      case 'active': return <Play color="#4ade80" size={16} />;
+      case 'paused': return <Pause color="#facc15" size={16} />;
+      case 'completed': return <Square color="#9ca3af" size={16} />;
+      case 'cancelled': return <Square color="#ef4444" size={16} />;
+      default: return <Clock color="#ffffff" size={16} />;
+    }
+  };
+
+  const getStatusText = (status: SessionStatus): string => {
+    switch (status) {
+      case 'scheduled': return 'Programmée';
+      case 'active': return 'En cours';
+      case 'paused': return 'En pause';
+      case 'completed': return 'Terminée';
+      case 'cancelled': return 'Annulée';
+      default: return status;
+    }
+  };
+
+  const formatDate = (dateString?: string): string => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const handleCreateSession = useCallback(async () => {
+    if (!newSessionTitle.trim()) {
+      Alert.alert('Erreur', 'Le titre de la session est requis.');
+      return;
+    }
+
+    try {
+      await createSession.mutateAsync({
+        partie_id: partieId,
+        name: newSessionTitle.trim(),
+        description: newSessionDescription.trim() || undefined,
+        scheduled_date: newSessionDate || undefined,
+        status: 'scheduled',
+      });
+
+      setShowCreateModal(false);
+      setNewSessionTitle('');
+      setNewSessionDescription('');
+      setNewSessionDate('');
+
+      // Forcer le rechargement de la liste
+      await refetch();
+    } catch (error) {
+      console.error('Erreur création session:', error);
+      Alert.alert(
+        'Erreur',
+        error instanceof Error ? error.message : 'Impossible de créer la session.'
+      );
+    }
+  }, [partieId, newSessionTitle, newSessionDescription, newSessionDate, createSession]);
+
+  const handleUpdateSessionStatus = useCallback(async (session: SessionRecord, newStatus: SessionStatus) => {
+    try {
+      const updates: any = { status: newStatus };
+
+      if (newStatus === 'active' && !session.started_at) {
+        updates.started_at = new Date().toISOString();
+      } else if (newStatus === 'completed' && !session.ended_at) {
+        updates.ended_at = new Date().toISOString();
+      }
+
+      await updateSession.mutateAsync({
+        sessionId: session.id,
+        updates,
+      });
+
+      // Forcer le rechargement de la liste
+      await refetch();
+    } catch (error) {
+      console.error('Erreur mise à jour session:', error);
+      Alert.alert(
+        'Erreur',
+        error instanceof Error ? error.message : 'Impossible de mettre à jour la session.'
+      );
+    }
+  }, [updateSession]);
+
+  const handleJoinSession = useCallback(async (session: SessionRecord) => {
+    if (isMJ) {
+      // Le MJ rejoint directement sans choisir de personnage
+      try {
+        const storedUser = await SecureStore.getItemAsync('user');
+        if (!storedUser) {
+          Alert.alert('Erreur', 'Vous devez être connecté pour rejoindre une session.');
+          return;
+        }
+
+        const user = JSON.parse(storedUser);
+        const userId = Number(user.id);
+
+        if (!Number.isFinite(userId)) {
+          Alert.alert('Erreur', 'Identifiant utilisateur invalide.');
+          return;
+        }
+
+        console.log('MJ joining session:', { sessionId: session.id, userId });
+
+        const result = await joinSession.mutateAsync({
+          sessionId: session.id,
+          userId,
+          // Pas de characterId pour le MJ
+        });
+
+        console.log('MJ join result:', result);
+        setActiveSession(session);
+      } catch (error) {
+        console.error('Erreur lors de la jonction MJ:', error);
+        Alert.alert(
+          'Erreur',
+          error instanceof Error ? error.message : 'Impossible de rejoindre la session.'
+        );
+      }
+    } else {
+      // Les joueurs doivent choisir un personnage
+      setSelectedSessionForJoin(session);
+      setShowCharacterSelection(true);
+    }
+  }, [isMJ, joinSession]);
+
+  const handleCharacterSelected = useCallback(async (character: any) => {
+    if (!selectedSessionForJoin) return;
+
+    try {
+      const storedUser = await SecureStore.getItemAsync('user');
+      if (!storedUser) {
+        Alert.alert('Erreur', 'Vous devez être connecté pour rejoindre une session.');
+        return;
+      }
+
+      const user = JSON.parse(storedUser);
+      const userId = Number(user.id);
+
+      if (!Number.isFinite(userId)) {
+        Alert.alert('Erreur', 'Identifiant utilisateur invalide.');
+        return;
+      }
+
+      await joinSession.mutateAsync({
+        sessionId: selectedSessionForJoin.id,
+        userId,
+        characterId: character.id,
+      });
+
+      Alert.alert(
+        'Succès',
+        `Vous avez rejoint la session avec ${character.name} !`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setActiveSession(selectedSessionForJoin);
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Erreur rejoindre session:', error);
+      Alert.alert(
+        'Erreur',
+        error instanceof Error ? error.message : 'Impossible de rejoindre la session.'
+      );
+    } finally {
+      setShowCharacterSelection(false);
+      setSelectedSessionForJoin(null);
+    }
+  }, [selectedSessionForJoin, joinSession]);
+
+  const handleLeaveSession = useCallback(async (session: SessionRecord) => {
+    try {
+      const storedUser = await SecureStore.getItemAsync('user');
+      if (!storedUser) {
+        Alert.alert('Erreur', 'Vous devez être connecté pour quitter une session.');
+        return;
+      }
+
+      const user = JSON.parse(storedUser);
+      const userId = Number(user.id);
+
+      if (!Number.isFinite(userId)) {
+        Alert.alert('Erreur', 'Identifiant utilisateur invalide.');
+        return;
+      }
+
+      await leaveSession.mutateAsync({
+        sessionId: session.id,
+        userId,
+      });
+
+      Alert.alert('Succès', 'Vous avez quitté la session.');
+    } catch (error) {
+      console.error('Erreur quitter session:', error);
+      Alert.alert(
+        'Erreur',
+        error instanceof Error ? error.message : 'Impossible de quitter la session.'
+      );
+    }
+  }, [leaveSession]);
+
+  const renderSessionCard = (session: SessionRecord) => (
+    <View key={session.id} className="bg-white/10 rounded-xl p-4 mb-4">
+      <View className="flex-row items-center justify-between mb-2">
+        <Text className="text-white text-lg font-semibold flex-1">
+          {session.name}
+        </Text>
+        <View className="flex-row items-center">
+          {getStatusIcon(session.status)}
+          <Text className={`ml-2 text-sm ${getStatusColor(session.status)}`}>
+            {getStatusText(session.status)}
+          </Text>
+        </View>
+      </View>
+
+      {session.description && (
+        <Text className="text-white/80 text-sm mb-2">
+          {session.description}
+        </Text>
+      )}
+
+      {session.scheduled_date && (
+        <View className="flex-row items-center mb-2">
+          <Calendar color="#ffffff80" size={14} />
+          <Text className="text-white/80 text-sm ml-2">
+            {formatDate(session.scheduled_date)}
+          </Text>
+        </View>
+      )}
+
+      {session.started_at && (
+        <View className="flex-row items-center mb-2">
+          <Clock color="#ffffff80" size={14} />
+          <Text className="text-white/80 text-sm ml-2">
+            Commencée : {formatDate(session.started_at)}
+          </Text>
+        </View>
+      )}
+
+      <View className="flex-row items-center justify-between mt-3">
+        <View className="flex-row items-center">
+          <Users color="#ffffff80" size={14} />
+          <Text className="text-white/80 text-sm ml-2">
+            Participants
+          </Text>
+        </View>
+
+        <View className="flex-row gap-2">
+          {session.status === 'scheduled' && (
+            <Button
+              variant="primary"
+              size="sm"
+              onPress={() => handleUpdateSessionStatus(session, 'active')}
+            >
+              Démarrer
+            </Button>
+          )}
+
+          {session.status === 'active' && (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                onPress={() => handleUpdateSessionStatus(session, 'paused')}
+              >
+                Pause
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onPress={() => handleUpdateSessionStatus(session, 'completed')}
+              >
+                Terminer
+              </Button>
+            </>
+          )}
+
+          {session.status === 'paused' && (
+            <Button
+              variant="primary"
+              size="sm"
+              onPress={() => handleUpdateSessionStatus(session, 'active')}
+            >
+              Reprendre
+            </Button>
+          )}
+
+          {(session.status === 'active' || session.status === 'paused') && (
+            <Button
+              variant="primary"
+              size="sm"
+              onPress={() => handleJoinSession(session)}
+            >
+              {isMJ ? 'Entrer en tant que MJ' : 'Entrer dans la session'}
+            </Button>
+          )}
+
+          {session.status === 'scheduled' && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onPress={() => handleJoinSession(session)}
+            >
+              {isMJ ? 'Entrer en tant que MJ' : 'Rejoindre'}
+            </Button>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+
+  if (isLoading) {
+    return (
+      <Layout backgroundColor="gradient" variant="scroll">
+        <View className="flex-1 items-center justify-center p-4">
+          <ActivityIndicator size="large" color="#ffffff" />
+          <Text className="text-white mt-4">Chargement des sessions...</Text>
+        </View>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout backgroundColor="gradient" variant="scroll">
+        <View className="flex-1 items-center justify-center p-4">
+          <Text className="text-red-300 text-center mb-4">
+            {error instanceof Error ? error.message : 'Erreur lors du chargement'}
+          </Text>
+          <Button variant="primary" size="md" onPress={() => refetch()}>
+            Réessayer
+          </Button>
+        </View>
+      </Layout>
+    );
+  }
+
+  // Si une session est active, afficher l'écran de session active
+  if (activeSession) {
+    return (
+      <ActiveSessionScreen
+        session={activeSession}
+        isMJ={isMJ}
+        onBack={() => setActiveSession(null)}
+      />
+    );
+  }
+
+  return (
+    <Layout backgroundColor="gradient" variant="scroll">
+      <View className="flex-1 p-4">
+        <View className="flex-row items-center justify-between mb-6">
+          <Button
+            variant="secondary"
+            size="sm"
+            onPress={onBack}
+          >
+            ← Retour
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onPress={() => setShowCreateModal(true)}
+          >
+            <Plus color="#ffffff" size={16} />
+            <Text className="text-white ml-1">Nouvelle session</Text>
+          </Button>
+        </View>
+
+        <Text className="text-white text-2xl font-bold mb-2">
+          Sessions
+        </Text>
+        {partieName && (
+          <Text className="text-white/80 text-base mb-4">
+            {partieName}
+          </Text>
+        )}
+
+        {/* Filtres */}
+        <View className="bg-white/10 rounded-xl p-4 mb-6">
+          <TouchableOpacity
+            className="flex-row items-center"
+            onPress={() => setHideCompletedSessions(!hideCompletedSessions)}
+            activeOpacity={0.7}
+          >
+            <View className={`w-5 h-5 rounded border-2 mr-3 items-center justify-center ${hideCompletedSessions ? 'bg-blue-500 border-blue-500' : 'border-white/50'
+              }`}>
+              {hideCompletedSessions && (
+                <Text className="text-white text-xs">✓</Text>
+              )}
+            </View>
+            <Text className="text-white text-sm">
+              Cacher les sessions terminées
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {sessions && sessions.length === 0 ? (
+          <View className="flex-1 items-center justify-center">
+            <Text className="text-white/80 text-center text-lg mb-4">
+              Aucune session pour cette partie
+            </Text>
+            <Text className="text-white/60 text-center mb-6">
+              Créez votre première session pour commencer à jouer
+            </Text>
+            <Button
+              variant="primary"
+              size="md"
+              onPress={() => setShowCreateModal(true)}
+            >
+              Créer une session
+            </Button>
+          </View>
+        ) : filteredSessions.length === 0 ? (
+          <View className="flex-1 items-center justify-center">
+            <Text className="text-white/80 text-center text-lg mb-4">
+              Aucune session visible
+            </Text>
+            <Text className="text-white/60 text-center mb-6">
+              {hideCompletedSessions
+                ? "Décochez 'Cacher les sessions terminées' pour voir toutes les sessions"
+                : "Créez votre première session pour commencer à jouer"
+              }
+            </Text>
+            {!hideCompletedSessions && (
+              <Button
+                variant="primary"
+                size="md"
+                onPress={() => setShowCreateModal(true)}
+              >
+                Créer une session
+              </Button>
+            )}
+          </View>
+        ) : (
+          <ScrollView>
+            {filteredSessions.map(renderSessionCard)}
+          </ScrollView>
+        )}
+
+        {/* Modal de création de session */}
+        <Modal
+          visible={showCreateModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+        >
+          <View className="flex-1 bg-gray-900 p-4">
+            <View className="flex-row items-center justify-between mb-6">
+              <Text className="text-white text-xl font-bold">
+                Nouvelle session
+              </Text>
+              <TouchableOpacity onPress={() => setShowCreateModal(false)}>
+                <Text className="text-white text-lg">✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View className="mb-4">
+              <Text className="text-white text-base mb-2">Titre *</Text>
+              <TextInput
+                className="bg-white/10 text-white px-3 py-2 rounded-lg"
+                placeholder="Nom de la session"
+                placeholderTextColor="#ffffff80"
+                value={newSessionTitle}
+                onChangeText={setNewSessionTitle}
+              />
+            </View>
+
+            <View className="mb-4">
+              <Text className="text-white text-base mb-2">Description</Text>
+              <TextInput
+                className="bg-white/10 text-white px-3 py-2 rounded-lg"
+                placeholder="Description optionnelle"
+                placeholderTextColor="#ffffff80"
+                value={newSessionDescription}
+                onChangeText={setNewSessionDescription}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            <View className="mb-6">
+              <Text className="text-white text-base mb-2">Date programmée</Text>
+              <TextInput
+                className="bg-white/10 text-white px-3 py-2 rounded-lg"
+                placeholder="YYYY-MM-DD HH:MM (optionnel)"
+                placeholderTextColor="#ffffff80"
+                value={newSessionDate}
+                onChangeText={setNewSessionDate}
+              />
+            </View>
+
+            <View className="flex-row gap-3">
+              <Button
+                variant="secondary"
+                size="md"
+                className="flex-1"
+                onPress={() => setShowCreateModal(false)}
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                className="flex-1"
+                onPress={handleCreateSession}
+                disabled={createSession.isPending}
+              >
+                {createSession.isPending ? 'Création...' : 'Créer'}
+              </Button>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal de sélection de personnage */}
+        {!isMJ && (
+          <CharacterSelectionModal
+            visible={showCharacterSelection}
+            onClose={() => {
+              setShowCharacterSelection(false);
+              setSelectedSessionForJoin(null);
+            }}
+            onSelectCharacter={handleCharacterSelected}
+            title="Rejoindre la session"
+            subtitle={`Choisissez le personnage avec lequel vous voulez rejoindre "${selectedSessionForJoin?.name}"`}
+          />
+        )}
+      </View>
+    </Layout>
+  );
+}

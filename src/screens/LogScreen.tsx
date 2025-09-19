@@ -7,8 +7,19 @@ import { useLogs, useClearLogs, LogEntry } from '@/api/logs';
 
 export default function LogScreen() {
   const [endpointFilter, setEndpointFilter] = useState('');
+  const [methodFilters, setMethodFilters] = useState({
+    GET: true,
+    POST: true,
+    PUT: true,
+  });
   const [failuresOnly, setFailuresOnly] = useState(false);
-  const { data: logs } = useLogs(endpointFilter, failuresOnly);
+
+  // Convertir les méthodes cochées en filtre pour l'API
+  const activeMethods = Object.entries(methodFilters)
+    .filter(([_, isActive]) => isActive)
+    .map(([method, _]) => method);
+
+  const { data: logs } = useLogs(endpointFilter, failuresOnly, activeMethods.join(','));
   const clearLogs = useClearLogs();
   const [modal, setModal] = useState<{ title: string; content: string } | null>(
     null,
@@ -34,6 +45,28 @@ export default function LogScreen() {
             <TouchableOpacity onPress={() => clearLogs.mutate()}>
               <Trash2 color="#fff" size={24} />
             </TouchableOpacity>
+          </View>
+
+          <View className="bg-white/10 rounded-lg px-3 py-3 mb-3">
+            <Text className="text-white text-sm font-semibold mb-3">Méthodes HTTP</Text>
+            <View className="flex-row justify-between">
+              {Object.entries(methodFilters).map(([method, isActive]) => (
+                <TouchableOpacity
+                  key={method}
+                  className="flex-row items-center"
+                  onPress={() => setMethodFilters(prev => ({
+                    ...prev,
+                    [method]: !prev[method as keyof typeof prev]
+                  }))}
+                >
+                  <View className={`w-5 h-5 rounded border-2 mr-2 items-center justify-center ${isActive ? 'bg-blue-500 border-blue-500' : 'border-white/40'
+                    }`}>
+                    {isActive && <Text className="text-white text-xs font-bold">✓</Text>}
+                  </View>
+                  <Text className="text-white text-sm">{method}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           <View className="flex-row items-center justify-between bg-white/10 rounded-lg px-3 py-2">
@@ -68,7 +101,7 @@ export default function LogScreen() {
                   size="sm"
                   variant="secondary"
                   onPress={() =>
-                    setModal({ title: 'Entrée', content: log.request_json })
+                    setModal({ title: 'Entrée', content: log.request_json || 'Aucune donnée' })
                   }
                 >
                   Entrée
@@ -77,7 +110,7 @@ export default function LogScreen() {
                   size="sm"
                   variant="secondary"
                   onPress={() =>
-                    setModal({ title: 'Sortie', content: log.response_json })
+                    setModal({ title: 'Sortie', content: log.response_json || 'Aucune donnée' })
                   }
                 >
                   Sortie

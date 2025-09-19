@@ -1,66 +1,71 @@
-export interface Session {
-  id: string;
+export type SessionStatus = 'scheduled' | 'active' | 'paused' | 'completed' | 'cancelled';
+
+export type SessionRecord = {
+  id: number;
+  partie_id: number;
   name: string;
-  description: string;
-  gameDate: Date;
-  
-  // Participants
-  masterId: string;
-  playerIds: string[];
-  characterIds: string[];
-  
-  // État de la session
-  status: 'pending' | 'active' | 'paused' | 'completed';
-  
-  // Communication
-  chatMessages: ChatMessage[];
-  diceRolls: DiceRoll[];
-  
-  // Paramètres
-  settings: {
-    allowPrivateMessages: boolean;
-    allowPlayerDiceRolls: boolean;
-    voiceChannelId?: string;
+  description?: string;
+  status: SessionStatus;
+  scheduled_date?: string;
+  started_at?: string;
+  ended_at?: string;
+  created_at: string;
+  updated_at: string;
+  summary?: string;
+  notes?: string;
+};
+
+export type SessionParticipant = {
+  id: number;
+  session_id: number;
+  user_id: number;
+  character_id?: string;
+  joined_at: string;
+  left_at?: string;
+  is_online: boolean;
+  last_seen: string;
+};
+
+export type SessionPresence = {
+  id: number;
+  session_id: number;
+  user_id: number;
+  character_id?: string;
+  is_online: boolean;
+  last_seen: string;
+  joined_at: string;
+  left_at?: string;
+};
+
+export type SessionWithDetails = SessionRecord & {
+  partie?: {
+    id: number;
+    nom?: string;
+    scenario_id?: number;
+    mj_id: number;
   };
-  
-  // Métadonnées
-  createdAt: Date;
-  updatedAt: Date;
-}
+  participants?: SessionParticipant[];
+  online_count?: number;
+  total_participants?: number;
+};
 
-export interface ChatMessage {
-  id: string;
-  sessionId: string;
-  senderId: string;
-  senderName: string;
-  content: string;
-  type: 'text' | 'dice' | 'system' | 'private';
-  targetId?: string; // Pour les messages privés
-  timestamp: Date;
-}
-
-export interface DiceRoll {
-  id: string;
-  sessionId: string;
-  playerId: string;
-  playerName: string;
-  diceType: string; // 'D10', 'D100', etc.
-  result: number;
-  modifier: number;
-  total: number;
-  reason: string;
-  timestamp: Date;
-}
-
-export interface PNJ {
-  id: string;
+export type CreateSessionInput = {
+  partie_id: number;
   name: string;
-  description: string;
-  species: string;
-  profession: string;
-  characteristics: Record<string, number>;
-  notes: string;
-  sessionId?: string;
-  createdBy: string;
-  createdAt: Date;
-} 
+  description?: string;
+  scheduled_date?: string;
+  started_at?: string;
+  ended_at?: string;
+  status: SessionStatus;
+};
+
+export type UpdateSessionInput = {
+  name?: string;
+  description?: string;
+  status?: SessionStatus;
+  scheduled_date?: string;
+  started_at?: string;
+  ended_at?: string;
+  summary?: string;
+  notes?: string;
+};

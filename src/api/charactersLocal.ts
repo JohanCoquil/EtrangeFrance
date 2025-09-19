@@ -268,7 +268,7 @@ export function useCharacters() {
         LEFT JOIN voies_etranges v ON c.voie_id = v.id
         LEFT JOIN druide_divinites d ON c.divinity_id = d.id
       `);
-      return result;
+      return result as any[];
     },
   });
 }
