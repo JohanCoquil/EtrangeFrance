@@ -293,6 +293,8 @@ export default function PartieScreen() {
   const [playerPartiesLoading, setPlayerPartiesLoading] = useState(false);
   const [playerPartiesError, setPlayerPartiesError] = useState<string | null>(null);
   const [selectedPartyForSessions, setSelectedPartyForSessions] = useState<PartyRecord | null>(null);
+  const [sessionViewRole, setSessionViewRole] = useState<"mj" | "player">("mj");
+  const [sessionReturnView, setSessionReturnView] = useState<ScreenView>("menu");
 
   // Restaurer la luminosité et nettoyer les fichiers temporaires quand le composant se démonte
   useEffect(() => {
@@ -419,10 +421,40 @@ export default function PartieScreen() {
     setView("menu");
     setError(null);
     setSelectedPartyForSessions(null);
+    setSessionViewRole("mj");
+    setSessionReturnView("menu");
   }, []);
+
+  const handleBackFromSessions = useCallback(() => {
+    const targetView = sessionReturnView;
+    setSelectedPartyForSessions(null);
+
+    if (targetView === "player" || targetView === "mj") {
+      setView(targetView);
+    } else {
+      setView("menu");
+      setError(null);
+    }
+
+    setSessionViewRole("mj");
+    setSessionReturnView("menu");
+  }, [sessionReturnView]);
 
   const handleShowSessions = useCallback((party: PartyRecord) => {
     setSelectedPartyForSessions(party);
+    setSessionViewRole("mj");
+    setSessionReturnView("menu");
+    setView("sessions");
+  }, []);
+
+  const handleOpenPlayerPartySessions = useCallback((playerParty: PlayerPartyRecord) => {
+    if (!playerParty?.party) {
+      return;
+    }
+
+    setSelectedPartyForSessions(playerParty.party);
+    setSessionViewRole("player");
+    setSessionReturnView("player");
     setView("sessions");
   }, []);
 
@@ -1270,9 +1302,11 @@ export default function PartieScreen() {
           ]);
 
           return (
-            <View
+            <TouchableOpacity
               key={playerParty.id}
               className="bg-white/10 rounded-xl p-4 mb-4"
+              activeOpacity={0.85}
+              onPress={() => handleOpenPlayerPartySessions(playerParty)}
             >
               <Text className="text-white text-lg font-semibold mb-1">
                 Partie #{party.id}
@@ -1315,7 +1349,10 @@ export default function PartieScreen() {
                   ))}
                 </View>
               )}
-            </View>
+              <Text className="text-blue-200 text-sm font-semibold mt-3">
+                Appuyez pour voir les sessions
+              </Text>
+            </TouchableOpacity>
           );
         })}
 
@@ -1633,8 +1670,8 @@ export default function PartieScreen() {
           <SessionScreen
             partieId={selectedPartyForSessions.id}
             partieName={getPartyDisplayName(selectedPartyForSessions)}
-            isMJ={true}
-            onBack={handleBackToMenu}
+            isMJ={sessionViewRole === "mj"}
+            onBack={handleBackFromSessions}
           />
         )}
       </View>
