@@ -49,6 +49,21 @@ type PartyParticipantsState = {
 
 type ParticipantsByPartyState = Record<number, PartyParticipantsState>;
 
+type PlayerPartyRecord = {
+  id: number;
+  partie_id: number;
+  user_id: number;
+  party: PartyRecord;
+  mjInfo?: {
+    id: number;
+    login?: string;
+    username?: string;
+    pseudo?: string;
+  };
+  scenarioTitle?: string;
+  otherParticipants: string[];
+};
+
 const QR_CODE_FIELD_KEYS = [
   "qr_code",
   "qrCode",
@@ -269,6 +284,9 @@ export default function PartieScreen() {
   const [tempFiles, setTempFiles] = useState<string[]>([]);
   const [expandedSections, setExpandedSections] = useState<AccordionSectionsState>({});
   const [participantsState, setParticipantsState] = useState<ParticipantsByPartyState>({});
+  const [playerParties, setPlayerParties] = useState<PlayerPartyRecord[]>([]);
+  const [playerPartiesLoading, setPlayerPartiesLoading] = useState(false);
+  const [playerPartiesError, setPlayerPartiesError] = useState<string | null>(null);
 
   // Restaurer la luminosité et nettoyer les fichiers temporaires quand le composant se démonte
   useEffect(() => {
@@ -396,9 +414,201 @@ export default function PartieScreen() {
     setError(null);
   }, []);
 
-  const handleShowPlayerParties = useCallback(() => {
+  const handleShowPlayerParties = useCallback(async () => {
     setView("player");
     setError(null);
+    setPlayerPartiesError(null);
+    setPlayerPartiesLoading(true);
+    setPlayerParties([]);
+
+    try {
+      // Récupérer l'utilisateur connecté
+      const storedUser = await SecureStore.getItemAsync("user");
+      if (!storedUser) {
+        Alert.alert(
+          "Connexion requise",
+          "Vous devez être connecté pour consulter vos parties en tant que joueur.",
+        );
+        return;
+      }
+
+      let parsedUser: any = null;
+      try {
+        parsedUser = JSON.parse(storedUser);
+      } catch (parseError) {
+        console.error("Unable to parse stored user", parseError);
+        Alert.alert(
+          "Erreur",
+          "Impossible de récupérer vos informations utilisateur.",
+        );
+        return;
+      }
+
+      const userId = Number(parsedUser?.id);
+      if (!Number.isFinite(userId)) {
+        Alert.alert("Erreur", "Identifiant utilisateur invalide.");
+        return;
+      }
+
+      // Récupérer les participations du joueur
+      const participantsResponse = await apiFetch(
+        `https://api.scriptonautes.net/api/records/participants?filter=user_id,eq,${encodeURIComponent(
+          String(userId),
+        )}`,
+      );
+
+      if (!participantsResponse.ok) {
+        const errorText = await participantsResponse.text();
+        throw new Error(errorText || "Impossible de récupérer vos participations.");
+      }
+
+      const participantsText = await participantsResponse.text();
+      const participantsData = JSON.parse(participantsText);
+      const participations = participantsData.records || [];
+
+      if (participations.length === 0) {
+        setPlayerParties([]);
+        return;
+      }
+
+      // Récupérer les détails des parties
+      const partyIds = participations.map((p: any) => p.partie_id).filter((id: any) => Number.isFinite(Number(id)));
+
+      if (partyIds.length === 0) {
+        setPlayerParties([]);
+        return;
+      }
+
+      // Construire le filtre pour récupérer toutes les parties en une fois
+      const partyFilter = partyIds.map((id: number) => `id,eq,${id}`).join(';or,');
+      const partiesResponse = await apiFetch(
+        `https://api.scriptonautes.net/api/records/parties?filter=${partyFilter}`,
+      );
+
+      if (!partiesResponse.ok) {
+        const errorText = await partiesResponse.text();
+        throw new Error(errorText || "Impossible de récupérer les détails des parties.");
+      }
+
+      const partiesText = await partiesResponse.text();
+      const partiesData = JSON.parse(partiesText);
+      const parties = partiesData.records || [];
+
+      // Récupérer les informations des MJs
+      const mjIds = Array.from(new Set(parties.map((p: any) => p.mj_id).filter((id: any) => Number.isFinite(Number(id)))));
+      const mjInfoMap: Record<number, any> = {};
+
+      if (mjIds.length > 0) {
+        const mjFilter = mjIds.map(id => `id,eq,${id}`).join(';or,');
+        const mjResponse = await apiFetch(
+          `https://api.scriptonautes.net/api/records/users?filter=${mjFilter}`,
+        );
+
+        if (mjResponse.ok) {
+          const mjText = await mjResponse.text();
+          const mjData = JSON.parse(mjText);
+          const mjs = mjData.records || [];
+
+          mjs.forEach((mj: any) => {
+            mjInfoMap[mj.id] = {
+              id: mj.id,
+              login: mj.login,
+              username: mj.username,
+              pseudo: mj.pseudo,
+            };
+          });
+        }
+      }
+
+      // Récupérer les titres des scénarios
+      const scenarioIds = Array.from(new Set(parties.map((p: any) => p.scenario_id).filter((id: any) => Number.isFinite(Number(id)))));
+      const scenarioTitles: Record<number, string> = {};
+
+      if (scenarioIds.length > 0) {
+        const db = getDb();
+        for (const id of scenarioIds) {
+          try {
+            const row = (await db.getFirstAsync(
+              "SELECT titre FROM scenarios WHERE id = ?",
+              [Number(id)],
+            )) as { titre?: string } | null;
+            const title = row?.titre;
+            if (typeof title === "string" && title.trim().length > 0) {
+              scenarioTitles[Number(id)] = title.trim();
+            }
+          } catch (dbError) {
+            console.warn(`Failed to load scenario ${id}`, dbError);
+          }
+        }
+      }
+
+      // Récupérer les autres participants pour chaque partie
+      const playerPartiesData: PlayerPartyRecord[] = [];
+
+      for (const participation of participations) {
+        const party = parties.find((p: any) => p.id === participation.partie_id);
+        if (!party) continue;
+
+        // Récupérer les autres participants de cette partie
+        const otherParticipantsResponse = await apiFetch(
+          `https://api.scriptonautes.net/api/records/participants?filter=partie_id,eq,${encodeURIComponent(
+            String(party.id),
+          )}`,
+        );
+
+        let otherParticipants: string[] = [];
+        if (otherParticipantsResponse.ok) {
+          const otherParticipantsText = await otherParticipantsResponse.text();
+          const otherParticipantsData = JSON.parse(otherParticipantsText);
+          const otherParticipations = otherParticipantsData.records || [];
+
+          // Récupérer les infos des autres participants (exclure le joueur actuel)
+          const otherUserIds = otherParticipations
+            .filter((p: any) => p.user_id !== userId)
+            .map((p: any) => p.user_id)
+            .filter((id: any) => Number.isFinite(Number(id)))
+            .map((id: any) => Number(id));
+
+          if (otherUserIds.length > 0) {
+            const otherUsersFilter = otherUserIds.map((id: number) => `id,eq,${id}`).join(';or,');
+            const otherUsersResponse = await apiFetch(
+              `https://api.scriptonautes.net/api/records/users?filter=${otherUsersFilter}`,
+            );
+
+            if (otherUsersResponse.ok) {
+              const otherUsersText = await otherUsersResponse.text();
+              const otherUsersData = JSON.parse(otherUsersText);
+              const otherUsers = otherUsersData.records || [];
+
+              otherParticipants = otherUsers.map((user: any) => {
+                return user.pseudo || user.login || user.username || `Utilisateur #${user.id}`;
+              });
+            }
+          }
+        }
+
+        playerPartiesData.push({
+          id: participation.id,
+          partie_id: participation.partie_id,
+          user_id: participation.user_id,
+          party: party,
+          mjInfo: mjInfoMap[party.mj_id],
+          scenarioTitle: scenarioTitles[party.scenario_id],
+          otherParticipants,
+        });
+      }
+
+      setPlayerParties(playerPartiesData);
+    } catch (err) {
+      console.error("Failed to load player parties", err);
+      setPlayerPartiesError(
+        err instanceof Error
+          ? err.message
+          : "Impossible de récupérer vos parties pour le moment.",
+      );
+    } finally {
+      setPlayerPartiesLoading(false);
+    }
   }, []);
 
   const handleShowMjParties = useCallback(async () => {
@@ -962,6 +1172,135 @@ export default function PartieScreen() {
     [handleShowMjParties],
   );
 
+  const renderPlayerContent = () => {
+    if (playerPartiesLoading) {
+      return (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#ffffff" />
+          <Text className="text-white mt-4">Chargement de vos parties...</Text>
+        </View>
+      );
+    }
+
+    if (playerPartiesError) {
+      return (
+        <View>
+          <Text className="text-red-300 text-base mb-4">{playerPartiesError}</Text>
+          <Button variant="primary" size="md" onPress={handleShowPlayerParties}>
+            Réessayer
+          </Button>
+        </View>
+      );
+    }
+
+    if (playerParties.length === 0) {
+      return (
+        <View>
+          <Text className="text-white text-base">
+            Vous ne participez à aucune partie pour le moment.
+          </Text>
+          <Text className="text-white/80 text-sm mt-2">
+            Vous pouvez rejoindre une partie depuis l'onglet "Scénarios" ou via un code partagé par votre MJ.
+          </Text>
+          <Button
+            variant="secondary"
+            size="md"
+            className="mt-4"
+            onPress={handleShowPlayerParties}
+          >
+            Actualiser la liste
+          </Button>
+        </View>
+      );
+    }
+
+    return (
+      <View>
+        {playerParties.map((playerParty) => {
+          const party = playerParty.party;
+          const mjName = playerParty.mjInfo?.pseudo ||
+            playerParty.mjInfo?.login ||
+            playerParty.mjInfo?.username ||
+            `MJ #${playerParty.mjInfo?.id || 'Inconnu'}`;
+
+          const scenarioLabel = playerParty.scenarioTitle ||
+            (party.scenario_id ? `Scénario #${party.scenario_id}` : null);
+
+          const createdAtRaw = extractStringField(party, [
+            "created_at",
+            "createdAt",
+            "creation_date",
+          ]);
+          const createdAt = formatDateToFrench(createdAtRaw) ?? createdAtRaw;
+
+          const status = extractStringField(party, [
+            "status",
+            "etat",
+            "state",
+          ]);
+
+          return (
+            <View
+              key={playerParty.id}
+              className="bg-white/10 rounded-xl p-4 mb-4"
+            >
+              <Text className="text-white text-lg font-semibold mb-1">
+                Partie #{party.id}
+              </Text>
+
+              {scenarioLabel && (
+                <Text className="text-white/80 text-sm mb-1">
+                  Scénario : {scenarioLabel}
+                </Text>
+              )}
+
+              <Text className="text-white/80 text-sm mb-1">
+                MJ : {mjName}
+              </Text>
+
+              {createdAt && (
+                <Text className="text-white/80 text-sm mb-1">
+                  Créée le : {createdAt}
+                </Text>
+              )}
+
+              {status && (
+                <Text className="text-white/80 text-sm mb-2">
+                  Statut : {status}
+                </Text>
+              )}
+
+              {playerParty.otherParticipants.length > 0 && (
+                <View className="mt-2">
+                  <Text className="text-white/80 text-sm mb-1">
+                    Autres participants :
+                  </Text>
+                  {playerParty.otherParticipants.map((participant, index) => (
+                    <Text
+                      key={`${playerParty.id}-other-${index}`}
+                      className="text-white/70 text-sm ml-2"
+                    >
+                      • {participant}
+                    </Text>
+                  ))}
+                </View>
+              )}
+            </View>
+          );
+        })}
+
+        <Button
+          variant="secondary"
+          size="md"
+          className="mt-2"
+          onPress={handleShowPlayerParties}
+        >
+          Actualiser
+        </Button>
+      </View>
+    );
+  };
+
   const renderMjContent = () => {
     if (loading) {
       return (
@@ -1223,11 +1562,7 @@ export default function PartieScreen() {
             >
               ← Retour
             </Button>
-            <Text className="text-white text-base leading-6">
-              Retrouvez ici vos parties en tant que joueur prochainement. En
-              attendant, vous pouvez rejoindre une partie depuis l'onglet
-              "Scénarios" ou via un code partagé par votre MJ.
-            </Text>
+            {renderPlayerContent()}
           </View>
         )}
 
