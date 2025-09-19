@@ -66,6 +66,9 @@ type PlayerPartyRecord = {
   otherParticipants: string[];
 };
 
+const EMAIL_VALIDATION_REGEX =
+  /^(?:[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
 const QR_CODE_FIELD_KEYS = [
   "qr_code",
   "qrCode",
@@ -737,18 +740,36 @@ export default function PartieScreen() {
         return;
       }
 
-      const recipients = emailInput
+      const emailEntries = emailInput
         .split(/[;,\s]+/)
         .map((entry) => entry.trim())
         .filter((entry) => entry.length > 0);
 
-      if (recipients.length === 0) {
+      if (emailEntries.length === 0) {
         Alert.alert(
           "Adresse email invalide",
           "Le champ ne contient aucune adresse email valide.",
         );
         return;
       }
+
+      const invalidEmails = emailEntries.filter(
+        (entry) => !EMAIL_VALIDATION_REGEX.test(entry),
+      );
+
+      if (invalidEmails.length > 0) {
+        Alert.alert(
+          invalidEmails.length > 1
+            ? "Adresses email invalides"
+            : "Adresse email invalide",
+          invalidEmails.length > 1
+            ? `Les adresses suivantes ne sont pas valides :\n${invalidEmails.join(", ")}`
+            : `${invalidEmails[0]} n'est pas une adresse email valide.`,
+        );
+        return;
+      }
+
+      const recipients = emailEntries;
 
       const qrCodeRaw = extractQrCodeRawValue(party);
       const normalizedQr = await generateQRCodeFromText(String(qrCodeRaw));
