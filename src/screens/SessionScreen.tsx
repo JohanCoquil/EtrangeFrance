@@ -23,8 +23,14 @@ import {
   useJoinSession,
   useLeaveSession
 } from '@/api/sessions';
-import type { SessionRecord, SessionStatus } from '@/types/session';
-import { Calendar, Clock, Users, Play, Pause, Square, Plus, Edit3 } from 'lucide-react-native';
+import type { SessionRecord, SessionStatus, SessionParticipant } from '@/types/session';
+import { apiFetch } from '@/utils/api';
+import { Calendar, Clock, Users, Play, Pause, Square, Plus } from 'lucide-react-native';
+
+const formatDateForMySQL = (date: Date | string): string => {
+  const d = new Date(date);
+  return d.toISOString().slice(0, 19).replace('T', ' ');
+};
 
 type SessionScreenProps = {
   partieId: number;
@@ -58,6 +64,68 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
   const updateSession = useUpdateSession();
   const joinSession = useJoinSession();
   const leaveSession = useLeaveSession();
+
+  const fetchExistingParticipant = useCallback(
+    async (sessionId: number, userId: number): Promise<SessionParticipant | null> => {
+      try {
+        const response = await apiFetch(
+          `https://api.scriptonautes.net/api/records/session_participants?filter=session_id,eq,${sessionId}`
+        );
+
+        if (!response.ok) {
+          return null;
+        }
+
+        const data = await response.json();
+        const participants = (data.records ?? []) as SessionParticipant[];
+        const participant = participants.find(part => String(part.user_id) === String(userId));
+
+        return participant ?? null;
+      } catch (fetchError) {
+        console.error('Erreur lors de la vérification du participant existant:', fetchError);
+        return null;
+      }
+    },
+    []
+  );
+
+  const reactivateParticipant = useCallback(
+    async (
+      participantId: number,
+      options: { characterId?: string | null; role?: SessionParticipant['role'] } = {}
+    ): Promise<void> => {
+      const now = new Date();
+      const payload: Record<string, any> = {
+        is_online: true,
+        last_seen: formatDateForMySQL(now),
+        left_at: null,
+      };
+
+      if (options.characterId !== undefined) {
+        payload.character_id =
+          options.characterId === null ? null : String(options.characterId);
+      }
+
+      if (options.role) {
+        payload.role = options.role;
+      }
+
+      const response = await apiFetch(
+        `https://api.scriptonautes.net/api/records/session_participants/${participantId}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Impossible de mettre à jour la participation.');
+      }
+    },
+    []
+  );
 
   const getStatusColor = (status: SessionStatus): string => {
     switch (status) {
@@ -109,6 +177,11 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
   };
 
   const handleCreateSession = useCallback(async () => {
+    if (!isMJ) {
+      Alert.alert('Action non autorisée', 'Seul le MJ peut créer une session.');
+      return;
+    }
+
     if (!newSessionTitle.trim()) {
       Alert.alert('Erreur', 'Le titre de la session est requis.');
       return;
@@ -138,7 +211,7 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
         error instanceof Error ? error.message : 'Impossible de créer la session.'
       );
     }
-  }, [partieId, newSessionTitle, newSessionDescription, newSessionDate, createSession]);
+  }, [isMJ, partieId, newSessionTitle, newSessionDescription, newSessionDate, createSession, refetch]);
 
   const handleDateChange = useCallback(
     (event: DateTimePickerEvent, selectedDate?: Date) => {
@@ -215,6 +288,11 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
   }, []);
 
   const handleUpdateSessionStatus = useCallback(async (session: SessionRecord, newStatus: SessionStatus) => {
+    if (!isMJ) {
+      Alert.alert('Action non autorisée', 'Seul le MJ peut modifier le statut d\'une session.');
+      return;
+    }
+
     try {
       const updates: any = { status: newStatus };
 
@@ -238,7 +316,7 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
         error instanceof Error ? error.message : 'Impossible de mettre à jour la session.'
       );
     }
-  }, [updateSession]);
+  }, [isMJ, updateSession, refetch]);
 
   const handleJoinSession = useCallback(async (session: SessionRecord) => {
     if (isMJ) {
@@ -258,16 +336,19 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
           return;
         }
 
-        console.log('MJ joining session:', { sessionId: session.id, userId });
+        const existingParticipant = await fetchExistingParticipant(session.id, userId);
 
-        const result = await joinSession.mutateAsync({
-          sessionId: session.id,
-          userId,
-          role: 'master',
-          // Pas de characterId pour le MJ
-        });
+        if (existingParticipant) {
+          await reactivateParticipant(existingParticipant.id, { role: 'master' });
+        } else {
+          await joinSession.mutateAsync({
+            sessionId: session.id,
+            userId,
+            role: 'master',
+            // Pas de characterId pour le MJ
+          });
+        }
 
-        console.log('MJ join result:', result);
         setActiveSession(session);
       } catch (error) {
         console.error('Erreur lors de la jonction MJ:', error);
@@ -281,10 +362,12 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
       setSelectedSessionForJoin(session);
       setShowCharacterSelection(true);
     }
-  }, [isMJ, joinSession]);
+  }, [isMJ, joinSession, fetchExistingParticipant, reactivateParticipant]);
 
   const handleCharacterSelected = useCallback(async (character: any) => {
     if (!selectedSessionForJoin) return;
+
+    const sessionToJoin = selectedSessionForJoin;
 
     const remoteIdCandidates = [
       character?.distant_id,
@@ -344,8 +427,31 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
         return;
       }
 
+      const existingParticipant = await fetchExistingParticipant(sessionToJoin.id, userId);
+
+      if (existingParticipant) {
+        await reactivateParticipant(existingParticipant.id, {
+          characterId: remoteCharacterId,
+          role: 'player',
+        });
+
+        Alert.alert(
+          'Succès',
+          `Vous êtes de retour dans la session avec ${character.name} !`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setActiveSession(sessionToJoin);
+              }
+            }
+          ]
+        );
+        return;
+      }
+
       await joinSession.mutateAsync({
-        sessionId: selectedSessionForJoin.id,
+        sessionId: sessionToJoin.id,
         userId,
         characterId: remoteCharacterId,
         role: 'player',
@@ -358,7 +464,7 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
           {
             text: 'OK',
             onPress: () => {
-              setActiveSession(selectedSessionForJoin);
+              setActiveSession(sessionToJoin);
             }
           }
         ]
@@ -373,7 +479,7 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
       setShowCharacterSelection(false);
       setSelectedSessionForJoin(null);
     }
-  }, [selectedSessionForJoin, joinSession]);
+  }, [selectedSessionForJoin, joinSession, fetchExistingParticipant, reactivateParticipant]);
 
   const handleLeaveSession = useCallback(async (session: SessionRecord) => {
     try {
@@ -453,7 +559,7 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
         </View>
 
         <View className="flex-row gap-2">
-          {session.status === 'scheduled' && (
+          {isMJ && session.status === 'scheduled' && (
             <Button
               variant="primary"
               size="sm"
@@ -463,7 +569,7 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
             </Button>
           )}
 
-          {session.status === 'active' && (
+          {isMJ && session.status === 'active' && (
             <>
               <Button
                 variant="secondary"
@@ -482,7 +588,7 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
             </>
           )}
 
-          {session.status === 'paused' && (
+          {isMJ && session.status === 'paused' && (
             <Button
               variant="primary"
               size="sm"
@@ -556,7 +662,7 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
   return (
     <Layout backgroundColor="gradient" variant="scroll">
       <View className="flex-1 p-4">
-        <View className="flex-row items-center justify-between mb-6">
+        <View className={`flex-row items-center mb-6 ${isMJ ? 'justify-between' : ''}`}>
           <Button
             variant="secondary"
             size="sm"
@@ -564,14 +670,16 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
           >
             ← Retour
           </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onPress={() => setShowCreateModal(true)}
-          >
-            <Plus color="#ffffff" size={16} />
-            <Text className="text-white ml-1">Nouvelle session</Text>
-          </Button>
+          {isMJ && (
+            <Button
+              variant="primary"
+              size="sm"
+              onPress={() => setShowCreateModal(true)}
+            >
+              <Plus color="#ffffff" size={16} />
+              <Text className="text-white ml-1">Nouvelle session</Text>
+            </Button>
+          )}
         </View>
 
         <Text className="text-white text-2xl font-bold mb-2">
@@ -608,15 +716,19 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
               Aucune session pour cette partie
             </Text>
             <Text className="text-white/60 text-center mb-6">
-              Créez votre première session pour commencer à jouer
+              {isMJ
+                ? 'Créez votre première session pour commencer à jouer'
+                : 'Demandez à votre MJ de planifier la prochaine session'}
             </Text>
-            <Button
-              variant="primary"
-              size="md"
-              onPress={() => setShowCreateModal(true)}
-            >
-              Créer une session
-            </Button>
+            {isMJ && (
+              <Button
+                variant="primary"
+                size="md"
+                onPress={() => setShowCreateModal(true)}
+              >
+                Créer une session
+              </Button>
+            )}
           </View>
         ) : filteredSessions.length === 0 ? (
           <View className="flex-1 items-center justify-center">
@@ -626,10 +738,12 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
             <Text className="text-white/60 text-center mb-6">
               {hideCompletedSessions
                 ? "Décochez 'Cacher les sessions terminées' pour voir toutes les sessions"
-                : "Créez votre première session pour commencer à jouer"
+                : isMJ
+                  ? 'Créez votre première session pour commencer à jouer'
+                  : 'Aucune session disponible pour le moment'
               }
             </Text>
-            {!hideCompletedSessions && (
+            {!hideCompletedSessions && isMJ && (
               <Button
                 variant="primary"
                 size="md"
@@ -646,103 +760,105 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
         )}
 
         {/* Modal de création de session */}
-        <Modal
-          visible={showCreateModal}
-          animationType="slide"
-          presentationStyle="pageSheet"
-        >
-          <View className="flex-1 bg-gray-900 p-4">
-            <View className="flex-row items-center justify-between mb-6">
-              <Text className="text-white text-xl font-bold">
-                Nouvelle session
-              </Text>
-              <TouchableOpacity onPress={closeCreateModal}>
-                <Text className="text-white text-lg">✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View className="mb-4">
-              <Text className="text-white text-base mb-2">Titre *</Text>
-              <TextInput
-                className="bg-white/10 text-white px-3 py-2 rounded-lg"
-                placeholder="Nom de la session"
-                placeholderTextColor="#ffffff80"
-                value={newSessionTitle}
-                onChangeText={setNewSessionTitle}
-              />
-            </View>
-
-            <View className="mb-4">
-              <Text className="text-white text-base mb-2">Description</Text>
-              <TextInput
-                className="bg-white/10 text-white px-3 py-2 rounded-lg"
-                placeholder="Description optionnelle"
-                placeholderTextColor="#ffffff80"
-                value={newSessionDescription}
-                onChangeText={setNewSessionDescription}
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-
-            <View className="mb-6">
-              <Text className="text-white text-base mb-2">Date programmée</Text>
-              <TouchableOpacity
-                className="bg-white/10 px-3 py-3 rounded-lg flex-row items-center justify-between"
-                onPress={handleShowDatePicker}
-              >
-                <Text
-                  className={
-                    newSessionDate
-                      ? 'text-white text-base'
-                      : 'text-white/60 text-base'
-                  }
-                >
-                  {newSessionDate
-                    ? formatDate(newSessionDate.toISOString())
-                    : 'Sélectionner une date et une heure (optionnel)'}
+        {isMJ && (
+          <Modal
+            visible={showCreateModal}
+            animationType="slide"
+            presentationStyle="pageSheet"
+          >
+            <View className="flex-1 bg-gray-900 p-4">
+              <View className="flex-row items-center justify-between mb-6">
+                <Text className="text-white text-xl font-bold">
+                  Nouvelle session
                 </Text>
-                <Calendar color="#ffffff" size={16} />
-              </TouchableOpacity>
-              {newSessionDate && (
-                <TouchableOpacity
-                  className="mt-2 self-start"
-                  onPress={() => setNewSessionDate(null)}
-                >
-                  <Text className="text-red-300 text-sm">Effacer la date</Text>
+                <TouchableOpacity onPress={closeCreateModal}>
+                  <Text className="text-white text-lg">✕</Text>
                 </TouchableOpacity>
-              )}
-              {Platform.OS === 'ios' && showDatePicker && (
-                <DateTimePicker
-                  value={newSessionDate ?? new Date()}
-                  mode="datetime"
-                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                  onChange={handleDateChange}
-                />
-              )}
-            </View>
+              </View>
 
-            <View className="flex-row gap-3">
-              <Button
-                variant="secondary"
-                size="md"
-                className="flex-1"
-                onPress={closeCreateModal}
-              >
-                Annuler
-              </Button>
-              <Button
-                variant="primary"
-                size="md"
-                className="flex-1"
-                onPress={handleCreateSession}
-                disabled={createSession.isPending}
-              >
-                {createSession.isPending ? 'Création...' : 'Créer'}
-              </Button>
+              <View className="mb-4">
+                <Text className="text-white text-base mb-2">Titre *</Text>
+                <TextInput
+                  className="bg-white/10 text-white px-3 py-2 rounded-lg"
+                  placeholder="Nom de la session"
+                  placeholderTextColor="#ffffff80"
+                  value={newSessionTitle}
+                  onChangeText={setNewSessionTitle}
+                />
+              </View>
+
+              <View className="mb-4">
+                <Text className="text-white text-base mb-2">Description</Text>
+                <TextInput
+                  className="bg-white/10 text-white px-3 py-2 rounded-lg"
+                  placeholder="Description optionnelle"
+                  placeholderTextColor="#ffffff80"
+                  value={newSessionDescription}
+                  onChangeText={setNewSessionDescription}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+
+              <View className="mb-6">
+                <Text className="text-white text-base mb-2">Date programmée</Text>
+                <TouchableOpacity
+                  className="bg-white/10 px-3 py-3 rounded-lg flex-row items-center justify-between"
+                  onPress={handleShowDatePicker}
+                >
+                  <Text
+                    className={
+                      newSessionDate
+                        ? 'text-white text-base'
+                        : 'text-white/60 text-base'
+                    }
+                  >
+                    {newSessionDate
+                      ? formatDate(newSessionDate.toISOString())
+                      : 'Sélectionner une date et une heure (optionnel)'}
+                  </Text>
+                  <Calendar color="#ffffff" size={16} />
+                </TouchableOpacity>
+                {newSessionDate && (
+                  <TouchableOpacity
+                    className="mt-2 self-start"
+                    onPress={() => setNewSessionDate(null)}
+                  >
+                    <Text className="text-red-300 text-sm">Effacer la date</Text>
+                  </TouchableOpacity>
+                )}
+                {Platform.OS === 'ios' && showDatePicker && (
+                  <DateTimePicker
+                    value={newSessionDate ?? new Date()}
+                    mode="datetime"
+                    display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                    onChange={handleDateChange}
+                  />
+                )}
+              </View>
+
+              <View className="flex-row gap-3">
+                <Button
+                  variant="secondary"
+                  size="md"
+                  className="flex-1"
+                  onPress={closeCreateModal}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  variant="primary"
+                  size="md"
+                  className="flex-1"
+                  onPress={handleCreateSession}
+                  disabled={createSession.isPending}
+                >
+                  {createSession.isPending ? 'Création...' : 'Créer'}
+                </Button>
+              </View>
             </View>
-          </View>
-        </Modal>
+          </Modal>
+        )}
 
         {/* Modal de sélection de personnage */}
         {!isMJ && (
