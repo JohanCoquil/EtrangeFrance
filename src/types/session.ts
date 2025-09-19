@@ -19,12 +19,14 @@ export type SessionParticipant = {
   id: number;
   session_id: number;
   user_id: number;
-  character_id?: string;
+  character_id?: string | number | null;
   role?: 'master' | 'player' | 'spectator' | string;
   joined_at: string;
   left_at?: string;
   is_online: boolean | number | string;
   last_seen: string;
+  character_name?: string | null;
+  user_name?: string | null;
 };
 
 export type SessionPresence = {

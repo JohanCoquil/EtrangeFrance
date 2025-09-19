@@ -14,6 +14,9 @@ import {
 import * as SecureStore from 'expo-secure-store';
 import Layout from '@/components/ui/Layout';
 import Button from '@/components/ui/Button';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '@/navigation/types';
 import {
   useSessionDetails,
   useUpdatePresence,
@@ -76,9 +79,10 @@ const normalizeOnlineStatus = (
 };
 
 export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSessionScreenProps) {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [currentCharacter, setCurrentCharacter] = useState<any>(null);
-  const [isMj, setIsMj] = useState(false);
+  const [isMj, setIsMj] = useState(isMJ);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isConnected, setIsConnected] = useState(true);
@@ -88,6 +92,61 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
   const updatePresence = useUpdatePresence();
   const leaveSession = useLeaveSession();
   const updateSession = useUpdateSession();
+
+  useEffect(() => {
+    setIsMj(isMJ);
+  }, [isMJ]);
+
+  const getParticipantCharacter = useCallback(
+    (participant: SessionParticipant | null | undefined) => {
+      if (!participant || !characters) {
+        return undefined;
+      }
+
+      const participantIdCandidates: string[] = [];
+
+      const addCandidate = (value: unknown) => {
+        if (value === null || value === undefined) {
+          return;
+        }
+        const normalized = String(value).trim();
+        if (normalized.length === 0 || normalized === '0') {
+          return;
+        }
+        participantIdCandidates.push(normalized);
+      };
+
+      addCandidate(participant.character_id);
+      addCandidate((participant as any)?.character_local_id);
+      addCandidate((participant as any)?.local_character_id);
+
+      if (participantIdCandidates.length === 0) {
+        return undefined;
+      }
+
+      return characters.find((character: any) => {
+        const characterCandidates = [
+          character?.id,
+          character?.distant_id,
+          character?.distantId,
+          character?.remote_id,
+          character?.remoteId,
+        ];
+
+        return characterCandidates.some(candidate => {
+          if (candidate === null || candidate === undefined) {
+            return false;
+          }
+          const normalized = String(candidate).trim();
+          if (normalized.length === 0 || normalized === '0') {
+            return false;
+          }
+          return participantIdCandidates.includes(normalized);
+        });
+      });
+    },
+    [characters]
+  );
 
 
   // Initialisation de l'utilisateur et du personnage
@@ -99,17 +158,16 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
           const user = JSON.parse(storedUser);
           setCurrentUser(user);
 
-          // Utiliser la prop isMJ passée depuis SessionScreen
-          setIsMj(isMJ);
-
           // Trouver le personnage utilisé dans cette session
           const participant = sessionDetails?.participants?.find(
-            (p: any) => p.user_id === user.id
+            (p: SessionParticipant) => String(p.user_id) === String(user.id)
           );
 
-          if (participant?.character_id && characters) {
-            const character = characters.find((c: any) => c.id === participant.character_id);
-            setCurrentCharacter(character);
+          if (participant) {
+            const character = getParticipantCharacter(participant);
+            setCurrentCharacter(character ?? null);
+          } else {
+            setCurrentCharacter(null);
           }
         }
       } catch (error) {
@@ -120,7 +178,7 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
     if (sessionDetails) {
       initializeUser();
     }
-  }, [sessionDetails, characters]);
+  }, [sessionDetails, getParticipantCharacter]);
 
   // Heartbeat pour maintenir la présence
   useEffect(() => {
@@ -342,6 +400,34 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
     );
   };
 
+  const handleParticipantPress = useCallback(
+    (participant: SessionParticipant) => {
+      const isCurrentUserParticipant =
+        currentUser?.id !== undefined && currentUser?.id !== null
+          ? String(participant.user_id) === String(currentUser.id)
+          : false;
+
+      if (!isMj && !isCurrentUserParticipant) {
+        return;
+      }
+
+      const character = getParticipantCharacter(participant);
+
+      if (!character || !character.id) {
+        Alert.alert(
+          'Fiche indisponible',
+          "Impossible de trouver la fiche de ce personnage sur cet appareil."
+        );
+        return;
+      }
+
+      navigation.navigate('CharacterSheet', {
+        characterId: String(character.id),
+      });
+    },
+    [currentUser, isMj, navigation, getParticipantCharacter]
+  );
+
   const renderParticipants = () => {
     if (!sessionDetails?.participants) return null;
 
@@ -349,7 +435,7 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
     const totalParticipants = participants.length;
 
     const onlineCount = participants.filter(participant => {
-      const isCurrentUserParticipant = participant.user_id === currentUser?.id;
+      const isCurrentUserParticipant = String(participant.user_id) === String(currentUser?.id ?? '');
       return (
         normalizeOnlineStatus(participant.is_online) ||
         (isCurrentUserParticipant && isConnected)
@@ -371,11 +457,15 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View className="flex-row gap-3">
             {participants.map(participant => {
-              const character = characters?.find((c: any) => c.id === participant.character_id) as any;
-              const isCurrentUserParticipant = participant.user_id === currentUser?.id;
+              const character = getParticipantCharacter(participant) as any;
+              const remoteCharacterName =
+                (participant as any)?.character_name ||
+                (participant as any)?.character?.name ||
+                (participant as any)?.characterName;
+              const isCurrentUserParticipant = String(participant.user_id) === String(currentUser?.id ?? '');
               const isMasterParticipant =
                 participant.role === 'master' ||
-                participant.user_id === sessionDetails?.partie?.mj_id ||
+                String(participant.user_id) === String(sessionDetails?.partie?.mj_id ?? '') ||
                 (isCurrentUserParticipant && isMj);
               const isOnline =
                 normalizeOnlineStatus(participant.is_online) ||
@@ -383,7 +473,10 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
               const statusText = isOnline ? 'En ligne' : 'Hors ligne';
               const primaryText = isMasterParticipant
                 ? 'Maître du jeu'
-                : character?.name || 'Sans personnage';
+                : character?.name || remoteCharacterName ||
+                  (participant.character_id
+                    ? `Personnage #${participant.character_id}`
+                    : 'Sans personnage');
               const baseRoleLabel =
                 participant.role === 'spectator'
                   ? 'Spectateur'
@@ -395,11 +488,15 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
                   ? 'Vous (MJ)'
                   : 'Vous'
                 : baseRoleLabel;
+              const canViewCharacter = Boolean(character?.id) && (isMj || isCurrentUserParticipant);
 
               return (
-                <View
+                <TouchableOpacity
                   key={participant.id}
-                  className={`p-3 rounded-lg min-w-[140px] ${isOnline ? 'bg-green-500/20' : 'bg-gray-500/20'}`}
+                  disabled={!canViewCharacter}
+                  activeOpacity={canViewCharacter ? 0.7 : 1}
+                  onPress={() => handleParticipantPress(participant)}
+                  className={`p-3 rounded-lg min-w-[140px] ${isOnline ? 'bg-green-500/20' : 'bg-gray-500/20'} ${canViewCharacter ? 'border border-white/30' : ''}`}
                 >
                   <View className="flex-row items-center mb-1">
                     <User color={isOnline ? '#4ade80' : '#9ca3af'} size={12} />
@@ -413,7 +510,12 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
                   <Text className="text-white/80 text-xs">
                     {footerText}
                   </Text>
-                </View>
+                  {canViewCharacter && (
+                    <Text className="text-white/60 text-[10px] mt-1">
+                      Voir la fiche
+                    </Text>
+                  )}
+                </TouchableOpacity>
               );
             })}
           </View>
