@@ -8,7 +8,9 @@ import {
   Modal,
   TextInput,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import * as SecureStore from 'expo-secure-store';
 import Layout from '@/components/ui/Layout';
 import Button from '@/components/ui/Button';
@@ -36,7 +38,8 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
   const [editingSession, setEditingSession] = useState<SessionRecord | null>(null);
   const [newSessionTitle, setNewSessionTitle] = useState('');
   const [newSessionDescription, setNewSessionDescription] = useState('');
-  const [newSessionDate, setNewSessionDate] = useState('');
+  const [newSessionDate, setNewSessionDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCharacterSelection, setShowCharacterSelection] = useState(false);
   const [selectedSessionForJoin, setSelectedSessionForJoin] = useState<SessionRecord | null>(null);
   const [activeSession, setActiveSession] = useState<SessionRecord | null>(null);
@@ -116,14 +119,15 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
         partie_id: partieId,
         name: newSessionTitle.trim(),
         description: newSessionDescription.trim() || undefined,
-        scheduled_date: newSessionDate || undefined,
+        scheduled_date: newSessionDate ? newSessionDate.toISOString() : undefined,
         status: 'scheduled',
       });
 
       setShowCreateModal(false);
+      setShowDatePicker(false);
       setNewSessionTitle('');
       setNewSessionDescription('');
-      setNewSessionDate('');
+      setNewSessionDate(null);
 
       // Forcer le rechargement de la liste
       await refetch();
@@ -135,6 +139,29 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
       );
     }
   }, [partieId, newSessionTitle, newSessionDescription, newSessionDate, createSession]);
+
+  const handleDateChange = useCallback(
+    (event: DateTimePickerEvent, selectedDate?: Date) => {
+      if (event.type === 'dismissed') {
+        setShowDatePicker(false);
+        return;
+      }
+
+      if (selectedDate) {
+        setNewSessionDate(selectedDate);
+      }
+
+      if (Platform.OS !== 'ios') {
+        setShowDatePicker(false);
+      }
+    },
+    [],
+  );
+
+  const closeCreateModal = useCallback(() => {
+    setShowCreateModal(false);
+    setShowDatePicker(false);
+  }, []);
 
   const handleUpdateSessionStatus = useCallback(async (session: SessionRecord, newStatus: SessionStatus) => {
     try {
@@ -533,7 +560,7 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
               <Text className="text-white text-xl font-bold">
                 Nouvelle session
               </Text>
-              <TouchableOpacity onPress={() => setShowCreateModal(false)}>
+              <TouchableOpacity onPress={closeCreateModal}>
                 <Text className="text-white text-lg">✕</Text>
               </TouchableOpacity>
             </View>
@@ -564,13 +591,39 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
 
             <View className="mb-6">
               <Text className="text-white text-base mb-2">Date programmée</Text>
-              <TextInput
-                className="bg-white/10 text-white px-3 py-2 rounded-lg"
-                placeholder="YYYY-MM-DD HH:MM (optionnel)"
-                placeholderTextColor="#ffffff80"
-                value={newSessionDate}
-                onChangeText={setNewSessionDate}
-              />
+              <TouchableOpacity
+                className="bg-white/10 px-3 py-3 rounded-lg flex-row items-center justify-between"
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text
+                  className={
+                    newSessionDate
+                      ? 'text-white text-base'
+                      : 'text-white/60 text-base'
+                  }
+                >
+                  {newSessionDate
+                    ? formatDate(newSessionDate.toISOString())
+                    : 'Sélectionner une date et une heure (optionnel)'}
+                </Text>
+                <Calendar color="#ffffff" size={16} />
+              </TouchableOpacity>
+              {newSessionDate && (
+                <TouchableOpacity
+                  className="mt-2 self-start"
+                  onPress={() => setNewSessionDate(null)}
+                >
+                  <Text className="text-red-300 text-sm">Effacer la date</Text>
+                </TouchableOpacity>
+              )}
+              {showDatePicker && (
+                <DateTimePicker
+                  value={newSessionDate ?? new Date()}
+                  mode="datetime"
+                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  onChange={handleDateChange}
+                />
+              )}
             </View>
 
             <View className="flex-row gap-3">
@@ -578,7 +631,7 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
                 variant="secondary"
                 size="md"
                 className="flex-1"
-                onPress={() => setShowCreateModal(false)}
+                onPress={closeCreateModal}
               >
                 Annuler
               </Button>
