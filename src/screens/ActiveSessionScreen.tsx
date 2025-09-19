@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import {
   useUpdateSession
 } from '@/api/sessions';
 import { useCharacters } from '@/api/charactersLocal';
+import { fetchRemoteCharacterRecord } from '@/api/charactersRemote';
 import type { SessionRecord, SessionParticipant } from '@/types/session';
 import {
   Users,
@@ -86,6 +87,13 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isConnected, setIsConnected] = useState(true);
+  const [remoteCharacters, setRemoteCharacters] = useState<Record<string, any>>({});
+  const remoteFetchInProgress = useRef<Set<string>>(new Set());
+  const remoteCharactersRef = useRef<Record<string, any>>({});
+
+  useEffect(() => {
+    remoteCharactersRef.current = remoteCharacters;
+  }, [remoteCharacters]);
 
   const { data: sessionDetails, isLoading, error, refetch } = useSessionDetails(session.id);
   const { data: characters } = useCharacters();
@@ -147,6 +155,95 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
     },
     [characters]
   );
+
+  const getParticipantRemoteCharacterId = useCallback(
+    (participant: SessionParticipant | null | undefined) => {
+      if (!participant) {
+        return null;
+      }
+
+      const candidates: unknown[] = [
+        participant.character_id,
+        (participant as any)?.character_remote_id,
+        (participant as any)?.character_distant_id,
+        (participant as any)?.character_local_id,
+        (participant as any)?.local_character_id,
+        (participant as any)?.character?.id,
+        (participant as any)?.character?.distant_id,
+        (participant as any)?.characterId,
+      ];
+
+      for (const candidate of candidates) {
+        if (candidate === null || candidate === undefined) {
+          continue;
+        }
+
+        const normalized = String(candidate).trim();
+        if (normalized.length === 0 || normalized === '0') {
+          continue;
+        }
+
+        return normalized;
+      }
+
+      return null;
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!sessionDetails?.participants || sessionDetails.participants.length === 0) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const fetchRemoteCharacters = async () => {
+      const participants = sessionDetails.participants as SessionParticipant[];
+
+      for (const participant of participants) {
+        const localCharacter = getParticipantCharacter(participant);
+        if (localCharacter && localCharacter.name) {
+          continue;
+        }
+
+        const remoteId = getParticipantRemoteCharacterId(participant);
+        if (!remoteId) {
+          continue;
+        }
+
+        if (remoteCharactersRef.current[remoteId]) {
+          continue;
+        }
+
+        if (remoteFetchInProgress.current.has(remoteId)) {
+          continue;
+        }
+
+        remoteFetchInProgress.current.add(remoteId);
+
+        try {
+          const remoteCharacter = await fetchRemoteCharacterRecord(remoteId);
+          if (!isCancelled && remoteCharacter) {
+            setRemoteCharacters(prev => ({
+              ...prev,
+              [remoteId]: remoteCharacter,
+            }));
+          }
+        } catch (remoteError) {
+          console.error('Erreur récupération personnage distant:', remoteError);
+        } finally {
+          remoteFetchInProgress.current.delete(remoteId);
+        }
+      }
+    };
+
+    fetchRemoteCharacters();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [sessionDetails, getParticipantCharacter, getParticipantRemoteCharacterId]);
 
 
   // Initialisation de l'utilisateur et du personnage
@@ -413,19 +510,34 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
 
       const character = getParticipantCharacter(participant);
 
-      if (!character || !character.id) {
-        Alert.alert(
-          'Fiche indisponible',
-          "Impossible de trouver la fiche de ce personnage sur cet appareil."
-        );
+      if (character && character.id) {
+        navigation.navigate('CharacterSheet', {
+          characterId: String(character.id),
+        });
         return;
       }
 
-      navigation.navigate('CharacterSheet', {
-        characterId: String(character.id),
-      });
+      const remoteId = getParticipantRemoteCharacterId(participant);
+      if (remoteId) {
+        navigation.navigate('CharacterSheet', {
+          characterId: remoteId,
+          mode: 'remote',
+        });
+        return;
+      }
+
+      Alert.alert(
+        'Fiche indisponible',
+        "Impossible de trouver la fiche de ce personnage sur cet appareil."
+      );
     },
-    [currentUser, isMj, navigation, getParticipantCharacter]
+    [
+      currentUser,
+      isMj,
+      navigation,
+      getParticipantCharacter,
+      getParticipantRemoteCharacterId,
+    ]
   );
 
   const renderParticipants = () => {
@@ -462,6 +574,15 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
                 (participant as any)?.character_name ||
                 (participant as any)?.character?.name ||
                 (participant as any)?.characterName;
+              const remoteCharacterId = getParticipantRemoteCharacterId(participant);
+              const remoteCharacter = remoteCharacterId
+                ? remoteCharacters[remoteCharacterId]
+                : undefined;
+              const remoteCharacterNameFromDb =
+                remoteCharacter?.name ||
+                (remoteCharacter as any)?.character_name ||
+                (remoteCharacter as any)?.record?.name ||
+                null;
               const isCurrentUserParticipant = String(participant.user_id) === String(currentUser?.id ?? '');
               const isMasterParticipant =
                 participant.role === 'master' ||
@@ -473,9 +594,11 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
               const statusText = isOnline ? 'En ligne' : 'Hors ligne';
               const primaryText = isMasterParticipant
                 ? 'Maître du jeu'
-                : character?.name || remoteCharacterName ||
-                  (participant.character_id
-                    ? `Personnage #${participant.character_id}`
+                : character?.name ||
+                  remoteCharacterNameFromDb ||
+                  remoteCharacterName ||
+                  (remoteCharacterId
+                    ? `Personnage #${remoteCharacterId}`
                     : 'Sans personnage');
               const baseRoleLabel =
                 participant.role === 'spectator'
@@ -488,7 +611,9 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
                   ? 'Vous (MJ)'
                   : 'Vous'
                 : baseRoleLabel;
-              const canViewCharacter = Boolean(character?.id) && (isMj || isCurrentUserParticipant);
+              const canViewCharacter =
+                (Boolean(character?.id) || Boolean(remoteCharacterId)) &&
+                (isMj || isCurrentUserParticipant);
 
               return (
                 <TouchableOpacity

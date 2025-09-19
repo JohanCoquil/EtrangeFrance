@@ -30,7 +30,7 @@ export type RootStackParamList = {
     characterName: string;
     characterId: string;
   };
-  CharacterSheet: { characterId: string };
+  CharacterSheet: { characterId: string; mode?: 'local' | 'remote' };
   // Ajoutez d'autres écrans modaux ou stack ici si nécessaire
 };
 
