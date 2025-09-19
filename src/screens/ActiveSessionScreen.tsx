@@ -21,7 +21,7 @@ import {
   useUpdateSession
 } from '@/api/sessions';
 import { useCharacters } from '@/api/charactersLocal';
-import type { SessionRecord } from '@/types/session';
+import type { SessionRecord, SessionParticipant } from '@/types/session';
 import {
   Users,
   MessageCircle,
@@ -45,6 +45,34 @@ type ChatMessage = {
   message: string;
   timestamp: string;
   characterName?: string;
+};
+
+const normalizeOnlineStatus = (
+  value: SessionParticipant['is_online'] | null | undefined
+): boolean => {
+  if (value === null || value === undefined) {
+    return false;
+  }
+
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+
+  if (typeof value === 'string') {
+    if (value === '1') {
+      return true;
+    }
+    if (value === '0') {
+      return false;
+    }
+    return value.toLowerCase() === 'true';
+  }
+
+  return false;
 };
 
 export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSessionScreenProps) {
@@ -317,8 +345,16 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
   const renderParticipants = () => {
     if (!sessionDetails?.participants) return null;
 
-    const onlineParticipants = sessionDetails.participants.filter((p: any) => p.is_online);
-    const totalParticipants = sessionDetails.participants.length;
+    const participants = sessionDetails.participants as SessionParticipant[];
+    const totalParticipants = participants.length;
+
+    const onlineCount = participants.filter(participant => {
+      const isCurrentUserParticipant = participant.user_id === currentUser?.id;
+      return (
+        normalizeOnlineStatus(participant.is_online) ||
+        (isCurrentUserParticipant && isConnected)
+      );
+    }).length;
 
     return (
       <View className="bg-white/10 rounded-xl p-4 mb-4">
@@ -326,7 +362,7 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
           <View className="flex-row items-center">
             <Users color="#ffffff" size={16} />
             <Text className="text-white font-semibold ml-2">
-              Participants ({onlineParticipants.length}/{totalParticipants})
+              {`Participants (${onlineCount}/${totalParticipants})`}
             </Text>
           </View>
           <View className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
@@ -334,25 +370,48 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View className="flex-row gap-3">
-            {sessionDetails.participants.map((participant: any) => {
+            {participants.map(participant => {
               const character = characters?.find((c: any) => c.id === participant.character_id) as any;
+              const isCurrentUserParticipant = participant.user_id === currentUser?.id;
+              const isMasterParticipant =
+                participant.role === 'master' ||
+                participant.user_id === sessionDetails?.partie?.mj_id ||
+                (isCurrentUserParticipant && isMj);
+              const isOnline =
+                normalizeOnlineStatus(participant.is_online) ||
+                (isCurrentUserParticipant && isConnected);
+              const statusText = isOnline ? 'En ligne' : 'Hors ligne';
+              const primaryText = isMasterParticipant
+                ? 'Maître du jeu'
+                : character?.name || 'Sans personnage';
+              const baseRoleLabel =
+                participant.role === 'spectator'
+                  ? 'Spectateur'
+                  : isMasterParticipant
+                    ? 'MJ'
+                    : 'Joueur';
+              const footerText = isCurrentUserParticipant
+                ? isMasterParticipant
+                  ? 'Vous (MJ)'
+                  : 'Vous'
+                : baseRoleLabel;
+
               return (
                 <View
                   key={participant.id}
-                  className={`p-3 rounded-lg min-w-[120px] ${participant.is_online ? 'bg-green-500/20' : 'bg-gray-500/20'
-                    }`}
+                  className={`p-3 rounded-lg min-w-[140px] ${isOnline ? 'bg-green-500/20' : 'bg-gray-500/20'}`}
                 >
                   <View className="flex-row items-center mb-1">
-                    <User color={participant.is_online ? '#4ade80' : '#9ca3af'} size={12} />
+                    <User color={isOnline ? '#4ade80' : '#9ca3af'} size={12} />
                     <Text className="text-white text-xs ml-1">
-                      {participant.is_online ? 'En ligne' : 'Hors ligne'}
+                      {statusText}
                     </Text>
                   </View>
                   <Text className="text-white text-sm font-semibold">
-                    {character?.name || 'Personnage'}
+                    {primaryText}
                   </Text>
                   <Text className="text-white/80 text-xs">
-                    {participant.user_id === currentUser?.id ? 'Vous' : 'Joueur'}
+                    {footerText}
                   </Text>
                 </View>
               );

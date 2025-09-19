@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerEvent, DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import * as SecureStore from 'expo-secure-store';
 import Layout from '@/components/ui/Layout';
 import Button from '@/components/ui/Button';
@@ -142,6 +142,10 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
 
   const handleDateChange = useCallback(
     (event: DateTimePickerEvent, selectedDate?: Date) => {
+      if (Platform.OS !== 'ios') {
+        return;
+      }
+
       if (event.type === 'dismissed') {
         setShowDatePicker(false);
         return;
@@ -151,12 +155,59 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
         setNewSessionDate(selectedDate);
       }
 
-      if (Platform.OS !== 'ios') {
-        setShowDatePicker(false);
-      }
+      setShowDatePicker(false);
     },
     [],
   );
+
+  const handleShowDatePicker = useCallback(() => {
+    if (Platform.OS !== 'android') {
+      setShowDatePicker(true);
+      return;
+    }
+
+    const initialDate = newSessionDate ?? new Date();
+
+    DateTimePickerAndroid.open({
+      value: initialDate,
+      mode: 'date',
+      is24Hour: true,
+      onChange: (event, selectedDate) => {
+        if (event.type !== 'set' || !selectedDate) {
+          return;
+        }
+
+        const updatedDate = new Date(initialDate);
+        updatedDate.setFullYear(
+          selectedDate.getFullYear(),
+          selectedDate.getMonth(),
+          selectedDate.getDate(),
+        );
+
+        DateTimePickerAndroid.open({
+          value: updatedDate,
+          mode: 'time',
+          is24Hour: true,
+          onChange: (timeEvent, selectedTime) => {
+            const dateWithNewDay = new Date(updatedDate);
+
+            if (timeEvent.type !== 'set' || !selectedTime) {
+              setNewSessionDate(dateWithNewDay);
+              return;
+            }
+
+            dateWithNewDay.setHours(
+              selectedTime.getHours(),
+              selectedTime.getMinutes(),
+              0,
+              0,
+            );
+            setNewSessionDate(dateWithNewDay);
+          },
+        });
+      },
+    });
+  }, [newSessionDate]);
 
   const closeCreateModal = useCallback(() => {
     setShowCreateModal(false);
@@ -593,7 +644,7 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
               <Text className="text-white text-base mb-2">Date programmée</Text>
               <TouchableOpacity
                 className="bg-white/10 px-3 py-3 rounded-lg flex-row items-center justify-between"
-                onPress={() => setShowDatePicker(true)}
+                onPress={handleShowDatePicker}
               >
                 <Text
                   className={
@@ -616,7 +667,7 @@ export default function SessionScreen({ partieId, partieName, isMJ, onBack }: Se
                   <Text className="text-red-300 text-sm">Effacer la date</Text>
                 </TouchableOpacity>
               )}
-              {showDatePicker && (
+              {Platform.OS === 'ios' && showDatePicker && (
                 <DateTimePicker
                   value={newSessionDate ?? new Date()}
                   mode="datetime"
