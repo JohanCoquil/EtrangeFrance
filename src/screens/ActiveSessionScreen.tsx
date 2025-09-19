@@ -28,11 +28,8 @@ import {
   LogOut,
   Play,
   Pause,
-  Square,
   User,
   Heart,
-  Shield,
-  Zap
 } from 'lucide-react-native';
 
 type ActiveSessionScreenProps = {
