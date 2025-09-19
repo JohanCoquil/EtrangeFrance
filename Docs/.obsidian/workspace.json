@@ -34,9 +34,21 @@
               "icon": "lucide-file",
               "title": "LOCAL BDD"
             }
+          },
+          {
+            "id": "ae99db74792c0d60",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.9.10"
+              },
+              "icon": "lucide-book-up",
+              "title": "Release Notes 1.9.10"
+            }
           }
         ],
-        "currentTab": 1
+        "currentTab": 2
       }
     ],
     "direction": "vertical"
@@ -175,6 +187,7 @@
   },
   "left-ribbon": {
     "hiddenItems": {
+      "bases:Create new base": false,
       "switcher:Open quick switcher": false,
       "graph:Open graph view": false,
       "canvas:Create new canvas": false,
@@ -183,7 +196,7 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "e78056f31f4adafa",
+  "active": "ae99db74792c0d60",
   "lastOpenFiles": [
     "LOCAL BDD.md",
     "api_professions_skills.md",
