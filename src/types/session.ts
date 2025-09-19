@@ -20,9 +20,10 @@ export type SessionParticipant = {
   session_id: number;
   user_id: number;
   character_id?: string;
+  role?: 'master' | 'player' | 'spectator' | string;
   joined_at: string;
   left_at?: string;
-  is_online: boolean;
+  is_online: boolean | number | string;
   last_seen: string;
 };
 
@@ -31,7 +32,7 @@ export type SessionPresence = {
   session_id: number;
   user_id: number;
   character_id?: string;
-  is_online: boolean;
+  is_online: boolean | number | string;
   last_seen: string;
   joined_at: string;
   left_at?: string;
