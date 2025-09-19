@@ -23,6 +23,7 @@ import {
 } from "@/api/charactersLocal";
 import { useCharacterCapacites } from "@/api/capacitiesLocal";
 import { useCharacterSkills } from "@/api/skillsLocal";
+import { useRemoteCharacter } from "@/api/charactersRemote";
 import CardFlip, { CardFlipRef } from "@/components/CardFlip";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Dices, AlertCircle, X } from "lucide-react-native";
@@ -36,7 +37,8 @@ export default function CharacterSheet() {
   const route = useRoute<RouteProp<RootStackParamList, "CharacterSheet">>();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { characterId } = route.params;
+  const { characterId, mode = "local" } = route.params;
+  const isRemote = mode === "remote";
   const { width, height } = Dimensions.get("window");
   const cardRef = useRef<CardFlipRef>(null);
   const flipSound = useRef<Audio.Sound | null>(null);
@@ -65,19 +67,62 @@ export default function CharacterSheet() {
   const [showFullImage, setShowFullImage] = useState(false);
   const updateAvatar = useUpdateAvatar();
   const updateSheet = useUpdateCharacterSheet();
-  const { data: characters, isLoading } = useCharacters();
-  const character: any = characters?.find((c: any) => c.id === characterId);
-  const { data: capacites } = useCharacterCapacites(characterId);
-  const { data: skills } = useCharacterSkills(characterId);
+  const { data: characters, isLoading: isLoadingLocal } = useCharacters();
+  const localCharacter: any = (characters as any[])?.find(
+    (c: any) => c.id === characterId,
+  );
+  const { data: localCapacites } = useCharacterCapacites(characterId);
+  const { data: localSkills } = useCharacterSkills(characterId);
+  const {
+    data: remoteData,
+    isLoading: isLoadingRemote,
+    error: remoteError,
+  } = useRemoteCharacter(isRemote ? characterId : undefined);
+  const character: any = isRemote ? remoteData?.character : localCharacter;
+  const capacites = (
+    isRemote
+      ? remoteData?.capacites ?? []
+      : ((localCapacites as any[]) ?? [])
+  ) as any[];
+  const skills = (
+    isRemote
+      ? remoteData?.skills ?? []
+      : ((localSkills as any[]) ?? [])
+  ) as any[];
   const triggerEffects = character?.trigger_effects
     ? JSON.parse(character.trigger_effects)
     : [];
-  const avatarUri = avatar ? FileSystem.documentDirectory + avatar : undefined;
+  const avatarUri = React.useMemo(() => {
+    if (!avatar) return undefined;
+    if (isRemote) {
+      if (avatar.startsWith("http://") || avatar.startsWith("https://")) {
+        return avatar;
+      }
+      return `https://api.scriptonautes.net/${avatar.replace(/^\//, "")}`;
+    }
+    return FileSystem.documentDirectory + avatar;
+  }, [avatar, isRemote]);
+
+  const isLoading = isRemote ? isLoadingRemote : isLoadingLocal;
 
   if (isLoading) {
     return (
       <Layout backgroundColor="gradient" className="px-4 py-6">
-        <Body className="text-white">Chargement...</Body>
+        <Body className="text-white">
+          {isRemote ? "Chargement du personnage distant..." : "Chargement..."}
+        </Body>
+      </Layout>
+    );
+  }
+
+  if (isRemote && remoteError) {
+    return (
+      <Layout backgroundColor="gradient" className="px-4 py-6">
+        <Body className="text-white">
+          {remoteError instanceof Error
+            ? remoteError.message
+            : "Impossible de charger le personnage distant."}
+        </Body>
       </Layout>
     );
   }
@@ -97,12 +142,21 @@ export default function CharacterSheet() {
       setNotes(character.notes ?? "");
       setEquipement(character.equipement ?? "");
       setFetiches(character.fetiches ?? "");
-      setAvatar(character.avatar ?? null);
+      if (isRemote) {
+        setAvatar(
+          character.avatar_distant ?? character.avatar ?? null,
+        );
+      } else {
+        setAvatar(character.avatar ?? null);
+      }
     }
-  }, [character]);
+  }, [character, isRemote]);
 
   const skipSave = useRef(true);
   useEffect(() => {
+    if (isRemote) {
+      return;
+    }
     if (skipSave.current) {
       skipSave.current = false;
       return;
@@ -118,7 +172,16 @@ export default function CharacterSheet() {
       });
     }, 500);
     return () => clearTimeout(timeout);
-  }, [origines, rencontres, notes, equipement, fetiches, characterId]);
+  }, [
+    origines,
+    rencontres,
+    notes,
+    equipement,
+    fetiches,
+    characterId,
+    isRemote,
+    updateSheet,
+  ]);
 
   useEffect(() => {
     const onBackPress = () => {
@@ -194,6 +257,10 @@ export default function CharacterSheet() {
   };
 
   const handleDifficultySelect = (value: number) => {
+    if (isRemote) {
+      setShowDifficulty(false);
+      return;
+    }
     const statObj = stats.find((s) => s.label === selectedStat);
     const extra2 =
       selectedExtra?.type === "skill"
@@ -227,6 +294,9 @@ export default function CharacterSheet() {
   };
 
   const pickAvatar = async () => {
+    if (isRemote) {
+      return;
+    }
     console.log(">>> pickAvatar");
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     console.log(">>> permission result", permission);
@@ -311,6 +381,8 @@ export default function CharacterSheet() {
   }, []);
 
   const SWIPE_FLIP_THRESHOLD = 50;
+  const canOpenDifficulty =
+    !isRemote && (selectedStat !== null || selectedExtra !== null);
 
   const createPanHandlers = (direction: "left" | "right") => {
     const onHandlerStateChange = (event: any) => {
@@ -415,14 +487,18 @@ export default function CharacterSheet() {
                   resizeMode="contain"
                 />
               </TouchableOpacity>
-              <Button className="mt-4" onPress={pickAvatar}>
-                Modifier l'avatar
-              </Button>
-              <Pressable className="mt-4" onPress={openOfficialIllustrations}>
-                <Body className="text-blue-600 underline text-center">
-                  En mal d'inspiration ? Consulter les illustrations officielles
-                </Body>
-              </Pressable>
+              {!isRemote && (
+                <>
+                  <Button className="mt-4" onPress={pickAvatar}>
+                    Modifier l'avatar
+                  </Button>
+                  <Pressable className="mt-4" onPress={openOfficialIllustrations}>
+                    <Body className="text-blue-600 underline text-center">
+                      En mal d'inspiration ? Consulter les illustrations officielles
+                    </Body>
+                  </Pressable>
+                </>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -451,12 +527,12 @@ export default function CharacterSheet() {
       </Modal>
       <Pressable
         className="absolute top-4 right-4 z-10"
-        disabled={!selectedStat && !selectedExtra}
+        disabled={!canOpenDifficulty}
         onPress={() => setShowDifficulty(true)}
       >
         <Dices
           size={32}
-          color={selectedStat || selectedExtra ? "#fff" : "#666"}
+          color={canOpenDifficulty ? "#fff" : "#666"}
         />
       </Pressable>
       <CardFlip
@@ -910,6 +986,7 @@ export default function CharacterSheet() {
                 multiline
                 value={origines}
                 onChangeText={setOrigines}
+                editable={!isRemote}
                 style={{
                   backgroundColor: "rgba(0,0,0,0.3)",
                   color: "#fff",
@@ -931,6 +1008,7 @@ export default function CharacterSheet() {
                 multiline
                 value={rencontres}
                 onChangeText={setRencontres}
+                editable={!isRemote}
                 style={{
                   backgroundColor: "rgba(0,0,0,0.3)",
                   color: "#fff",
@@ -952,6 +1030,7 @@ export default function CharacterSheet() {
                 multiline
                 value={notes}
                 onChangeText={setNotes}
+                editable={!isRemote}
                 style={{
                   backgroundColor: "rgba(0,0,0,0.3)",
                   color: "#fff",
@@ -973,6 +1052,7 @@ export default function CharacterSheet() {
                 multiline
                 value={equipement}
                 onChangeText={setEquipement}
+                editable={!isRemote}
                 style={{
                   backgroundColor: "rgba(0,0,0,0.3)",
                   color: "#fff",
@@ -994,6 +1074,7 @@ export default function CharacterSheet() {
                 multiline
                 value={fetiches}
                 onChangeText={setFetiches}
+                editable={!isRemote}
                 style={{
                   backgroundColor: "rgba(0,0,0,0.3)",
                   color: "#fff",
