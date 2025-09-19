@@ -387,7 +387,7 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
 
   if (isLoading) {
     return (
-      <Layout backgroundColor="gradient" variant="scroll">
+      <Layout backgroundColor="dark" variant="scroll" className="bg-black">
         <View className="flex-1 items-center justify-center p-4">
           <ActivityIndicator size="large" color="#ffffff" />
           <Text className="text-white mt-4">Chargement de la session...</Text>
@@ -398,7 +398,7 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
 
   if (error) {
     return (
-      <Layout backgroundColor="gradient" variant="scroll">
+      <Layout backgroundColor="dark" variant="scroll" className="bg-black">
         <View className="flex-1 items-center justify-center p-4">
           <Text className="text-red-300 text-center mb-4">
             {error instanceof Error ? error.message : 'Erreur lors du chargement'}
@@ -418,7 +418,7 @@ export default function ActiveSessionScreen({ session, isMJ, onBack }: ActiveSes
       presentationStyle="fullScreen"
       statusBarTranslucent={true}
     >
-      <View className="flex-1 bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+      <View className="flex-1 bg-black">
         <KeyboardAvoidingView
           className="flex-1"
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
